@@ -22,13 +22,12 @@ class Scenario:
     def to_dict(self):
         return {
             "power_network": self.power_network.to_dict(),
-            "actors": self.actors.to_dict(),
-            "map_actors": self.map_actors.to_dict(),
+            "actors": {a.to_dict() for a in self.actors},
+            "map_actors": self.map_actors,
         }
 
-    def from_dict():
-        def from_dict(self):
-            pass
+    def from_dict(self):
+        pass
 
 
 def create_random(num_nodes, num_actors):
