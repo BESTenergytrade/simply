@@ -1,5 +1,4 @@
 from simply import scenario
-from simply.scenario import Scenario
 from simply.market import Market
 
 timesteps = 1
@@ -11,9 +10,14 @@ if __name__ == "__main__":
     for t in range(timesteps):
         m = Market()
         # TODO for loop over actors, which place bids and asks
-        m.accept_bid((0, 0, 2, 0.2))
-        m.accept_ask((0, 1, 2, 0.2))
+        # TODO concurrent bidding of actors
+        m.accept_bid((0, 0, 3, 0.2))
+        m.accept_bid((0, 2, 2, 0.2))
+        m.accept_ask((0, 1, 4, 0.2))
 
         m.print()
+        # To run matching without effective clearing
+        m.match(show=True)
+
         m.clear()
-        print(m.get_all_matches())
+        print("Matches of bid/ask ids: {}".format(m.get_all_matches()))

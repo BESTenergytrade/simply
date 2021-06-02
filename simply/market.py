@@ -7,7 +7,8 @@ class Market:
         # TODO tbd if lists or dicts or ... is used
         self.asks = []
         self.bids = []
-        self.matches = {20: 21}
+        self.matches = {}
+        self.seed = 42
 
     def get_bids(self):
         return pd.DataFrame(self.bids, columns=["time", "actor_id", "energy", "price"])
@@ -39,17 +40,32 @@ class Market:
     def clear(self):
         # TODO match bids
         self.matches = self.match()
-        # TODO send notification to actors about cleared bids
+        # TODO send notification to actors about cleared bids for further processing
 
-    def match(self):
+    def match(self, show=False):
+        random.seed(42)
         # TODO default match can be replaced in different subclass
         bids = self.get_bids()
         asks = self.get_asks()
-        # TODO expand bids/asks of identical energy quantity
-        # bids.apply(lambda x: [1 for i in range(0, int(x['energy']))], axis=1, result_type='expand')
+        # Expand bids/asks to fixed energy quantity bids/asks with individual ids
+        bids = (
+            bids.reindex(bids.index.repeat(bids["energy"]))
+            .drop("energy", axis=1)
+            .reset_index()
+        )
+        asks = (
+            asks.reindex(asks.index.repeat(asks["energy"]))
+            .drop("energy", axis=1)
+            .reset_index()
+        )
         bid_ids = list(bids.index)
         ask_ids = list(asks.index)
+        if show:
+            print(bids)
+            print(asks)
+
+        # Do the actual matching
         bid_ids = random.sample(bid_ids, len(ask_ids))
-        map = {b: a for b, a in zip(bid_ids, ask_ids)}
-        matches = map
+        matches = {b: a for b, a in zip(bid_ids, ask_ids)}
+
         return matches
