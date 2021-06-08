@@ -13,14 +13,8 @@ if __name__ == "__main__":
         m = Market(t)
         for a in sc.actors:
             # TODO concurrent bidding of actors
-            # TODO integrate order type into order
-            order, o_type = a.generate_order()
-            if o_type == -1:
-                m.accept_bid(order, a.receive_market_results)
-            elif o_type == 1:
-                m.accept_ask(order, a.receive_market_results)
-            else:
-                raise ValueError
+            order = a.generate_order()
+            m.accept_order(order, a.receive_market_results)
 
         m.print()
         # To run matching without effective clearing

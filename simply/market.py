@@ -16,10 +16,10 @@ class Market:
         self.seed = 42
 
     def get_bids(self):
-        return pd.DataFrame(self.bids, columns=["time", "actor_id", "energy", "price"])
+        return pd.DataFrame(self.bids)
 
     def get_asks(self):
-        return pd.DataFrame(self.asks, columns=["time", "actor_id", "energy", "price"])
+        return pd.DataFrame(self.asks)
 
     def get_all_matches(self):
         return self.matches
@@ -28,25 +28,20 @@ class Market:
         print(self.get_bids())
         print(self.get_asks())
 
-    def accept_bid(self, bid, callback):
+    def accept_order(self, order, callback):
         """
-        :param bid: tuple
+        :param order: namedtuple namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
         :param callback: callback function
         :return:
         """
-        assert bid[0] == self.t
-        self.bids.append(bid)
-        self.actor_callback[bid[1]] = callback
-
-    def accept_ask(self, ask, callback):
-        """
-        :param ask: tuple
-        :param callback: callback function
-        :return:
-        """
-        assert ask[0] == self.t
-        self.asks.append(ask)
-        self.actor_callback[ask[1]] = callback
+        assert order.time == self.t
+        if order.type == -1:
+            self.bids.append(order)
+        elif order.type == 1:
+            self.asks.append(order)
+        else:
+            raise ValueError
+        self.actor_callback[order.actor_id] = callback
 
     def clear(self):
         # TODO match bids

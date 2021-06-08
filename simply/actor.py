@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
+from collections import namedtuple
 
+Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
 class Actor:
     # TODO rename bids/asks to order and use named tuple
@@ -17,7 +19,7 @@ class Actor:
         self.prices = df["prices"].to_list()
         # perfect foresight
         self.schedule = df["pv"] - df["load"]
-        self.bids = []
+        self.orders = []
         self.traded = {}
 
     def generate_order(self):
@@ -27,12 +29,12 @@ class Actor:
         price = self.prices[self.t]
         # TODO take flexibility into account to generate the bid
 
-        new_bid = (self.t, self.id, abs(energy), price)
+        new = Order(np.sign(energy), self.t, self.id, abs(energy), price)
         # TODO place bid on market
-        self.bids.append(new_bid)
+        self.orders.append(new)
         self.t += 1
 
-        return new_bid, np.sign(energy)
+        return new
 
 
     def receive_market_results(self, time, energy, price):
