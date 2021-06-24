@@ -10,5 +10,7 @@ load_curve_com  = pandas.read_csv('..\data\load_curve_office-like_businesses.csv
                                   sep = ';',
                                   low_memory=False) # for uniform dtype
 # %%load industry time series
-data = json.loads(elevations)
-df = pd.json_normalize(data['results'])
+with open('..\data\v_opendata.json','r') as f:
+    load_curve_industry = json.loads(f.read())
+# TODO harmonize resolution - to 60 min?
+# TODO come up with a mechanism to add noise or randomize load curves
