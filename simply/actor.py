@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from collections import namedtuple
+import matplotlib.pyplot as plt
 
 Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
@@ -10,22 +11,35 @@ class Actor:
         # TODO add battery component
         self.id = actor_id
         self.t = 0
+        self.horizon = 24
         self.load_scale = ls
         self.pv_scale = ps
         self.battery = None
-        self.load = ls * df["load"].to_list()
-        self.pv = ps * df["pv"].to_list()
-        self.prices = df["prices"].to_list()
+        self.data = pd.DataFrame()
+        self.pred = pd.DataFrame()
+        self.data["load"] = ls * df["load"]
+        self.data["pv"] = ps * df["pv"]
+        self.data["prices"] = df["prices"]
+        self.pred["load"] = self._predict_horizon(ls * df["load"])
+        self.pred["pv"] = self._predict_horizon(ps * df["pv"])
+        self.pred["prices"] = self._predict_horizon(df["prices"])
         # perfect foresight
-        self.schedule = df["pv"] - df["load"]
+        self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
         self.orders = []
         self.traded = {}
 
+    def _predict_horizon(self, series, n = 0.1):
+        return series.iloc[self.t:self.t+self.horizon] + n * np.random.rand(self.horizon)
+
+    def plot(self, columns):
+        pd.concat([self.pred[columns].add_suffix("_pred"), self.data[columns]], axis=1).plot()
+        plt.show()
+
     def generate_order(self):
         # TODO calculate amount of energy to fulfil personal schedule
-        energy = self.schedule[self.t]
+        energy = self.pred["schedule"][self.t]
         # TODO simulate strategy: manipulation, etc.
-        price = self.prices[self.t]
+        price = self.pred["prices"][self.t]
         # TODO take flexibility into account to generate the bid
 
         # TODO replace order type by enum
