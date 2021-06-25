@@ -3,11 +3,13 @@ import pandas as pd
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
+from simply.util import gaussian_pv
+
 Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
 
 class Actor:
-    def __init__(self, actor_id, df, ls=1, ps=1):
+    def __init__(self, actor_id, df, ls=1, ps=2):
         # TODO add battery component
         self.id = actor_id
         self.t = 0
@@ -28,11 +30,15 @@ class Actor:
         self.orders = []
         self.traded = {}
 
-    def _predict_horizon(self, series, n = 0.1):
-        return series.iloc[self.t:self.t+self.horizon] + n * np.random.rand(self.horizon)
+    def _predict_horizon(self, series, n=0.1):
+        return series.iloc[self.t : self.t + self.horizon] + n * np.random.rand(
+            self.horizon
+        )
 
     def plot(self, columns):
-        pd.concat([self.pred[columns].add_suffix("_pred"), self.data[columns]], axis=1).plot()
+        pd.concat(
+            [self.pred[columns].add_suffix("_pred"), self.data[columns]], axis=1
+        ).plot()
         plt.show()
 
     def generate_order(self):
@@ -53,6 +59,7 @@ class Actor:
     def receive_market_results(self, time, sign, energy, price):
         # TODO update schedule, if possible e.g. battery
         # TODO post settlement of differences
+        # cleared market is in the past
         assert time < self.t
         assert sign in [-1, 1]
         post = (sign * energy, price)
@@ -64,11 +71,13 @@ class Actor:
 
 def create_random(actor_id):
     # TODO improve random signals
-    # TODO add random generation signal (e.g. with PV characteristic)
     nb_ts = 24
     time_idx = pd.date_range("2021-01-01", freq="H", periods=nb_ts)
     cols = ["load", "pv", "prices"]
     values = np.random.rand(nb_ts, len(cols))
     df = pd.DataFrame(values, columns=cols, index=time_idx)
 
+    # Multiply random generation signal with gaussian/PV-like characteristic
+    day_ts = np.linspace(0, 24, 24)
+    df["pv"] *= gaussian_pv(day_ts, 12, 3)
     return Actor(actor_id, df)
