@@ -29,6 +29,7 @@ class Actor:
         self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
         self.orders = []
         self.traded = {}
+        self.args = {"id": actor_id, "df": df.to_json(), "ls": ls, "ps": ps}
 
     def _predict_horizon(self, series, n=0.1):
         return series.iloc[self.t : self.t + self.horizon] + n * np.random.rand(
@@ -66,7 +67,7 @@ class Actor:
         self.traded[time] = post
 
     def to_dict(self):
-        return self.id
+        return self.args
 
 
 def create_random(actor_id):
