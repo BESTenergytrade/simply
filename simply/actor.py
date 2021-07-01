@@ -9,7 +9,7 @@ Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
 
 class Actor:
-    def __init__(self, actor_id, df, ls=1, ps=2):
+    def __init__(self, actor_id, df, ls=1, ps=2, pm={}):
         # TODO add battery component
         self.id = actor_id
         self.t = 0
@@ -19,22 +19,20 @@ class Actor:
         self.battery = None
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
-        self.data["load"] = ls * df["load"]
-        self.data["pv"] = ps * df["pv"]
-        self.data["prices"] = df["prices"]
-        self.pred["load"] = self._predict_horizon(ls * df["load"])
-        self.pred["pv"] = self._predict_horizon(ps * df["pv"])
-        self.pred["prices"] = self._predict_horizon(df["prices"])
+        for column, scale in [("load", ls), ("pv", ps), ("prices", 1)]:
+            self.data[column] = scale * df[column]
+            try:
+                prediction_multiplier = np.array(pm[column])
+            except KeyError:
+                prediction_multiplier = 0.1 * np.random.rand(self.horizon)
+                pm[column] = prediction_multiplier.tolist()
+            self.pred[column] = self.data[column].iloc[self.t : self.t + self.horizon] + prediction_multiplier
+
         # perfect foresight
         self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
         self.orders = []
         self.traded = {}
-        self.args = {"id": actor_id, "df": df.to_json(), "ls": ls, "ps": ps}
-
-    def _predict_horizon(self, series, n=0.1):
-        return series.iloc[self.t : self.t + self.horizon] + n * np.random.rand(
-            self.horizon
-        )
+        self.args = {"id": actor_id, "df": df.to_json(), "ls": ls, "ps": ps, "pm": pm}
 
     def plot(self, columns):
         pd.concat(

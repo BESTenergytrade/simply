@@ -67,7 +67,7 @@ def from_dict(scenario_dict):
     pn = power_network.PowerNetwork(pn_name, network)
 
     actors = [
-        actor.Actor(actor_id, pd.read_json(ai["df"]), ai["ls"], ai["ps"])
+        actor.Actor(actor_id, pd.read_json(ai["df"]), ai["ls"], ai["ps"], ai["pm"])
         for actor_id, ai in scenario_dict["actors"].items()]
 
     return Scenario(pn, actors, scenario_dict["map_actors"], scenario_dict["rng_seed"])
@@ -101,7 +101,7 @@ def load(dirpath):
     for f in sorted(actor_files):
         at = f.read_text()
         aj = json.loads(at)
-        ai = [aj["id"], pd.read_json(aj["df"]), aj["ls"], aj["ps"]]
+        ai = [aj["id"], pd.read_json(aj["df"]), aj["ls"], aj["ps"], aj["pm"]]
         actors.append(actor.Actor(*ai))
 
     # read map_actors
