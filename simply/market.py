@@ -1,6 +1,7 @@
 import pandas as pd
 import random
 
+from simply.actor import Order
 
 class Market:
     def __init__(self, time):
@@ -41,11 +42,14 @@ class Market:
         :return:
         """
         assert order.time == self.t
-        self.orders.append(order)
+        # make certain energy has step size of energy_unit
+        energy = (order.energy // self.energy_unit) * self.energy_unit
+        unit_order = Order(order.type, order.time, order.actor_id, energy, order.price)
+        self.orders.append(unit_order)
         if order.type == -1:
-            self.bids.append(order)
+            self.bids.append(unit_order)
         elif order.type == 1:
-            self.asks.append(order)
+            self.asks.append(unit_order)
         else:
             raise ValueError
         self.actor_callback[order.actor_id] = callback
@@ -53,37 +57,40 @@ class Market:
     def clear(self):
         # TODO match bids
         self.matches = self.match()
-        trades = self.order_df.iloc[
-            list(self.matches.keys()) + list(self.matches.values())
-        ]
-        self.trades = trades
-        # Send cleared bids and asks to actors for further processing via callback
-        for a_id, ac in self.actor_callback.items():
-            # TODO simplify with one order book
-            a_trades = trades[trades["actor_id"] == a_id]
-            if not a_trades.empty:
-                assert (a_trades["type"].iloc[0] == a_trades["type"]).all()
-                energy = a_trades.count()[0] * self.energy_unit
-                price = a_trades["price"].mean() * self.energy_unit
-                # TODO replace cleared values by namedtuple
-                ac(self.t, a_trades["type"].iloc[0], energy, price)
+
+        for match in self.matches:
+            bid_actor_id = match["bid_actor"]
+            ask_actor_id = match["ask_actor"]
+            bid_actor_callback = self.actor_callback[bid_actor_id]
+            ask_actor_callback = self.actor_callback[ask_actor_id]
+            energy = match["energy"]
+            price = match["price"]
+            bid_actor_callback(self.t, 1, energy, price)
+            ask_actor_callback(self.t,-1, energy, price)
 
     def match(self, show=False):
         # TODO default match can be replaced in different subclass
         orders = self.get_order_df()
-        # Expand bids/asks to fixed energy quantity bids/asks with individual order ids
-        self.order_df = (
-            orders.reindex(orders.index.repeat(orders["energy"] / self.energy_unit))
-            .drop("energy", axis=1)
-            .reset_index()
-        )
-        bid_ids = list(self.order_df[self.order_df["type"] == 1].index)
-        ask_ids = list(self.order_df[self.order_df["type"] == -1].index)
-        if show:
-            print(self.order_df)
+        bids = orders[orders["type"] > 0]
+        asks = orders[orders["type"] < 0]
 
-        # Do the actual matching
-        bid_ids = random.sample(bid_ids, min(len(ask_ids), len(bid_ids)))
-        matches = {b: a for b, a in zip(bid_ids, ask_ids)}
+        # pay as bid. First come, first served
+        matches = []
+        for ask_id, ask in asks.iterrows():
+            for bid_id, bid in bids.iterrows():
+                if ask.energy > 0 and bid.energy > 0 and ask.price <= bid.price:
+                    # match ask and bid
+                    energy = min(ask.energy, bid.energy)
+                    ask.energy -= energy
+                    bid.energy -= energy
+                    matches.append({
+                        "bid_actor": int(bid.actor_id),
+                        "ask_actor": int(ask.actor_id),
+                        "energy": energy,
+                        "price": bid.price
+                    })
+
+        if show:
+            print(matches)
 
         return matches
