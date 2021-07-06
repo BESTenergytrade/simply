@@ -14,7 +14,6 @@ class Market:
         self.matches = {}
         self.energy_unit = 0.1
         self.actor_callback = {}
-        self.seed = 42
 
     def get_bids(self):
         self.get_order_df()
@@ -70,7 +69,6 @@ class Market:
                 ac(self.t, a_trades["type"].iloc[0], energy, price)
 
     def match(self, show=False):
-        random.seed(self.seed)
         # TODO default match can be replaced in different subclass
         orders = self.get_order_df()
         # Expand bids/asks to fixed energy quantity bids/asks with individual order ids
