@@ -2,6 +2,8 @@ import json
 from networkx.readwrite import json_graph
 import pandas as pd
 import random
+import glob
+import os
 
 from simply import actor
 from simply import power_network
@@ -136,17 +138,33 @@ def create_random2(num_nodes, num_actors):
 
     return Scenario(pn, actors, map_actors)
 
-def create_random_household_from_csv(dirpath):
-    # TODO! load all csv files in dir
+
+def create_households_from_csv(dirpath):
+    """
+    read load time series from csv files
+    """
+    # create list with alle files in dir '..\data\households'
+    filenames = glob.glob(os.path.join(dirpath, "*.csv"))
+
+    # read in timesteps
+    df_timesteps = pd.read_csv(filenames[0],
+                               usecols = ['Time'],
+                               parse_dates = [0],
+                               sep = ';')
+    df_timesteps = df_timesteps.rename(columns = {'Time': 'DateTime'})
+
+    # read each load curve in separate DataFrame
+    li = []
+    for filename in filenames:
+        df_file = pd.read_csv(filename,
+                              usecols = ['Sum [kWh]'],
+                              sep = ';')
+        df_file = df_file.rename(columns = {
+                    'Sum [kWh]': os.path.basename(filename)[:-4]})
+        li.append(df_file)
     
-    filename = 'CHH2'
-    filepath = 'data\CHH2\CHH2.csv'
-    # read the csv 
-    load_curve = pd.read_csv(filepath,
-                         usecols = ['Time', 'Sum [kWh]'],
-                         parse_dates = [0],
-                         sep = ';')
-    # rename the columns. This could maybe be integrated in the previous step
-    load_curve.rename(columns={"Time": "DateTime", "Sum [kWh]": filename})
-    # TODO! harmonize time steps to 1 min
-    return Actor(actor_id, load_curve) 
+    # concat DataFrames into one
+    df = pd.concat(li, axis = 1)
+    df = pd.concat([df_timesteps, df], axis = 1)
+    
+    return(df)
