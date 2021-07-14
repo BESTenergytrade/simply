@@ -135,3 +135,18 @@ def create_random2(num_nodes, num_actors):
     # pn.add_actors_map(map_actors)
 
     return Scenario(pn, actors, map_actors)
+
+def create_random_household_from_csv(dirpath):
+    # TODO! load all csv files in dir
+    
+    filename = 'CHH2'
+    filepath = 'data\CHH2\CHH2.csv'
+    # read the csv 
+    load_curve = pd.read_csv(filepath,
+                         usecols = ['Time', 'Sum [kWh]'],
+                         parse_dates = [0],
+                         sep = ';')
+    # rename the columns. This could maybe be integrated in the previous step
+    load_curve.rename(columns={"Time": "DateTime", "Sum [kWh]": filename})
+    # TODO! harmonize time steps to 1 min
+    return Actor(actor_id, load_curve) 
