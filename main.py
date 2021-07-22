@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 
-from simply import scenario, market, market_2pac
+from simply import scenario, market, market_2pac, market_fair
 from simply.util import summerize_actor_trading
 
 show_plots = False
@@ -33,9 +33,9 @@ if __name__ == "__main__":
     for a in sc.actors:
         a.t = cfg.start
 
-    m = market.Market(0)
+    # m = market.Market(0)
     # m = market_2pac.TwoSidedPayAsClear(0)
-    # m = market_fair.BestMarket(0, sc.power_network)
+    m = market_fair.BestMarket(0, sc.power_network)
     for t in cfg.list_ts:
         m.t = t
         for a in sc.actors:
