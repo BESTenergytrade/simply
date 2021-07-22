@@ -5,11 +5,10 @@ from simply.market import Market
 
 class TwoSidedPayAsClear(Market):
 
-    def match(self, show=False):
-        orders = self.get_order_df()
+    def match(self, show=True):
         # order orders by price
-        bids = orders[orders["type"] > 0].sort_values(["price", "energy"], ascending=False)
-        asks = orders[orders["type"] < 0].sort_values(["price", "energy"])
+        bids = self.get_bids().sort_values(["price", "energy"], ascending=False)
+        asks = self.get_asks().sort_values(["price", "energy"], ascending=True)
 
         if len(bids) == 0 or len(asks) == 0:
             # no bids or no asks: no match
@@ -17,27 +16,30 @@ class TwoSidedPayAsClear(Market):
 
         # match!
         bid_iter = bids.iterrows()
-        bid = next(bid_iter)[1]
+        bid_id, bid = next(bid_iter)
         matches = []
-        for _, ask in asks.iterrows():
+        for ask_id, ask in asks.iterrows():
             while bid is not None and ask.price <= bid.price:
                 # get common energy value
                 energy = min(ask.energy, bid.energy)
                 ask.energy -= energy
                 bid.energy -= energy
+                self.orders.loc[ask_id] = ask
+                self.orders.loc[bid_id] = bid
                 matches.append({
+                    "time": self.t,
                     "bid_actor": int(bid.actor_id),
                     "ask_actor": int(ask.actor_id),
                     "energy": energy,
                     "price": ask.price
                 })
-                if ask.energy == 0:
+                if ask.energy < self.energy_unit:
                     # ask finished: next ask
                     break
-                if bid.energy == 0:
+                if bid.energy < self.energy_unit:
                     # bid finished: next bid
                     try:
-                        bid = next(bid_iter)[1]
+                        bid_id, bid = next(bid_iter)
                     except IndexError:
                         bid = None
 
