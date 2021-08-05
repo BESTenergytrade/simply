@@ -4,7 +4,9 @@ import pandas as pd
 import random
 import glob
 import os
+import numpy as np
 
+from simply.util import gaussian_pv
 from simply import actor
 from simply import power_network
 
@@ -116,7 +118,7 @@ def load(dirpath):
 def create_random(num_nodes, num_actors):
     pn = power_network.create_random(num_nodes)
     actors = [actor.create_random(i) for i in range(num_actors)]
-
+    # actors = create_households_from_csv('..\data\households', num_actors)
     # Add actor nodes at random position in the network
     # One network node can contain several actors (using random.choices method)
     map_actors = pn.add_actors_random(actors)
@@ -139,10 +141,11 @@ def create_random2(num_nodes, num_actors):
     return Scenario(pn, actors, map_actors)
 
 
-def create_households_from_csv(dirpath):
+def create_households_from_csv(dirpath, num_nodes, num_actors):
     """
     read load time series from csv files
     """
+    pn = power_network.create_random(num_nodes)
     # create list with alle files in dir '..\data\households'
     filenames = glob.glob(os.path.join(dirpath, "*.csv"))
 
@@ -164,7 +167,33 @@ def create_households_from_csv(dirpath):
         li.append(df_file)
     
     # concat DataFrames into one
-    df = pd.concat(li, axis = 1)
-    df = pd.concat([df_timesteps, df], axis = 1)
+    df_all = pd.concat(li, axis = 1)
+    df_all = pd.concat([df_timesteps, df_all], axis = 1)
     
-    return(df)
+    # generate list of actors
+    actors = []
+    for i in range(num_actors):
+        # specify from which csv file load is taken
+        clmn = os.path.basename(filenames[i])[:-4]
+        
+        # define load, pv and price
+        values_load = list(df_all[clmn])
+        values_pv = [1]*len(df_timesteps) # preliminary
+        values_price = [1]*len(df_timesteps) # preliminary
+        
+        # create dict
+        values = {'load' : values_load,
+                  'pv' : values_pv,
+                  'prices' : values_price
+            }
+        
+        # create data frame from dict
+        df = pd.DataFrame(values, index=df_timesteps)
+        
+        # append actor object to list of actors
+        actors.append(actor.Actor(i, df))
+        
+    
+    map_actors = pn.add_actors_random(actors)
+    
+    return Scenario(pn, actors, map_actors)
