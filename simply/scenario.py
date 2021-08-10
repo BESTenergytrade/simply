@@ -143,56 +143,47 @@ def create_random2(num_nodes, num_actors):
 
 def create_households_from_csv(dirpath, num_nodes, num_actors):
     """
-    read load time series from csv files
+    load time series from csv files, source: https://www.loadprofilegenerator.de/results2/
+    - 62 sample results from loadprofilegenerator
+	- the households are described in household_data_description.csv
+	- year is 2016
+	- unit is [kWh]
+	- original data is in 1 min resolution
+    
     """
+    # create random nodes for power network
     pn = power_network.create_random(num_nodes)
+    
     # create list with alle files in dir '..\data\households'
     filenames = glob.glob(os.path.join(dirpath, "*.csv"))
 
-    # read in timesteps
-    df_timesteps = pd.read_csv(filenames[0],
-                               usecols = ['Time'],
-                               parse_dates = [0],
-                               sep = ';')
-    df_timesteps = df_timesteps.rename(columns = {'Time': 'DateTime'})
-
     # read each load curve in separate DataFrame
-    li = []
-    for filename in filenames:
-        df_file = pd.read_csv(filename,
-                              usecols = ['Sum [kWh]'],
-                              sep = ';')
-        df_file = df_file.rename(columns = {
-                    'Sum [kWh]': os.path.basename(filename)[:-4]})
-        li.append(df_file)
-    
-    # concat DataFrames into one
-    df_all = pd.concat(li, axis = 1)
-    df_all = pd.concat([df_timesteps, df_all], axis = 1)
-    
-    # generate list of actors
+    # create list to track data input for each actor
+    household_type = []
+    # create list of actors
     actors = []
-    for i in range(num_actors):
-        # specify from which csv file load is taken
-        clmn = os.path.basename(filenames[i])[:-4]
+    # choose a random sample of files to read
+    filenames = random.sample(filenames, num_actors)
+    # iterate over list of files to be read
+    for i,filename in enumerate(filenames):
+        # save actor_id and data description in list 
+        # TODO! where to save it?
+        household_type.append((i, os.path.basename(filename)[:-4]))
+        print('actor_id: {} - household: {}'.format(i, os.path.basename(filename)[:-4]))
+        # read file
+        df = pd.read_csv(filename,
+                         sep = ';',
+                         parse_dates = ['Time'],
+                         dayfirst = True)
+        df = df.set_index('Time')
+        df = df.rename(columns={'Sum [kWh]' : "load"})
+        # TODO! The "unsampled" data will have another column called 'Electricity.Timestep'
+        # df = df.drop(columns='Electricity.Timestep')
+        # TODO! we need realistic data for the PV loads
+        df['pv'] = [1]*len(df)
+        df['prices'] = [1]*len(df)
         
-        # define load, pv and price
-        values_load = list(df_all[clmn])
-        values_pv = [1]*len(df_timesteps) # preliminary
-        values_price = [1]*len(df_timesteps) # preliminary
-        
-        # create dict
-        values = {'load' : values_load,
-                  'pv' : values_pv,
-                  'prices' : values_price
-            }
-        
-        # create data frame from dict
-        df = pd.DataFrame(values, index=df_timesteps)
-        
-        # append actor object to list of actors
-        actors.append(actor.Actor(i, df))
-        
+        actors.append(actor.Actor(i, df))   
     
     map_actors = pn.add_actors_random(actors)
     

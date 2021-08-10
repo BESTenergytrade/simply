@@ -3,7 +3,7 @@ from simply.scenario import Scenario
 
 if __name__ == "__main__":
     # sc = scenario.create_random(12, 10)
-    sc = scenario.create_households_from_csv('C:\\Users\daniel.busch\simply\simply\data\households', 12, 10)
+    sc = scenario.create_households_from_csv('C:\\Users\daniel.busch\simply\simply\data\households_sample', 12, 10)
     print(sc.to_dict())
 
     sc.power_network.update_shortest_paths()
