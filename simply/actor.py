@@ -80,18 +80,3 @@ def create_random(actor_id):
     day_ts = np.linspace(0, 24, 24)
     df["pv"] *= gaussian_pv(day_ts, 12, 3)
     return Actor(actor_id, df)
-
-def create_random_household_from_csv(actor_id):
-    # TODO! list all directories in 'data/household/' and randomly choose one
-    # select a household type (sample file)
-    filename = 'CHH2'
-    filepath = 'data\CHH2\CHH2.csv'
-    # read the csv 
-    load_curve = pd.read_csv(filepath,
-                         usecols = ['Time', 'Sum [kWh]'],
-                         parse_dates = [0],
-                         sep = ';')
-    # rename the columns. This could maybe be integrated in the previous step
-    load_curve.rename(columns={"Time": "DateTime", "Sum [kWh]": filename})
-    # TODO! harmonize time steps to 1 min
-    return Actor(actor_id, load_curve) 
