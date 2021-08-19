@@ -43,12 +43,18 @@ for i, data in enumerate(load_curve_industry[0]['data']):
     df = rs * timesteps_h  # divide by timestep ratio to sustain energy balance
     industry_type = data['internal_id'][0]  # get industry type
     # assign a yearly energy consumption to the normalized load
+    # the data is taken from the csv file data_description.csv
+    # some industrial companies can have very differnet sizes
+    # these get a yearly energy consumption from this study:
+    # https://www.eoptimum.de/energie-news/vom-wollen-und-koennen-rund-um-energieeinsparungen-in-unternehmen-12/ 
     if np.isnan(df_ind['yearly consumption [kWh]'].iloc[industry_type-1]):
         energy_category = np.random.choice(np.arange(0, 6),
                                            p=[0.29, 0.3, 0.25,
                                               0.13, 0.02, 0.01])
         yearly_energy = np.random.randint(df_consumption['minE'].iloc[0],
                                           df_consumption['maxE'].iloc[0])
+    # some industrial companies usually need a lot of energy
+    # they are assigned a value from research +- 10%
     else:
         yearly_energy_fixed = df_ind[
             'yearly consumption [kWh]'].iloc[industry_type-1]
