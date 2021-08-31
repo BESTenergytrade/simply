@@ -2,15 +2,17 @@ import pandas as pd
 import json
 import os
 import numpy as np
+from pathlib import Path
+
 
 def preprocess_industry_data(dir_in,  # directory of original data
                              filename,  # filename
                              t_step,  # time step in hours (must match t_resample)
                              n_days,  # how many days
                              t_resample):  # '15min', '2min' etc.
-# TODO! until now this function can only upsample not downsample the data
-# TODO! t_step and t_resample are separate variables even though they contain
-# the same information
+    # TODO! until now this function can only upsample not downsample the data
+    # TODO! t_step and t_resample are separate variables even though they contain
+    # the same information
 
     # merge directory path and relative path
     path_dir = os.path.join(os.getcwd(), dir_in)  # is this necessary?
@@ -41,6 +43,7 @@ def preprocess_industry_data(dir_in,  # directory of original data
     # return as list of dataframes
     return df_list
 
+
 def scale_industry_data(df_list, directory, categories, probabilities):
     df_list_scale = []
     for df in df_list:
@@ -57,6 +60,7 @@ def scale_industry_data(df_list, directory, categories, probabilities):
     # return as list of dataframes
     return df_list_scale
 
+
 def save_industry_data(df_list, dir_out):
     for df in df_list:
         # generate filename based on industry type
@@ -66,18 +70,21 @@ def save_industry_data(df_list, dir_out):
         #  save as csv
         df.to_csv(path_out_complete, index=True, sep=';')
 
+
 if __name__ == "__main__":
+    data_in = Path('data', 'industry')
+    data_out = Path('sample', 'industry_sample')
     # resample industry data
     industry_data_sample = preprocess_industry_data(
-        dir_in=r'simply\data\industry',
-        filename = 'v_opendata.json',
+        dir_in=data_in,
+        filename='v_opendata.json',
         t_step=0.25,
         n_days=7,
         t_resample="15min")
     # scale industry data
     industry_data_sample = scale_industry_data(
         industry_data_sample,
-        directory= r'simply\data\industry',
+        directory=data_in,
         categories=pd.DataFrame(
                   {'minE': [1e4, 3e4, 1e5, 2.5e5, 1e6, 5e6],
                    'maxE': [3e4, 1e5, 2.5e5, 1e6, 5e6, 8e6]
@@ -85,5 +92,7 @@ if __name__ == "__main__":
                                ),
         probabilities=[0.29, 0.3, 0.25, 0.13, 0.02, 0.01])
     # save industry data
+    if not os.path.isdir(data_out):
+        os.mkdir(data_out)
     save_industry_data(df_list=industry_data_sample,
-        dir_out=r'simply\data\industry_sample')
+        dir_out=data_out)
