@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 
 from simply.util import gaussian_pv
 
-Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
+Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))  "the order is being defined as a list with different attributes"
+
 
 
 class Actor:
