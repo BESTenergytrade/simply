@@ -17,7 +17,7 @@ class Config:
         self.start = 8
         self.nb_ts = 3
         self.step_size = 1
-        self.list_ts = np.linspace(self.start, self.start + self.nb_ts, self.nb_ts + 1)
+        self.list_ts = np.linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
         self.path = Path('./scenarios/default')
 
 
