@@ -6,7 +6,7 @@ from simply.actor import Order
 class Market:
     def __init__(self, time, network=None):
         # TODO tbd if lists or dicts or ... is used
-        self.orders = pd.DataFrame()
+        self.orders = pd.DataFrame(columns=Order._fields)
         self.t = time
         self.matches = []
         self.energy_unit = 0.1
@@ -42,7 +42,8 @@ class Market:
 
     def clear(self, reset=True):
         # TODO match bids
-        matches = self.match()
+        order_dict = self.get_order_dict()
+        matches = self.match(order_dict)
         self.matches.append(matches)
 
         for match in matches:
@@ -60,10 +61,49 @@ class Market:
             # remove fully matched orders
             self.orders = self.orders[self.orders.energy >= self.energy_unit]
 
-    def match(self, show=False):
-        # TODO default match can be replaced in different subclass
-        bids = self.get_bids()
+    def get_order_dict(self):
         asks = self.get_asks()
+        bids = self.get_bids()
+
+        data = {
+            "market_1": {
+                "bids": bids.to_dict('records'),
+                "offers": asks.to_dict('records')
+            }
+        }
+
+        return data
+
+    def split_orders(self, orders):
+        # split asks and bids into smallest energy unit, save original index
+        orders = pd.DataFrame(orders)
+        orders["order_id"] = orders.index
+        orders = pd.DataFrame(orders.values.repeat(orders.energy / self.energy_unit, axis=0),
+                            columns=orders.columns)
+        orders.energy = self.energy_unit
+
+        return orders
+
+    def match(self, data=None, show=False):
+        """
+
+        :param data: (Dict[str, Dict]) in format: {"market_name": {{'bids': []], 'offers': []}}
+        :param show: (Bool), print final matches
+        :return: List(Dict):
+        """
+        # default match are replaced in different subclass
+        if data is None:
+            bids = self.get_bids()
+            asks = self.get_asks()
+        else:
+            # only a single market is expected
+            assert len(data.items()) == 1
+            bids = pd.DataFrame(data.get("market_1").get("bids"))
+            asks = pd.DataFrame(data.get("market_1").get("offers"))
+
+        if len(asks) == 0 or len(bids) == 0:
+            # no asks or bids at all: no matches
+            return {}
 
         # pay as bid. First come, first served
         matches = []

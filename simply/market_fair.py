@@ -2,7 +2,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from simply.market import Market
-
+from typing import Dict, Union, List, Tuple
+# TODO: adapt matching result to d3a
+# from d3a_interface.dataclasses import BidOfferMatch
 
 class BestMarket(Market):
 
@@ -49,23 +51,47 @@ class BestMarket(Market):
                         # add to list of nodes that form new clusters
                         nodes.append(v)
 
-    def match(self, show=False):
-
+    def get_order_dict(self):
         asks = self.get_asks()
         bids = self.get_bids()
+
+        asks = self.split_orders(asks)
+        bids = self.split_orders(bids)
+
+        data = {
+            "market_1": {
+                "bids": bids.to_dict('records'),
+                "offers": asks.to_dict('records')
+            }
+        }
+
+        return data
+
+    def match(self, data: Dict[str, Dict]=None, show=False):
+        """
+
+        :param data: (Dict[str, Dict]) in format: {"market_name": {{'bids': []], 'offers': []}}
+        :param show: (Bool), print final matches
+        :return:
+        """
+        print(data)
+        # default match are replaced in different subclass
+        if data is None:
+            bids = self.get_bids()
+            asks = self.get_asks()
+        else:
+            # only a single market is expected
+            assert len(data.items()) == 1
+            bids = pd.DataFrame(data.get("market_1").get("bids"))
+            asks = pd.DataFrame(data.get("market_1").get("offers"))
+
         if len(asks) == 0 or len(bids) == 0:
             # no asks or bids at all: no matches
-            return {}
+            return []
 
-        # split asks and bids into smallest energy unit, save original index
-        asks = pd.DataFrame(asks)
-        asks["order_id"] = asks.index
-        asks = pd.DataFrame(asks.values.repeat(asks.energy / self.energy_unit, axis=0), columns=asks.columns)
-        asks.energy = self.energy_unit
-        bids = pd.DataFrame(bids)
-        bids["order_id"] = bids.index
-        bids = pd.DataFrame(bids.values.repeat(bids.energy / self.energy_unit, axis=0), columns=bids.columns)
-        bids.energy = self.energy_unit
+        # TODO: further adapt to d3a?:
+        #bids_mapping = {bid["order_id"]: bid for bid in data.get("bids")}
+        #offers_mapping = {offer["order_id"]: offer for offer in data.get("offers")}
 
         # keep track which clusters have to be (re)matched
         # start with all clusters
@@ -171,10 +197,10 @@ class BestMarket(Market):
             # get original order id of ask/bid and adjust order energy
             ask_id = match["ask_id"]
             ask_order_id = asks.loc[ask_id].order_id
-            self.orders.loc[ask_order_id, "energy"] -= match["energy"]
+            # self.orders.loc[ask_order_id, "energy"] -= match["energy"]
             bid_id = match["bid_id"]
             bid_order_id = bids.loc[bid_id].order_id
-            self.orders.loc[bid_order_id, "energy"] -= match["energy"]
+            # self.orders.loc[bid_order_id, "energy"] -= match["energy"]
 
             if ask_order_id not in _matches:
                 # ask not seen before: create empty dict
@@ -196,5 +222,24 @@ class BestMarket(Market):
 
         if show:
             print(matches)
+
+        # TODO: check with d3a interface
+        # assert BidOfferMatch.is_valid_dict(match)
+        # Example:
+        # matches = [
+        #     {"market_id": "market1",
+        #      "bids": [{"id": 3, "buyer": "C", "energy_rate": 3, "energy": 20}],
+        #      "offers": [{"id": 4, "seller": "A", "energy_rate": 1.00001, "energy": 25}],
+        #      "selected_energy": 20, "trade_rate": 3},
+        #
+        #     {"market_id": "market2",
+        #      "bids": [{"id": 8, "buyer": "B", "energy_rate": 2, "energy": 45}],
+        #      "offers": [{"id": 12, "seller": "C", "energy_rate": 1, "energy": 65}],
+        #      "selected_energy": 45, "trade_rate": 2},
+        #
+        #     {"market_id": "market2",
+        #      "bids": [{"id": 9, "buyer": "C", "energy_rate": 6, "energy": 50}],
+        #      "offers": [{"id": 11, "seller": "B", "energy_rate": 1, "energy": 60}],
+        #      "selected_energy": 50, "trade_rate": 6}]
 
         return matches
