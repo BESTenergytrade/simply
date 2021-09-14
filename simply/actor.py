@@ -9,7 +9,16 @@ Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
 
 class Actor:
-    def __init__(self, actor_id, df, ls=1, ps=2, pm={}):
+    def __init__(self, actor_id, df, ls=1, ps=1.5, pm={}):
+        """
+        Actor is the representation of a prosumer with ressources (load, photovoltaic)
+
+        :param actor_id: unique identification of the actor
+        :param df: DataFrame, column names "load", "pv" and "prices" are processed
+        :param ls: (optional)
+        :param ps: (optional)
+        :param pm: (optional)
+        """
         # TODO add battery component
         self.id = actor_id
         self.t = 0
@@ -44,6 +53,10 @@ class Actor:
         # TODO calculate amount of energy to fulfil personal schedule
         energy = self.pred["schedule"][self.t]
         # TODO simulate strategy: manipulation, etc.
+        # TODO replace price update by realistic net price timeseries
+        # Quick fix: Adapt order price to compensate due to net pricing of ask orders
+        net_price_factor = 0.3
+        self.pred["prices"][self.t] -= (energy < 0) * net_price_factor * self.pred["prices"][self.t]
         price = self.pred["prices"][self.t]
         # TODO take flexibility into account to generate the bid
 
