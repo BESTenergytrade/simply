@@ -27,7 +27,7 @@ if __name__ == "__main__":
     if cfg.path.exists() and not cfg.update_scenario:
         sc = scenario.load(cfg.path)
     else:
-        sc = scenario.create_random(12, 12)
+        sc = scenario.create_random(12, 11)
         sc.save(cfg.path)
 
     # TODO make output folder for config file, output series (csv, plot) files
