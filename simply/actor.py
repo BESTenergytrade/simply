@@ -5,9 +5,23 @@ import matplotlib.pyplot as plt
 
 from simply.util import gaussian_pv
 
-Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))  "the order is being defined as a list with different attributes"
+""" 
+type explains what the actor is and can be a prosumer or a consumer 
+time defines in which time energy is needed or produced 
+actor_id identifies each actor
+energy is the sum of energy provided or needed
+price defines the cost for energy provided or obtained
+"""
 
+Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
+"""
+the relevant variables / columns for the actor are load, pv, prices
+load is the energy that is needed for self-consumption
+pv is the energy produced
+prices the 
+
+"""
 
 class Actor:
     def __init__(self, actor_id, df, ls=1, ps=2, pm={}):
@@ -29,6 +43,10 @@ class Actor:
                 pm[column] = prediction_multiplier.tolist()
             self.pred[column] = self.data[column].iloc[self.t : self.t + self.horizon] + prediction_multiplier
 
+
+#'"""
+#schedule is implemented to give a foresight for the quantity of energy the prosumer needs to obtain from the market and results in the difference of the prediction of the pv load and the load that is needed by the prosumer
+#"""
         # perfect foresight
         self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
         self.orders = []
