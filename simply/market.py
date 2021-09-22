@@ -10,7 +10,6 @@ class Market:
         A dictionary is created for the matches and a list is created for the trades.
 
 
-        creates an empty list with the key actor_id. The list is then filled with all actors and the type (bid, ask) and price
 
         """
 
@@ -61,6 +60,9 @@ class Market:
         self.actor_callback[order.actor_id] = callback
 
     def clear(self):
+        """
+        git pushcreates an empty list with the key actor_id. The list is then filled with all actors and the type (bid, ask) and price
+        """
         # TODO match bids
         self.matches = self.match()
         trades = self.order_df.iloc[
