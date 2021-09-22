@@ -4,6 +4,16 @@ import random
 
 class Market:
     def __init__(self, time):
+
+        """
+        In this file lists are created which summarize the different bids and asks depending on the type (1 for bids, -1 for asks). Bids and asks are implemented into the order list.
+        A dictionary is created for the matches and a list is created for the trades.
+
+
+        creates an empty list with the key actor_id. The list is then filled with all actors and the type (bid, ask) and price
+
+        """
+
         # TODO tbd if lists or dicts or ... is used
         self.t = time
         self.asks = []
@@ -39,7 +49,7 @@ class Market:
         :param order: namedtuple namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
         :param callback: callback function
         :return:
-        """
+         """
         assert order.time == self.t
         self.orders.append(order)
         if order.type == -1:
