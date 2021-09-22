@@ -7,6 +7,23 @@ import matplotlib.pyplot as plt
 
 class PowerNetwork:
     def __init__(self, name, network):
+        """ Class PowerNetwork is the representation of a grid
+
+        the market is designed to update find out the shortest path in the grid. The participants are then added randomly to the nodes. The participants are then mapped onto the nodes.
+        The nodes are weighted differently and should represent the different network charges.
+
+        :param name:
+        :param network:
+
+        with networkx the short path is being updated and calculates the shortest path between the participants
+
+        :def add_actors_random: list is created with base_id of the nodes, list goes as long as many participants are involved
+
+        :connections = random.choices: returns a list of random selected elements of the sequence "self.leaf_node" and has the length of the active participants
+
+         In the beginning a empty dictionary is created called map, then the last value of list "actor_nodes" is assigned to variable a, then the last value of list connections is assigned to variable c. In map[a]=c command inside the map dictionary a new key with the name variable "a"is created and the value of that key is assigned as variable "c"
+
+        """
         self.name = name
         self.network = network
         # TODO currently first leaf node is interpreted as root node which might change
