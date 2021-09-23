@@ -9,6 +9,17 @@ from simply import power_network
 
 class Scenario:
     def __init__(self, network, actors, map_actors, rng_seed=None):
+        """ Class Scenario represents different scenarios. Objects are created "network", "actors" and "map_actors".
+        With __str__ strings are created out of these objects. The column names of each of the dataframes are then converted to keys of the dictonaries.
+
+
+
+        :param network: specific power grid
+        :param actors: examples of different prosumer
+        :param map_actors: define where actors are located
+        :param rng_seed:
+
+        """
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
 
@@ -21,6 +32,7 @@ class Scenario:
         pass
 
     def __str__(self):
+        """create empty strings for the parameters of the class"""
         return "Scenario(network: {}, actors: {}, map_actors: {})".format(
             self.power_network, self.actors, self.map_actors
         )
@@ -59,6 +71,10 @@ class Scenario:
 
 
 def from_dict(scenario_dict):
+    """
+    last item of the dictonary is removed and checks if the dictionary is empty. Objects are created with "network", "pn" and "actors"
+    
+    """
     pn_name, pn_dict = scenario_dict["power_network"].popitem()
     assert len(scenario_dict["power_network"]) == 0, "Multiple power networks in scenario"
     network = json_graph.node_link_graph(pn_dict,
