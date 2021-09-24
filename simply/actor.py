@@ -24,6 +24,12 @@ prices the
 """
 
 class Actor:
+    """
+    the class Actor represents the different prosumer where only the columns "load", "pv" and "prices" are used
+
+
+    """
+
     def __init__(self, actor_id, df, ls=1, ps=2, pm={}):
         # TODO add battery component
         self.id = actor_id
