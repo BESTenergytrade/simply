@@ -1,3 +1,7 @@
+"""the script powernetwork.py uses the library networkx to create a random network with nodes and edges. Important about this script is the definition of weights on the edges.
+Through the weights the different net fees are taken into account and are a key component of the simulation in general.
+"""
+
 import json
 import random
 import networkx as nx
@@ -9,7 +13,7 @@ class PowerNetwork:
     def __init__(self, name, network):
         """ Class PowerNetwork is the representation of a grid
 
-        the market is designed to update find out the shortest path in the grid. The participants are then added randomly to the nodes. The participants are then mapped onto the nodes.
+        the powernetwork is designed to update and find out the shortest path in the grid. The participants are then added randomly to the nodes. The participants are then mapped onto the nodes.
         The nodes are weighted differently and should represent the different network charges.
 
         :param name:
@@ -80,6 +84,16 @@ class PowerNetwork:
 
 
 def create_random(nodes):
+    """
+    edges can be 0 or 1 and describe the number of adjecent of each variable e. The 12 nodes are loaded in with the adjecent numbers. One after the other the weight is added.
+    Parameters
+    ----------
+    nodes
+
+    Returns
+    -------
+    Object: PowerNetwork with the nw list with the new weights
+    """
     # TODO get number of leaves as parameter
     nw = nx.random_tree(nodes)
 
@@ -91,6 +105,16 @@ def create_random(nodes):
 
 
 def create_random2(nodes):
+    """
+
+    Parameters
+    ----------
+    nodes
+
+    Returns
+    -------
+
+    """
     # TODO get number of leaves as parameter
     nw = nx.random_tree(nodes)
 
