@@ -1,9 +1,19 @@
+""" the script "actor.py" represents the different prosumer where only the columns "load", "pv" and "prices" are used
+Orders are generated and given to the market. The results are clustered in bids and asks.
+The pv generation per actor is quantified.
+"""
+
+
 import numpy as np
 import pandas as pd
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
 from simply.util import gaussian_pv
+
+
+
+Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
 """ 
 type explains what the actor is and can be a prosumer or a consumer 
@@ -13,24 +23,18 @@ energy is the sum of energy provided or needed
 price defines the cost for energy provided or obtained
 """
 
-Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
-
-"""
-the relevant variables / columns for the actor are load, pv, prices
-load is the energy that is needed for self-consumption
-pv is the energy produced
-prices the 
-
-"""
-
 class Actor:
-    """
-    the class Actor represents the different prosumer where only the columns "load", "pv" and "prices" are used
-
-
-    """
-
     def __init__(self, actor_id, df, ls=1, ps=2, pm={}):
+        """
+        schedule is implemented to give a foresight for the quantity of energy the prosumer needs to obtain from the market and results in the difference of the prediction of the pv load and the load that is needed by the prosumer
+        Parameters
+        ----------
+        actor_id
+        df
+        ls
+        ps
+        pm
+         """
         # TODO add battery component
         self.id = actor_id
         self.t = 0
@@ -49,10 +53,6 @@ class Actor:
                 pm[column] = prediction_multiplier.tolist()
             self.pred[column] = self.data[column].iloc[self.t : self.t + self.horizon] + prediction_multiplier
 
-
-#'"""
-#schedule is implemented to give a foresight for the quantity of energy the prosumer needs to obtain from the market and results in the difference of the prediction of the pv load and the load that is needed by the prosumer
-#"""
         # perfect foresight
         self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
         self.orders = []
@@ -66,6 +66,9 @@ class Actor:
         plt.show()
 
     def generate_order(self):
+        """
+        ??
+        """
         # TODO calculate amount of energy to fulfil personal schedule
         energy = self.pred["schedule"][self.t]
         # TODO simulate strategy: manipulation, etc.
@@ -81,6 +84,17 @@ class Actor:
         return new
 
     def receive_market_results(self, time, sign, energy, price):
+        """
+        the empty dictionary created above gets the key "time". The values of the calculation "post" are inserted.
+
+        Parameters
+        ----------
+        time: int
+        sign: int
+            is devided into bids and asks
+        energy: int
+        price: int
+        """
         # TODO update schedule, if possible e.g. battery
         # TODO post settlement of differences
         # cleared market is in the past
@@ -94,6 +108,18 @@ class Actor:
 
 
 def create_random(actor_id):
+    """
+    creates a Dataframe with a timerange of 24h and random values.
+    "util.py" is included into the Dataframe.
+    Parameters
+    ----------
+    actor_id: int
+
+    Returns
+    -------
+    Object: Actor
+        specific actor with data about pv generation
+    """
     # TODO improve random signals
     nb_ts = 24
     time_idx = pd.date_range("2021-01-01", freq="H", periods=nb_ts)
