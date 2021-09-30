@@ -1,3 +1,5 @@
+"""JuH: the script "example_save_and_load_scenario.py" is similar to the "main.py" only that the scenario is being safed at the beginning, then deleted and loaded again."""
+
 #!/usr/bin/env python3
 
 import pandas as pd
