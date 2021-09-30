@@ -1,3 +1,5 @@
+"""JuH: the script shows a visualisation of the network with its nodes and edges and the actors of the scenario."""
+
 from simply import scenario
 from simply.scenario import Scenario
 
