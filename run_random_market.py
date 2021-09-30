@@ -1,3 +1,5 @@
+"""JuH: runs a market example for one timestep"""
+
 from simply import scenario
 from simply.market import Market
 
