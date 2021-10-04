@@ -20,9 +20,9 @@ Changing components of the BEST energy trading system. E.g. regarding:
 ## Setups 
 A setup is the quantity of the selected parameters of a simulation (e.g. network topology, prosumer composition, market mechanism, network charges).
 Setups generate a model of the scenario variant under consideration from the simulation framework.
-A Setup consists of a parameter set and a data set
+A Setup consists of a parameter set and a data set.
 ### parameter set
-includes all parameters that define decisions about the scenario variant
+Includes all parameters that define decisions about the scenario variant
 ### data set
-includes all time series and other data files that are used in the model
+Includes all time series and other data files that are used in the model
 
