@@ -10,7 +10,7 @@ python main.py
 ```
 glossary
 ========
-## Scenario
+## scenario
 Imaginable reality or future with respect to parameters beyond our control. E.g.
 - Prosumer composition)
   - power demand
@@ -21,14 +21,13 @@ Imaginable reality or future with respect to parameters beyond our control. E.g.
 - Digitalisation
 - Grid expansion
 
-## Variants
+## variant
 Changing components of the BEST energy trading system. E.g. regarding: 
  - Market mechanism
  - Network charges model 
  - Conditions for the commercial energy supplier
    
-## Setups 
-A setup is the quantity of the selected parameters of a simulation (e.g. network topology, prosumer composition, market mechanism, network charges).
+## setups 
 Setups generate a model of the scenario variant under consideration from the simulation framework.
 A Setup consists of a parameter set and a data set.
 ### parameter set
