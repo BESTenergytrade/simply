@@ -1,4 +1,4 @@
-""" the script "actor.py" represents the different prosumer where only the columns "load", "pv" and "prices" are used
+""" JuH: the script "actor.py" represents the different prosumer where only the columns "load", "pv" and "prices" are used
 Orders are generated and given to the market. The results are clustered in bids and asks.
 The pv generation per actor is quantified.
 """
@@ -16,7 +16,7 @@ from simply.util import gaussian_pv
 Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
 """ 
-type explains what the actor is and can be a prosumer or a consumer 
+JuH: type explains what the actor is and can be a prosumer or a consumer 
 time defines in which time energy is needed or produced 
 actor_id identifies each actor
 energy is the sum of energy provided or needed
@@ -26,7 +26,8 @@ price defines the cost for energy provided or obtained
 class Actor:
     def __init__(self, actor_id, df, ls=1, ps=2, pm={}):
         """
-        schedule is implemented to give a foresight for the quantity of energy the prosumer needs to obtain from the market and results in the difference of the prediction of the pv load and the load that is needed by the prosumer
+        JuH: schedule is implemented to give a foresight for the quantity of energy the prosumer needs to obtain from the market
+        and results in the difference of the prediction of the pv load and the load that is needed by the prosumer
         Parameters
         ----------
         actor_id
@@ -85,7 +86,7 @@ class Actor:
 
     def receive_market_results(self, time, sign, energy, price):
         """
-        the empty dictionary created above gets the key "time". The values of the calculation "post" are inserted.
+        JuH: the empty dictionary created above gets the key "time". The values of the calculation "post" are inserted.
 
         Parameters
         ----------
@@ -109,7 +110,7 @@ class Actor:
 
 def create_random(actor_id):
     """
-    creates a Dataframe with a timerange of 24h and random values.
+    JuH: creates a Dataframe with a timerange of 24h and random values.
     "util.py" is included into the Dataframe.
     Parameters
     ----------

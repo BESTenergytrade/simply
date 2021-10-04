@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 class PowerNetwork:
     def __init__(self, name, network):
         """
-        Parameters
+        JuH: Parameters
         ----------
         name: string
         network:
@@ -49,8 +49,8 @@ class PowerNetwork:
 
     def to_dict(self):
         """
-        JuH:
-        Returns graph of the node-link data"""
+        JuH: Returns graph of the node-link data
+        """
         return json_graph.node_link_data(self.network)
 
     def to_json(self):
@@ -83,12 +83,6 @@ class PowerNetwork:
         return map
 
     def add_actors_map(self, map):
-        """
-
-        Parameters
-        ----------
-        map:
-        """
         base_id = max(self.network.nodes()) + 100
         for a, c in map.items():
             self.network.add_edge(c, a + base_id)
