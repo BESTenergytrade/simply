@@ -74,7 +74,7 @@ class BestMarket(Market):
         :param show: (Bool), print final matches
         :return:
         """
-        print(data)
+
         # default match are replaced in different subclass
         if data is None:
             bids = self.get_bids()
@@ -82,8 +82,8 @@ class BestMarket(Market):
         else:
             # only a single market is expected
             assert len(data.items()) == 1
-            bids = pd.DataFrame(data.get("market_1").get("bids"))
-            asks = pd.DataFrame(data.get("market_1").get("offers"))
+            bids = pd.DataFrame(data[list(data.keys())[0]].get("bids"))
+            asks = pd.DataFrame(data[list(data.keys())[0]].get("offers"))
 
         if len(asks) == 0 or len(bids) == 0:
             # no asks or bids at all: no matches
