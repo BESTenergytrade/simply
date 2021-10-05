@@ -65,15 +65,49 @@ class TestBestMarket:
             {'type': -1.0, 'time': 8.0, 'actor_id': 4.0, 'energy': 0.1, 'price': 0.2908924092940778, 'order_id': 3.0}]
         }}
 
-        trades = m.match(data)
+        data = {'market_1': {
+            'bids': [
+                {'actor_id': 1, 'energy': 0.1, 'price': 1, 'order_id': 1},
+                {'actor_id': 7, 'energy': 0.1, 'price': 0.9, 'order_id': 4},
+                {'actor_id': 7, 'energy': 0.1, 'price': 0.9, 'order_id': 4},
+                {'actor_id': 8, 'energy': 0.1, 'price': 0.8, 'order_id': 5},
+                {'actor_id': 8, 'energy': 0.1, 'price': 0.8, 'order_id': 5},
+                {'actor_id': 8, 'energy': 0.1, 'price': 0.8, 'order_id': 5},
+                {'actor_id': 8, 'energy': 0.1, 'price': 0.8, 'order_id': 5},
+                {'actor_id': 10, 'energy': 0.1, 'price': .7, 'order_id': 6},
+                {'actor_id': 10, 'energy': 0.1, 'price': .7, 'order_id': 6},
+            ],
+            'offers': [
+                {'actor_id': 0, 'energy': 0.1, 'price': 0.1, 'order_id': 0},
+                {'actor_id': 3, 'energy': 0.1, 'price': 0.4, 'order_id': 2},
+                {'actor_id': 3, 'energy': 0.1, 'price': 0.4, 'order_id': 2},
+                {'actor_id': 3, 'energy': 0.1, 'price': 0.4, 'order_id': 2},
+                {'actor_id': 3, 'energy': 0.1, 'price': 0.4, 'order_id': 2},
+                {'actor_id': 4, 'energy': 0.1, 'price': 0.3, 'order_id': 3},
+                {'actor_id': 4, 'energy': 0.1, 'price': 0.3, 'order_id': 3},
+                {'actor_id': 4, 'energy': 0.1, 'price': 0.3, 'order_id': 3},
+            ]
+        }}
+
+        trades = m.match(data, False)
 
         # TODO: Example with unbalanced matching error -> replace by expected
-        expected_trades = [
-            {'time': 0, 'bid_actor': 8, 'ask_actor': 4, 'energy': 0.4, 'price': 0.6908924092940778, 'ask_id': 16,'bid_id': 3, 'cluster': 2},
-            {'time': 0, 'bid_actor': 1, 'ask_actor': 4, 'energy': 0.1, 'price': 0.2908924092940778,'ask_id': 11, 'bid_id': 0, 'cluster': 1},
-            {'time': 0, 'bid_actor': 10, 'ask_actor': 4, 'energy': 0.1, 'price': 0.2908924092940778,'ask_id': 15, 'bid_id': 7, 'cluster': 1},
-            {'time': 0, 'bid_actor': 7, 'ask_actor': 3, 'energy': 0.2, 'price': 0.41665171884290503,'ask_id': 8, 'bid_id': 1, 'cluster': 4}
-        ]
+        expected_trades = {
+            1: {0: {'energy': 0.1, 'price': 1.0}},
+            7: {3: {'energy': 0.2, 'price': 0.4}},
+            8: {4: {'energy': 0.3, 'price': 0.7}},
 
-        assert trades == expected_trades
-        print(trades)
+        }
+
+        assert len(trades) == sum(len(v) for v in expected_trades.values())
+
+        for t in trades:
+            print(t)
+            bid_actor = t['bid_actor']
+            ask_actor = t['ask_actor']
+            energy = t['energy']
+            price = t['price']
+            assert bid_actor in expected_trades
+            assert ask_actor in expected_trades[bid_actor]
+            assert abs(energy - expected_trades[bid_actor][ask_actor]['energy']) < 1e-10
+            assert abs(price - expected_trades[bid_actor][ask_actor]['price']) < 1e-10
