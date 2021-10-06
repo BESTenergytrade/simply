@@ -1,5 +1,7 @@
-"""JuH: the script "main.py" inserts the Config class which gives a starting point and intervall for the simulation. The scenario.py script is loaded in which already includes the actor.py and power_network.py.
-In the first for loop every actor with it's features is loaded. In the second loop each actor passes through each time step and lines up each bids and asks. The market is then cleared."""
+"""JuH: the script "main.py" inserts the Config class which gives a starting point and intervall for the simulation.
+The scenario.py script is loaded in which already includes the actor.py and power_network.py.
+In the first for loop every actor with it's features is loaded.
+In the second loop in each time step orders are generated and the market is cleared."""
 
 
 #!/usr/bin/env python3
@@ -27,7 +29,6 @@ class Config:
 
 
 if __name__ == "__main__":
-    """ JuH: bids and asks are loaded into the script and orders are generated. Sums up the bids, asks, actor_id and the price per timestamp from 8-11 (after each loop)"""
     cfg = Config()
     sc = scenario.create_random(12, 10)
     # TODO make output folder for config file and Scenario json files, output series in csv and plots files
