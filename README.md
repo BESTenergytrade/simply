@@ -36,4 +36,4 @@ Includes all parameters that define decisions about the scenario variant
 Includes all time series and other data files that are used in the model
 
 ## model
-D3A together with a specific set up is model 
+D3A together with a specific set up is a model  
