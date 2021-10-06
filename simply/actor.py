@@ -1,6 +1,6 @@
-""" JuH: the script "actor.py" represents the different prosumer where only the columns "load", "pv" and "prices" are used
-Orders are generated and given to the market. The results are clustered in bids and asks.
-The pv generation per actor is quantified.
+""" JuH: the script "actor.py" represents the different prosumer,
+where only the columns "load", "pv" and "prices" are used. Actor class is defined and can generate orders for the market.
+The results are clustered in bids and asks. The pv generation per actor is quantified.
 """
 
 
@@ -16,25 +16,24 @@ from simply.util import gaussian_pv
 Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
 """ 
-JuH: type explains what the actor is and can be a prosumer or a consumer 
-time defines in which time energy is needed or produced 
+JuH: type can be 1 (bid) or -1 (ask)
+Time is non-negative timestamp 
 actor_id identifies each actor
 energy is the sum of energy provided or needed
-price defines the cost for energy provided or obtained
-"""
+Price is the asking or bidding price."""
 
 class Actor:
     def __init__(self, actor_id, df, ls=1, ps=2, pm={}):
         """
-        JuH: schedule is implemented to give a foresight for the quantity of energy the prosumer needs to obtain from the market
+        JuH: power schedule is implemented to give a foresight for the quantity of energy the prosumer needs to obtain from the market
         and results in the difference of the prediction of the pv load and the load that is needed by the prosumer
         Parameters
         ----------
-        actor_id
-        df
-        ls
-        ps
-        pm
+        actor_id: uique ID
+        df: pandas dataframe with load, pv and prices columns
+        ls: load scale
+        ps: PV scale
+        pm: prediction multiplier for each column
          """
         # TODO add battery component
         self.id = actor_id
@@ -61,6 +60,8 @@ class Actor:
         self.args = {"id": actor_id, "df": df.to_json(), "ls": ls, "ps": ps, "pm": pm}
 
     def plot(self, columns):
+        """StS: show power predictions of this actor
+        """
         pd.concat(
             [self.pred[columns].add_suffix("_pred"), self.data[columns]], axis=1
         ).plot()
@@ -68,7 +69,8 @@ class Actor:
 
     def generate_order(self):
         """
-        ??
+        StS: generate new Order for the current timestep.
+        How much energy do I need/sell and how much am I willing to pay/receive?
         """
         # TODO calculate amount of energy to fulfil personal schedule
         energy = self.pred["schedule"][self.t]
@@ -86,8 +88,7 @@ class Actor:
 
     def receive_market_results(self, time, sign, energy, price):
         """
-        JuH: the empty dictionary created above gets the key "time". The values of the calculation "post" are inserted.
-
+        StS: callback function which updates the actor's traded property.
         Parameters
         ----------
         time: int
@@ -105,6 +106,8 @@ class Actor:
         self.traded[time] = post
 
     def to_dict(self):
+        """StS: returns dictionary with necessary information to recreate this actor from scratch. Orders and trades are not saved.
+"""
         return self.args
 
 
@@ -118,8 +121,8 @@ def create_random(actor_id):
 
     Returns
     -------
-    Object: Actor
-        specific actor with data about pv generation
+    Object: random Actor
+         random power need, PV and prices
     """
     # TODO improve random signals
     nb_ts = 24
