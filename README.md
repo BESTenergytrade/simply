@@ -34,3 +34,6 @@ A Setup consists of a parameter set and a data set.
 Includes all parameters that define decisions about the scenario variant
 ### data set
 Includes all time series and other data files that are used in the model
+
+## model
+D3A together with a specific set up is model 
