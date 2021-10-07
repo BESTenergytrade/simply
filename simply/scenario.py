@@ -43,19 +43,20 @@ class Scenario:
         dirpath.mkdir(parents=True, exist_ok=True)
 
         # save meta information
-        dirpath.joinpath('_meta.inf').write_text(json.dumps({"rng_seed": self.rng_seed}))
+        dirpath.joinpath('_meta.inf').write_text(json.dumps(
+            {"rng_seed": self.rng_seed}, indent=2))
 
         # save power network
         dirpath.joinpath('network.cfg').write_text(json.dumps({
             self.power_network.name: self.power_network.to_dict()
-        }))
+        }, indent=2))
 
         # save actors
         for actor in self.actors:
             dirpath.joinpath(f'actor_{actor.id}.cfg').write_text(json.dumps(actor.to_dict()))
 
         # save map_actors
-        dirpath.joinpath('map_actors.cfg').write_text(json.dumps(self.map_actors))
+        dirpath.joinpath('map_actors.cfg').write_text(json.dumps(self.map_actors, indent=2))
 
 
 def from_dict(scenario_dict):
