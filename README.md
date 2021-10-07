@@ -8,7 +8,7 @@ pip install -r requirements.txt
 
 python main.py
 ```
-simulaton set ups
+simulation set ups
 ==================
     actor time series
         ◦ load profile types: households, commerce/industry
