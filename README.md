@@ -37,3 +37,10 @@ Includes all time series and other data files that are used in the model
 
 ## model
 D3A together with a specific set up is a model  
+
+## schedule
+Time series of energy quantities that should be traded.
+It is generated taking all energy assets at the prosumer site, flexibilities and future market prices into account.
+It is the output of obs-d/bidding agent.
+It is not clear if such a thing will exist in final simulations since it might be that only bids and asks for the next market period will be 
+calculated by OBS-d.
