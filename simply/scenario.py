@@ -111,10 +111,10 @@ def load(dirpath):
     return Scenario(pn, actors, map_actors, rng_seed)
 
 
-def create_random(num_nodes, num_actors):
+def create_random(num_nodes, num_actors, cfg):
     assert num_actors < num_nodes
     pn = power_network.create_random(num_nodes)
-    actors = [actor.create_random(i) for i in range(num_actors)]
+    actors = [actor.create_random(i, cfg) for i in range(num_actors)]
 
     # Add actor nodes at random position in the network
     # One network node can contain several actors (using random.choices method)
@@ -123,11 +123,11 @@ def create_random(num_nodes, num_actors):
     return Scenario(pn, actors, map_actors)
 
 
-def create_random2(num_nodes, num_actors):
+def create_random2(num_nodes, num_actors, cfg):
     assert num_actors < num_nodes
     # num_actors has to be much smaller than num_nodes
     pn = power_network.create_random(num_nodes)
-    actors = [actor.create_random(i) for i in range(num_actors)]
+    actors = [actor.create_random(i, cfg) for i in range(num_actors)]
 
     # Give actors a random position in the network
     actor_nodes = random.sample(pn.leaf_nodes, num_actors)

@@ -9,7 +9,7 @@ Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
 
 class Actor:
-    def __init__(self, actor_id, df, ls=1, ps=1.5, pm={}):
+    def __init__(self, actor_id, df, ls, ps, pm={}, cfg=None):
         """
         Actor is the representation of a prosumer with ressources (load, photovoltaic)
 
@@ -20,15 +20,16 @@ class Actor:
         :param pm: (optional)
         """
         # TODO add battery component
+        #cfg.read(Path('./scenarios/default/constants.cfg'))
         self.id = actor_id
-        self.t = 0
-        self.horizon = 24
-        self.load_scale = ls
-        self.pv_scale = ps
+        self.t = cfg.getint('actor', 'start')
+        self.horizon = cfg.getint('actor', 'horizon')
+        self.load_scale = cfg.getint('actor', 'ls')
+        self.pv_scale = cfg.getint('actor', 'ps')
         self.battery = None
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
-        for column, scale in [("load", ls), ("pv", ps), ("prices", 1)]:
+        for column, scale in [("load", ls), ("pv", ps), ("prices", cfg.getint('actor', 'prices'))]:
             self.data[column] = scale * df[column]
             try:
                 prediction_multiplier = np.array(pm[column])
@@ -81,7 +82,7 @@ class Actor:
         return self.args
 
 
-def create_random(actor_id):
+def create_random(actor_id, cfg):
     # TODO improve random signals
     nb_ts = 24
     time_idx = pd.date_range("2021-01-01", freq="H", periods=nb_ts)
@@ -92,4 +93,4 @@ def create_random(actor_id):
     # Multiply random generation signal with gaussian/PV-like characteristic
     day_ts = np.linspace(0, 24, 24)
     df["pv"] *= gaussian_pv(day_ts, 12, 3)
-    return Actor(actor_id, df)
+    return Actor(actor_id, df, cfg = cfg)

@@ -3,6 +3,8 @@
 import pandas as pd
 from pathlib import Path
 import numpy as np
+import configparser
+import os
 
 from simply import scenario, market, market_2pac, market_fair
 from simply.util import summerize_actor_trading
@@ -10,12 +12,23 @@ from simply.util import summerize_actor_trading
 show_plots = False
 show_prints = False
 
+"""cfg_file = os.path.join(scenarios_path, 'constants.cfg')
+if not os.path.isfile(cfg_file):
+    raise FileNotFoundError(f'Config file {cfg_file} not found.')
+try:
+    cfg.read(cfg_file)
+except Exception:
+    raise FileNotFoundError(f'Cannot read config file {cfg_file} - malformed?')
+"""
 # TODO Config, datetime, etc.
 class Config:
-    def __init__(self):
-        self.start = 8
-        self.nb_ts = 3
-        self.step_size = 1
+    def __init__(self, path='./scenarios/default/constants.cfg'):
+        self.cfg = configparser.ConfigParser()
+        self.cfg.read(Path(path))
+        #print(cfg.getint('base', 'start'))
+        self.start = self.cfg.getint('base', 'start')
+        self.nb_ts = self.cfg.getint('base', 'steps')
+        self.step_size = self.cfg.getint('base', 'stepsize')
         self.list_ts = np.linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
         self.path = Path('./scenarios/default')
         self.update_scenario = False
@@ -27,7 +40,7 @@ if __name__ == "__main__":
     if cfg.path.exists() and not cfg.update_scenario:
         sc = scenario.load(cfg.path)
     else:
-        sc = scenario.create_random(12, 11)
+        sc = scenario.create_random(12, 11, cfg.cfg)
         sc.save(cfg.path)
 
     # TODO make output folder for config file, output series (csv, plot) files
