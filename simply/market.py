@@ -43,7 +43,7 @@ class Market:
     def clear(self, reset=True):
         # TODO match bids
         matches = self.match()
-        self.matches += matches
+        self.matches.append(matches)
 
         for match in matches:
             bid_actor_callback = self.actor_callback[match["bid_actor"]]
