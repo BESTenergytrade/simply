@@ -1,6 +1,8 @@
 import pandas as pd
 import random
 
+import simply.config as cfg
+
 
 class Market:
     def __init__(self, time):
@@ -12,7 +14,7 @@ class Market:
         self.order_df = None
         self.trades = None
         self.matches = {}
-        self.energy_unit = 0.1
+        self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
         self.actor_callback = {}
 
     def get_bids(self):

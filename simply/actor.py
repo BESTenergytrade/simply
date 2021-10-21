@@ -4,6 +4,7 @@ from collections import namedtuple
 import matplotlib.pyplot as plt
 
 from simply.util import gaussian_pv
+import simply.config as cfg
 
 Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
@@ -22,7 +23,7 @@ class Actor:
         # TODO add battery component
         self.id = actor_id
         self.t = 0
-        self.horizon = 24
+        self.horizon = cfg.parser.get("actor", "horizon", fallback=24)
         self.load_scale = ls
         self.pv_scale = ps
         self.battery = None
