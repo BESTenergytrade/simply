@@ -47,19 +47,22 @@ class Scenario:
         dirpath.mkdir(parents=True, exist_ok=True)
 
         # save meta information
-        dirpath.joinpath('_meta.inf').write_text(json.dumps({"rng_seed": self.rng_seed}))
+        dirpath.joinpath('_meta.inf').write_text(json.dumps({"rng_seed": self.rng_seed}, indent=2))
 
         # save power network
-        dirpath.joinpath('network.cfg').write_text(json.dumps({
-            self.power_network.name: self.power_network.to_dict()
-        }))
+        dirpath.joinpath('network.cfg').write_text(
+            json.dumps(
+                { self.power_network.name: self.power_network.to_dict() },
+                indent=2,
+            )
+        )
 
         # save actors
         for actor in self.actors:
-            dirpath.joinpath(f'actor_{actor.id}.cfg').write_text(json.dumps(actor.to_dict()))
+            dirpath.joinpath(f'actor_{actor.id}.cfg').write_text(json.dumps(actor.to_dict(), indent=2))
 
         # save map_actors
-        dirpath.joinpath('map_actors.cfg').write_text(json.dumps(self.map_actors))
+        dirpath.joinpath('map_actors.cfg').write_text(json.dumps(self.map_actors, indent=2))
 
 
 def from_dict(scenario_dict):
@@ -116,6 +119,7 @@ def load(dirpath):
 
 
 def create_random(num_nodes, num_actors):
+    assert num_actors < num_nodes
     pn = power_network.create_random(num_nodes)
     actors = [actor.create_random(i) for i in range(num_actors)]
     # actors = create_households_from_csv('..\data\households', num_actors)
@@ -127,6 +131,7 @@ def create_random(num_nodes, num_actors):
 
 
 def create_random2(num_nodes, num_actors):
+    assert num_actors < num_nodes
     # num_actors has to be much smaller than num_nodes
     pn = power_network.create_random(num_nodes)
     actors = [actor.create_random(i) for i in range(num_actors)]

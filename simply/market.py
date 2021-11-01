@@ -1,38 +1,27 @@
 import pandas as pd
 import random
 
+from simply.actor import Order
 
 class Market:
-    def __init__(self, time):
+    def __init__(self, time, network=None):
         # TODO tbd if lists or dicts or ... is used
+        self.orders = pd.DataFrame()
         self.t = time
-        self.asks = []
-        self.bids = []
-        self.orders = []
-        self.order_df = None
-        self.trades = None
-        self.matches = {}
+        self.matches = []
         self.energy_unit = 0.1
         self.actor_callback = {}
+        self.network = network
 
     def get_bids(self):
-        self.get_order_df()
-        return self.order_df[self.order_df["type"] == 1]
+        return self.orders[self.orders["type"] == 1]
 
     def get_asks(self):
-        self.get_order_df()
-        return self.order_df[self.order_df["type"] == -1]
-
-    def get_order_df(self):
-        self.order_df = pd.DataFrame(self.orders)
-        return self.order_df
-
-    def get_all_matches(self):
-        return self.matches
+        return self.orders[self.orders["type"] == -1]
 
     def print(self):
-        print(pd.DataFrame(self.bids))
-        print(pd.DataFrame(self.asks))
+        print(self.get_bids())
+        print(self.get_asks())
 
     def accept_order(self, order, callback):
         """
@@ -41,49 +30,61 @@ class Market:
         :return:
         """
         assert order.time == self.t
-        self.orders.append(order)
-        if order.type == -1:
-            self.bids.append(order)
-        elif order.type == 1:
-            self.asks.append(order)
-        else:
-            raise ValueError
+        assert order.type in [-1, 1]
+        # make certain energy has step size of energy_unit
+        energy = (order.energy // self.energy_unit) * self.energy_unit
+        # make certain enough energy is traded
+        if energy < self.energy_unit:
+            return
+        unit_order = Order(order.type, order.time, order.actor_id, energy, order.price)
+        self.orders = self.orders.append(pd.DataFrame([unit_order]), ignore_index=True)
         self.actor_callback[order.actor_id] = callback
 
-    def clear(self):
+    def clear(self, reset=True):
         # TODO match bids
-        self.matches = self.match()
-        trades = self.order_df.iloc[
-            list(self.matches.keys()) + list(self.matches.values())
-        ]
-        self.trades = trades
-        # Send cleared bids and asks to actors for further processing via callback
-        for a_id, ac in self.actor_callback.items():
-            # TODO simplify with one order book
-            a_trades = trades[trades["actor_id"] == a_id]
-            if not a_trades.empty:
-                assert (a_trades["type"].iloc[0] == a_trades["type"]).all()
-                energy = a_trades.count()[0] * self.energy_unit
-                price = a_trades["price"].mean() * self.energy_unit
-                # TODO replace cleared values by namedtuple
-                ac(self.t, a_trades["type"].iloc[0], energy, price)
+        matches = self.match()
+        self.matches.append(matches)
+
+        for match in matches:
+            bid_actor_callback = self.actor_callback[match["bid_actor"]]
+            ask_actor_callback = self.actor_callback[match["ask_actor"]]
+            energy = match["energy"]
+            price = match["price"]
+            bid_actor_callback(self.t, 1, energy, price)
+            ask_actor_callback(self.t,-1, energy, price)
+
+        if reset:
+            # don't retain orders for next cycle
+            self.orders = pd.DataFrame()
+        else:
+            # remove fully matched orders
+            self.orders = self.orders[self.orders.energy >= self.energy_unit]
 
     def match(self, show=False):
         # TODO default match can be replaced in different subclass
-        orders = self.get_order_df()
-        # Expand bids/asks to fixed energy quantity bids/asks with individual order ids
-        self.order_df = (
-            orders.reindex(orders.index.repeat(orders["energy"] / self.energy_unit))
-            .drop("energy", axis=1)
-            .reset_index()
-        )
-        bid_ids = list(self.order_df[self.order_df["type"] == 1].index)
-        ask_ids = list(self.order_df[self.order_df["type"] == -1].index)
-        if show:
-            print(self.order_df)
+        bids = self.get_bids()
+        asks = self.get_asks()
 
-        # Do the actual matching
-        bid_ids = random.sample(bid_ids, min(len(ask_ids), len(bid_ids)))
-        matches = {b: a for b, a in zip(bid_ids, ask_ids)}
+        # pay as bid. First come, first served
+        matches = []
+        for ask_id, ask in asks.iterrows():
+            for bid_id, bid in bids.iterrows():
+                if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit and ask.price <= bid.price:
+                    # match ask and bid
+                    energy = min(ask.energy, bid.energy)
+                    ask.energy -= energy
+                    bid.energy -= energy
+                    self.orders.loc[ask_id] = ask
+                    self.orders.loc[bid_id] = bid
+                    matches.append({
+                        "time": self.t,
+                        "bid_actor": int(bid.actor_id),
+                        "ask_actor": int(ask.actor_id),
+                        "energy": energy,
+                        "price": bid.price
+                    })
+
+        if show:
+            print(matches)
 
         return matches
