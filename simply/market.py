@@ -88,3 +88,11 @@ class Market:
             print(matches)
 
         return matches
+
+    def save_matches(self, filename='matches.csv'):
+        matches_df = pd.concat(
+            [pd.DataFrame.from_dict(self.matches[i]) for i in range(len(self.matches))]
+        ).reset_index()
+        matches_df.to_csv(filename)
+
+        return matches_df

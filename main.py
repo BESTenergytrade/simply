@@ -9,6 +9,7 @@ from simply.util import summerize_actor_trading
 
 show_plots = False
 show_prints = False
+save_csv = False
 
 # TODO Config, datetime, etc.
 class Config:
@@ -55,3 +56,7 @@ if __name__ == "__main__":
 
     # print("\nTraded energy volume and price at actor level")
     # print(summerize_actor_trading(sc))
+
+    if save_csv:
+        m.orders.to_csv('orders.csv')
+        matches_df = m.save_matches()
