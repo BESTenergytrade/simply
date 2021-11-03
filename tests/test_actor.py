@@ -20,11 +20,20 @@ class TestActor:
         # time, sign, energy, price
         a = Actor(0, self.df)
         o = a.generate_order()
+        assert o.time == 0
         a.receive_market_results(o.time, o.type, o.energy/4, o.price)
-        assert len(a.traded[0]) == 1
+        # must be tuple at key 0 (current time)
+        assert len(a.traded[0]) == 2
+        # must have one energy and one price
+        assert len(a.traded[0][0]) == 1
+        assert len(a.traded[0][1]) == 1
         # double matches should not overwrite each other
         a.receive_market_results(o.time, o.type, o.energy/2, o.price)
+        # must still be tuple
         assert len(a.traded[0]) == 2
+        # tuple must now contain lists of len 2
+        assert len(a.traded[0][0]) == 2
+        assert len(a.traded[0][1]) == 2
 
     def test_create_random(self):
         a = create_random(0)
