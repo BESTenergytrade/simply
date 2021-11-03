@@ -7,7 +7,7 @@ from simply.actor import Order
 class Market:
     def __init__(self, time, network=None):
         # TODO tbd if lists or dicts or ... is used
-        self.orders = pd.DataFrame()
+        self.orders = pd.DataFrame(columns = Order._fields)
         self.t = time
         self.asks = []
         self.bids = []
@@ -30,19 +30,20 @@ class Market:
 
     def accept_order(self, order, callback):
         """
-        :param order: namedtuple namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
+        :param order: Order (type, time, actor_id, energy, price)
         :param callback: callback function
         :return:
         """
-        assert order.time == self.t
-        assert order.type in [-1, 1]
+        if order.time != self.t:
+            raise ValueError("Wrong order time ({}), market is at time {}".format(order.time, self.t))
+        if order.type not in [-1, 1]:
+            raise ValueError("Wrong order type ({})".format(order.type))
         # make certain energy has step size of energy_unit
         energy = (order.energy // self.energy_unit) * self.energy_unit
         # make certain enough energy is traded
         if energy < self.energy_unit:
             return
-        unit_order = Order(order.type, order.time, order.actor_id, energy, order.price)
-        self.orders = self.orders.append(pd.DataFrame([unit_order]), ignore_index=True)
+        self.orders = self.orders.append(pd.DataFrame([order]), ignore_index=True)
         self.actor_callback[order.actor_id] = callback
 
     def clear(self, reset=True):
@@ -66,14 +67,12 @@ class Market:
             self.orders = self.orders[self.orders.energy >= self.energy_unit]
 
     def match(self, show=False):
-        # TODO default match can be replaced in different subclass
-        bids = self.get_bids()
-        asks = self.get_asks()
-
         # pay as bid. First come, first served
+        # default match can be replaced in different subclass
+
         matches = []
-        for ask_id, ask in asks.iterrows():
-            for bid_id, bid in bids.iterrows():
+        for ask_id, ask in self.get_asks().iterrows():
+            for bid_id, bid in self.get_bids().iterrows():
                 if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit and ask.price <= bid.price:
                     # match ask and bid
                     energy = min(ask.energy, bid.energy)
