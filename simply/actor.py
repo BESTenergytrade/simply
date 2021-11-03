@@ -75,8 +75,10 @@ class Actor:
         # cleared market is in the past
         assert time < self.t
         assert sign in [-1, 1]
+        # append traded energy and price to actor's trading info
         post = (sign * energy, price)
-        self.traded[time] = post
+        pre = self.traded.get(time, ([], []))
+        self.traded[time] = tuple(e + [post[i]] for i,e in enumerate(pre))
 
     def to_dict(self):
         return self.args

@@ -8,13 +8,20 @@ import matplotlib.pyplot as plt
 class PowerNetwork:
     def __init__(self, name, network):
         self.name = name
-        self.network = network
         # TODO currently first leaf node is interpreted as root node which might change
-        self.leaf_nodes = sorted(n for n, d in self.network.degree() if d == 1)[1:]
-        self.short_paths = {}
+        self.leaf_nodes = sorted(n for n, d in network.degree() if d == 1)[1:]
+
+        #clusters: leaves with their parents (no weight between them)
+        for leaf in self.leaf_nodes:
+            for u,v,d in network.edges(leaf, data=True):
+                d["weight"] = 0
+
+        self.network = network
+        self.short_paths = None
+        self.update_shortest_paths()
 
     def update_shortest_paths(self):
-        self.short_paths = dict(nx.all_pairs_shortest_path(self.network))
+        self.short_paths = nx.shortest_path(self.network, weight="weight")
 
     def to_image(self, width, height):
         fig = self.plot(False)
@@ -50,17 +57,39 @@ class PowerNetwork:
             a = actor_nodes.pop()
             c = connections.pop()
             map[a] = c
-            self.network.add_edge(c, a)
+            self.network.add_edge(c, a, weight=round(random.random(), 1))
 
         return map
 
     def add_actors_map(self, map):
         base_id = max(self.network.nodes()) + 100
         for a, c in map.items():
-            self.network.add_edge(c, a + base_id)
+            self.network.add_edge(c, a + base_id, weight=round(random.random(), 4))
 
         return map
 
+    def get_path_weight(self, u, v):
+        # get weight of path between nodes
+        if u == v:
+            return 0
+        if self.short_paths is None:
+            self.update_shortest_paths()
+
+        path = self.short_paths[u][v]
+        path_weight = 0
+        u = path[0]
+        for v in path[1:]:
+            path_weight += self.network[u][v].get("weight", 0)
+            u = v
+        return path_weight
+
+    def get_cluster_weights(self, c1, c2):
+        # get all weighted pathlength between two clusters of nodes
+        weights = {u: {} for u in c1}
+        for u in c1:
+            for v in c2:
+                weights[u][v] = self.get_path_weight(u,v)
+        return weights
 
 def create_random(nodes):
     # TODO get number of leaves as parameter
@@ -94,4 +123,7 @@ def create_random2(nodes):
 
 def load_network():
     nw = nx.random_lobster(3, 0.5, 0.2)
+    # Add random weights in [0, 1] with 0.1 resolution
+    for e in nw.edges:
+        nw[e[0]][e[1]]["weight"] = random.randint(0, 10) * 0.1
     return PowerNetwork("random", nw)

@@ -2,9 +2,8 @@
 
 from argparse import ArgumentParser
 
-from simply import scenario
+from simply import scenario, market, market_2pac, market_fair
 from simply.config import Config
-from simply.market import Market
 from simply.util import summerize_actor_trading
 
 
@@ -22,28 +21,29 @@ if __name__ == "__main__":
     # TODO make output folder for config file and Scenario json files, output series in csv and plots files
 
     if cfg.show_plots:
+        sc.power_network.plot()
         sc.actors[0].plot(["load", "pv"])
 
     # Fast forward to interesting start interval for PV energy trading
     for a in sc.actors:
         a.t = cfg.start
 
+    m = market.Market(0)
+    # m = market_2pac.TwoSidedPayAsClear(0)
+    # m = market_fair.BestMarket(0, sc.power_network)
     for t in cfg.list_ts:
-        m = Market(t)
+        m.t = t
         for a in sc.actors:
             # TODO concurrent bidding of actors
             order = a.generate_order()
             m.accept_order(order, a.receive_market_results)
 
-        m.clear()
+        m.clear(reset=cfg.reset_market)
         if cfg.show_prints:
-            # print(sc.to_dict())
-            # m.print()
-            print("Matches of bid/ask ids: {}".format(m.get_all_matches()))
+            print("Matches of bid/ask ids: {}".format(m.matches))
             print(
                 "\nCheck individual traded energy blocks (splitted) and price at market level"
             )
-            print(m.trades)
 
     if cfg.show_prints:
         print("\nTraded energy volume and price at actor level")

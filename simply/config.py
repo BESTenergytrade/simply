@@ -5,6 +5,8 @@ from pathlib import Path
 class Config:
 
     def __init__(self, cfg_file):
+        global config
+        config = self
         global parser
         parser = ConfigParser()
         try:
@@ -22,5 +24,6 @@ class Config:
         self.update_scenario = parser.getboolean("default", "update_scenario", fallback=False)
         self.path = parser.get("default", "path", fallback = './scenarios/default')
         self.path = Path(self.path)
+        self.reset_market = parser.getboolean("default", "reset_market", fallback=False)
 
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
