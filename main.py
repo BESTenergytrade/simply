@@ -28,9 +28,15 @@ if __name__ == "__main__":
     for a in sc.actors:
         a.t = cfg.start
 
-    m = market.Market(0)
-    # m = market_2pac.TwoSidedPayAsClear(0)
-    # m = market_fair.BestMarket(0, sc.power_network)
+    # generate requested market
+    if "pac" in cfg.market_type:
+        m = market_2pac.TwoSidedPayAsClear(0)
+    elif cfg.market_type in ["fair", "merit"]:
+        m = market_fair.BestMarket(0, sc.power_network)
+    else:
+        # default
+        m = market.Market(0)
+
     for t in cfg.list_ts:
         m.t = t
         for a in sc.actors:
