@@ -1,6 +1,7 @@
 import pandas as pd
 import random
 
+import simply.config as cfg
 from simply.actor import Order
 
 class Market:
@@ -8,8 +9,12 @@ class Market:
         # TODO tbd if lists or dicts or ... is used
         self.orders = pd.DataFrame(columns = Order._fields)
         self.t = time
+        self.asks = []
+        self.bids = []
+        self.order_df = None
+        self.trades = None
         self.matches = []
-        self.energy_unit = 0.1
+        self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
         self.actor_callback = {}
         self.network = network
 
@@ -43,7 +48,7 @@ class Market:
 
     def clear(self, reset=True):
         # TODO match bids
-        matches = self.match()
+        matches = self.match(show=cfg.config.show_plots)
         self.matches.append(matches)
 
         for match in matches:
