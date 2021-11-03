@@ -51,7 +51,7 @@ class TwoSidedPayAsClear(Market):
                     # bid finished: next bid
                     try:
                         bid_id, bid = next(bid_iter)
-                    except IndexError:
+                    except StopIteration:
                         bid = None
 
         # adjust price to market clearing price (highest asking price)
