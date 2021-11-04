@@ -9,9 +9,6 @@ class Market:
         # TODO tbd if lists or dicts or ... is used
         self.orders = pd.DataFrame(columns = Order._fields)
         self.t = time
-        self.asks = []
-        self.bids = []
-        self.order_df = None
         self.trades = None
         self.matches = []
         self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
