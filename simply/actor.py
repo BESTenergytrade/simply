@@ -26,6 +26,7 @@ class Actor:
         self.horizon = cfg.parser.get("actor", "horizon", fallback=24)
         self.load_scale = ls
         self.pv_scale = ps
+        self.error_scale = 0
         self.battery = None
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
@@ -38,7 +39,7 @@ class Actor:
             try:
                 prediction_multiplier = np.array(pm[column])
             except KeyError:
-                prediction_multiplier = 0.1 * np.random.rand(self.horizon)
+                prediction_multiplier = self.error_scale * np.random.rand(self.horizon)
                 pm[column] = prediction_multiplier.tolist()
             self.pred[column] = self.data[column].iloc[self.t : self.t + self.horizon] + prediction_multiplier
 
