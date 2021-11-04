@@ -37,7 +37,7 @@ class BestMarket(Market):
                     if v in node_to_cluster:
                         # already visited
                         continue
-                    if edge[2].get("weight") == 0:
+                    if edge[2].get("weight", 0) == 0:
                         # weight zero: part of cluster
                         # add to cluster set
                         self.clusters[-1].add(v)
@@ -55,16 +55,18 @@ class BestMarket(Market):
         bids = self.get_bids()
         if len(asks) == 0 or len(bids) == 0:
             # no asks or bids at all: no matches
-            return {}
+            return []
 
         # split asks and bids into smallest energy unit, save original index
         asks = pd.DataFrame(asks)
         asks["order_id"] = asks.index
-        asks = pd.DataFrame(asks.values.repeat(asks.energy / self.energy_unit, axis=0), columns=asks.columns)
+        asks = pd.DataFrame(asks.values.repeat(
+            asks.energy * (1/self.energy_unit), axis=0), columns=asks.columns)
         asks.energy = self.energy_unit
         bids = pd.DataFrame(bids)
         bids["order_id"] = bids.index
-        bids = pd.DataFrame(bids.values.repeat(bids.energy / self.energy_unit, axis=0), columns=bids.columns)
+        bids = pd.DataFrame(bids.values.repeat(
+            bids.energy * (1/self.energy_unit), axis=0), columns=bids.columns)
         bids.energy = self.energy_unit
 
         # keep track which clusters have to be (re)matched
