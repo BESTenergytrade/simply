@@ -13,11 +13,20 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     cfg = Config(args.config)
-    if cfg.path.exists() and not cfg.update_scenario:
-        sc = scenario.load(cfg.path)
+    # Load scenario, if path exists with the correct format
+    # otherwise remove all files in existing folder and create new scenario
+    scenario_exists = len([False for i in cfg.path.glob(f"actor_*.{cfg.data_format}")]) != 0
+    if scenario_exists and not cfg.update_scenario:
+        sc = scenario.load(cfg.path, cfg.data_format)
     else:
-        sc = scenario.create_random(12, 11)
-        sc.save(cfg.path)
+        if cfg.path.exists():
+            # Remove all files in scenario folder
+            for f in cfg.path.iterdir():
+                f.unlink()
+        nb_actors = 11
+        nb_nodes = 12
+        sc = scenario.create_random(nb_nodes, nb_actors)
+        sc.save(cfg.path, cfg.data_format)
     # TODO make output folder for config file and Scenario json files, output series in csv and plots files
 
     if cfg.show_plots:
