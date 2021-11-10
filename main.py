@@ -54,3 +54,7 @@ if __name__ == "__main__":
     if cfg.show_prints:
         print("\nTraded energy volume and price at actor level")
         print(summerize_actor_trading(sc))
+
+    if cfg.save_csv:
+        m.orders.to_csv(cfg.path / 'orders.csv')
+        matches_df = m.save_matches(cfg.path / 'matches.csv')

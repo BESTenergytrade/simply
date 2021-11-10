@@ -32,6 +32,8 @@ class Config:
         self.show_plots = parser.getboolean("default", "show_plots", fallback=False)
         # print debug info to console
         self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
+        # save orders and matching results to csv files
+        self.save_csv = parser.getboolean("default", "save_csv", fallback=True)
 
         # path of scenario file to load and/or store
         self.path = parser.get("default", "path", fallback = "./scenarios/default")
