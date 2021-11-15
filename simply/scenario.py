@@ -54,14 +54,15 @@ class Scenario:
         )
 
         # save actors
-        external = data_format == "csv"
-        if external:
+        if data_format == "csv":
+            # Save data in separate csv file and all actors in one config file
             a_dict = {}
             for actor in self.actors:
                 a_dict[actor.id] = actor.to_dict(external_data=True)
                 actor.save_csv(dirpath)
             dirpath.joinpath(f'actors.cfg').write_text(json.dumps(a_dict, indent=2))
         else:
+            # Save config and data per actor in a single file
             for actor in self.actors:
                 dirpath.joinpath(f'actor_{actor.id}.cfg').write_text(
                     json.dumps(actor.to_dict(external_data=False), indent=2)
