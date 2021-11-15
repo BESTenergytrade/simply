@@ -20,9 +20,8 @@ if __name__ == "__main__":
         sc = scenario.load(cfg.path, cfg.data_format)
     else:
         if cfg.path.exists():
-            # Remove all files in scenario folder
-            for f in cfg.path.iterdir():
-                f.unlink()
+            raise Exception('The path: ' + str(cfg.path) + ' already exists with another file structure. '
+                            'Please remove or rename folder to avoid confusion and restart simulation.')
         nb_actors = 11
         nb_nodes = 12
         sc = scenario.create_random(nb_nodes, nb_actors)
