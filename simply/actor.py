@@ -10,7 +10,7 @@ Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
 
 class Actor:
-    def __init__(self, actor_id, df, ls=1, ps=1.5, pm={}):
+    def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}):
         """
         Actor is the representation of a prosumer with ressources (load, photovoltaic)
 
@@ -26,15 +26,20 @@ class Actor:
         self.horizon = cfg.parser.get("actor", "horizon", fallback=24)
         self.load_scale = ls
         self.pv_scale = ps
+        self.error_scale = 0
         self.battery = None
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
+        if csv is not None:
+            self.csv_file = csv
+        else:
+            self.csv_file = f'actor_{actor_id}.csv'
         for column, scale in [("load", ls), ("pv", ps), ("prices", 1)]:
             self.data[column] = scale * df[column]
             try:
                 prediction_multiplier = np.array(pm[column])
             except KeyError:
-                prediction_multiplier = 0.1 * np.random.rand(self.horizon)
+                prediction_multiplier = self.error_scale * np.random.rand(self.horizon)
                 pm[column] = prediction_multiplier.tolist()
             self.pred[column] = self.data[column].iloc[self.t : self.t + self.horizon] + prediction_multiplier
 
@@ -42,7 +47,7 @@ class Actor:
         self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
         self.orders = []
         self.traded = {}
-        self.args = {"id": actor_id, "df": df.to_json(), "ls": ls, "ps": ps, "pm": pm}
+        self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps, "pm": pm}
 
     def plot(self, columns):
         pd.concat(
@@ -80,8 +85,17 @@ class Actor:
         pre = self.traded.get(time, ([], []))
         self.traded[time] = tuple(e + [post[i]] for i,e in enumerate(pre))
 
-    def to_dict(self):
-        return self.args
+    def to_dict(self, external_data=False):
+        if external_data:
+            args_no_df = {
+                "id": self.id, "df": {}, "csv": self.csv_file, "ls": self.load_scale, "ps": self.pv_scale, "pm": {}
+            }
+            return args_no_df
+        else:
+            return self.args
+
+    def save_csv(self, dirpath):
+        self.data.to_csv(dirpath.joinpath(self.csv_file))
 
 
 def create_random(actor_id):
