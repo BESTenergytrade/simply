@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 class PowerNetwork:
     def __init__(self, name, network):
         self.name = name
-        # TODO currently first leaf node is interpreted as root node which might change
-        self.leaf_nodes = sorted(n for n, d in network.degree() if d == 1)[1:]
+        # all leaf nodes are potential connection points for actors
+        self.leaf_nodes = sorted(n for n, d in network.degree() if d == 1)
 
         #clusters: leaves with their parents (no weight between them)
         for leaf in self.leaf_nodes:
@@ -47,11 +47,9 @@ class PowerNetwork:
         json.dump(net_json, open(filename, "w"), indent=2)
 
     def add_actors_random(self, actors):
-        base_id = max(self.network.nodes()) + 100
-        num_actors = len(actors)
-        actor_nodes = list([*range(base_id, base_id + len(actors), 1)])
+        actor_nodes = list([a.id for a in actors])
         random.shuffle(actor_nodes)
-        connections = random.choices(self.leaf_nodes, k=num_actors)
+        connections = random.choices(self.leaf_nodes, k=len(actors))
         map = {}
         while actor_nodes:
             a = actor_nodes.pop()
@@ -59,12 +57,15 @@ class PowerNetwork:
             map[a] = c
             self.network.add_edge(c, a, weight=round(random.random(), 1))
 
+        # The Actor knows its grid connection node ID
+        for a in actors:
+            a.grid_id = map[a.id]
+
         return map
 
     def add_actors_map(self, map):
-        base_id = max(self.network.nodes()) + 100
         for a, c in map.items():
-            self.network.add_edge(c, a + base_id, weight=round(random.random(), 4))
+            self.network.add_edge(c, a, weight=round(random.random(), 1))
 
         return map
 
@@ -91,8 +92,8 @@ class PowerNetwork:
                 weights[u][v] = self.get_path_weight(u,v)
         return weights
 
+
 def create_random(nodes):
-    # TODO get number of leaves as parameter
     nw = nx.random_tree(nodes)
 
     # Add random weights in [0, 1] with 0.1 resolution
@@ -103,11 +104,10 @@ def create_random(nodes):
 
 
 def create_random2(nodes):
-    # TODO get number of leaves as parameter
     nw = nx.random_tree(nodes)
+    # TODO check also: nx.balanced_tree(branches, height)
 
-    # TODO might be useful to add actors as additional nodes after creation
-    leaf_nodes = sorted(n for n, d in nw.degree() if d == 1)[1:]
+    leaf_nodes = sorted(n for n, d in nw.degree() if d == 1)
     offset = 0
     for n in leaf_nodes:
         for i in range(random.randint(2, 5)):

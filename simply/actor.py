@@ -22,6 +22,7 @@ class Actor:
         """
         # TODO add battery component
         self.id = actor_id
+        self.grid_id = None
         self.t = 0
         self.horizon = cfg.parser.get("actor", "horizon", fallback=24)
         self.load_scale = ls

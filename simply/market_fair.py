@@ -120,8 +120,8 @@ class BestMarket(Market):
                         # bid and ask match: append to local solution
                         _matches.append({
                             "time": self.t,
-                            "bid_actor": int(bid.actor_id),
-                            "ask_actor": int(ask.actor_id),
+                            "bid_actor": bid.actor_id,
+                            "ask_actor": ask.actor_id,
                             "energy": self.energy_unit,
                             "price": ask.adjusted_price,
                             # only for removing doubles later
