@@ -25,6 +25,7 @@ class Actor:
         self.grid_id = None
         self.t = 0
         self.horizon = cfg.parser.get("actor", "horizon", fallback=24)
+
         self.load_scale = ls
         self.pv_scale = ps
         self.error_scale = 0
@@ -44,8 +45,11 @@ class Actor:
                 pm[column] = prediction_multiplier.tolist()
             self.pred[column] = self.data[column].iloc[self.t : self.t + self.horizon] + prediction_multiplier
 
-        # perfect foresight
-        self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
+        if "schedule" in df.columns:
+            self.pred["schedule"] = df["schedule"]
+        else:
+            # perfect foresight
+            self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
         self.orders = []
         self.traded = {}
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps, "pm": pm}
@@ -60,10 +64,6 @@ class Actor:
         # TODO calculate amount of energy to fulfil personal schedule
         energy = self.pred["schedule"][self.t]
         # TODO simulate strategy: manipulation, etc.
-        # TODO replace price update by realistic net price timeseries
-        # Quick fix: Adapt order price to compensate due to net pricing of ask orders
-        net_price_factor = 0.3
-        self.pred["prices"][self.t] -= (energy < 0) * net_price_factor * self.pred["prices"][self.t]
         price = self.pred["prices"][self.t]
         # TODO take flexibility into account to generate the bid
 
@@ -96,18 +96,36 @@ class Actor:
             return self.args
 
     def save_csv(self, dirpath):
-        self.data.to_csv(dirpath.joinpath(self.csv_file))
+        # TODO if "predicted" values do not equal actual time series values, also errors need to be saved
+        if self.error_scale != 0:
+            raise Exception('Prediction Error is not yet implemented!')
+        save_df = pd.concat([self.data[["load", "pv"]], self.pred[["schedule", "prices"]]], axis=1)
+        save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
 def create_random(actor_id):
     # TODO improve random signals
     nb_ts = 24
     time_idx = pd.date_range("2021-01-01", freq="H", periods=nb_ts)
-    cols = ["load", "pv", "prices"]
+    cols = ["load", "pv", "schedule", "prices"]
     values = np.random.rand(nb_ts, len(cols))
     df = pd.DataFrame(values, columns=cols, index=time_idx)
 
     # Multiply random generation signal with gaussian/PV-like characteristic
     day_ts = np.linspace(0, 24, 24)
     df["pv"] *= gaussian_pv(day_ts, 12, 3)
-    return Actor(actor_id, df)
+
+    # Scale generation, load and price time series
+    ls = 0.7
+    ps = 1.5
+    df["schedule"] = ps * df["pv"] - ls * df["load"]
+    max_price = 0.3
+    df["prices"] *= max_price
+    # Adapt order price by a factor to compensate net pricing of ask orders (i.e. positive power)
+    # Bids however include network charges
+    net_price_factor = 0.7
+    df["prices"] = df.apply(
+        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor * slot["prices"], axis=1
+    )
+
+    return Actor(actor_id, df, ls=ls, ps=ps)
