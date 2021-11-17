@@ -16,10 +16,10 @@ class Market:
         self.network = network
 
     def get_bids(self):
-        return self.orders[self.orders["type"] == 1]
+        return self.orders[self.orders["type"] == -1]
 
     def get_asks(self):
-        return self.orders[self.orders["type"] == -1]
+        return self.orders[self.orders["type"] == 1]
 
     def print(self):
         print(self.get_bids())
