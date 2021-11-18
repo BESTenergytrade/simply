@@ -22,11 +22,12 @@ if __name__ == "__main__":
         if cfg.path.exists():
             raise Exception('The path: ' + str(cfg.path) + ' already exists with another file structure. '
                             'Please remove or rename folder to avoid confusion and restart simulation.')
-        nb_actors = 11
-        nb_nodes = 12
+        # TODO Use config file for scenario generation
+        nb_actors = 5
+        nb_nodes = 3
         sc = scenario.create_random(nb_nodes, nb_actors)
         sc.save(cfg.path, cfg.data_format)
-    # TODO make output folder for config file and Scenario json files, output series in csv and plots files
+    # TODO output folder: add plots files
 
     if cfg.show_plots:
         sc.power_network.plot()
