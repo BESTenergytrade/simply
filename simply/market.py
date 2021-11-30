@@ -21,6 +21,19 @@ class Market:
     def get_asks(self):
         return self.orders[self.orders["type"] == 1]
 
+    def get_order_dict(self):
+        asks = self.get_asks()
+        bids = self.get_bids()
+
+        data = {
+            "market_1": {
+                "bids": bids.to_dict('records'),
+                "offers": asks.to_dict('records')
+            }
+        }
+
+        return data
+
     def print(self):
         print(self.get_bids())
         print(self.get_asks())
