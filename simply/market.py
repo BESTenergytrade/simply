@@ -93,7 +93,7 @@ class Market:
         default match can be replaced in different subclass
 
         :param data: (Dict[str, Dict]) in format: {"market_name": {{'bids': []], 'offers': []}}
-        :param energy_unit: minimal volue that can be traded
+        :param energy_unit: minimal value that can be traded
         :param show: (Bool), print final matches
         :return: matches: (Dict) matched orders respectively
         """

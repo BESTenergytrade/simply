@@ -6,6 +6,7 @@ is lower then the bidding price.
 
 """
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from simply.market import Market
 
@@ -16,13 +17,28 @@ class TwoSidedPayAsClear(Market):
     The matched energy value is substracted from its initial asking/bidding value till its smaller then 100 kWh
     (100 kWh because its the lowest tradable value).
     """
-    def match(self, show=True):
-        # order orders by price
-        bids = self.get_bids().sort_values(["price", "energy"], ascending=False)
-        asks = self.get_asks().sort_values(["price", "energy"], ascending=True)
+    def match(self, data, energy_unit=0.1, show=False):
+        """
+        pay as clear. merit order
 
-        if len(bids) == 0 or len(asks) == 0:
-            # no bids or no asks: no match
+        :param data: (Dict[str, Dict]) in format: {"market_name": {{'bids': []], 'offers': []}}
+        :param energy_unit: (default: 0.1) minimal energy block in kWh that can be traded
+        :param show: (Bool), print final matches
+        :return: matches: (Dict) matched orders respectively
+        """
+        # only a single market is expected
+        assert len(data.items()) == 1
+        bids = pd.DataFrame(data.get(list(data.keys())[0]).get("bids"))
+        asks = pd.DataFrame(data.get(list(data.keys())[0]).get("offers"))
+        # keep track of unmatched orders (currently only for debugging purposes)
+        orders = pd.concat([bids, asks]).set_index('id')
+
+        # order orders by price
+        bids = bids.sort_values(["price", "energy"], ascending=False)
+        asks = asks.sort_values(["price", "energy"], ascending=True)
+
+        if len(asks) == 0 or len(bids) == 0:
+            # no asks or bids at all: no matches
             return {}
 
         # match!
@@ -35,19 +51,21 @@ class TwoSidedPayAsClear(Market):
                 energy = min(ask.energy, bid.energy)
                 ask.energy -= energy
                 bid.energy -= energy
-                self.orders.loc[ask_id] = ask
-                self.orders.loc[bid_id] = bid
+                # TODO: unmatched orders are not updated/ returned
+                orders.loc[ask.id] = ask.drop('id')
+                orders.loc[bid.id] = bid.drop('id')
+                assert bid.time == ask.time
                 matches.append({
-                    "time": self.t,
+                    "time": bid.time,
                     "bid_actor": bid.actor_id,
                     "ask_actor": ask.actor_id,
                     "energy": energy,
                     "price": ask.price
                 })
-                if ask.energy < self.energy_unit:
+                if ask.energy < energy_unit:
                     # ask finished: next ask
                     break
-                if bid.energy < self.energy_unit:
+                if bid.energy < energy_unit:
                     # bid finished: next bid
                     try:
                         bid_id, bid = next(bid_iter)
