@@ -1,13 +1,14 @@
 import pandas as pd
 import random
+from typing import Dict
 
 import simply.config as cfg
 from simply.actor import Order
 
+
 class Market:
     def __init__(self, time, network=None):
-        # TODO tbd if lists or dicts or ... is used
-        self.orders = pd.DataFrame(columns = Order._fields)
+        self.orders = pd.DataFrame(columns=Order._fields).rename_axis('id')
         self.t = time
         self.trades = None
         self.matches = []
@@ -57,10 +58,20 @@ class Market:
         self.actor_callback[order.actor_id] = callback
 
     def clear(self, reset=True):
-        # TODO match bids
-        matches = self.match(show=cfg.config.show_plots)
+        # add final order id to book
+        self.orders = self.orders.rename_axis('id').reset_index()
+        if reset:
+            assert (self.orders['time'] == self.t).all()
+
+        # Match bids and asks
+        matches = self.match(
+            self.get_order_dict(),
+            self.energy_unit,
+            show=cfg.config.show_plots
+        )
         self.matches.append(matches)
 
+        # Send actors information about traded volume and price
         for match in matches:
             bid_actor_callback = self.actor_callback[match["bid_actor"]]
             ask_actor_callback = self.actor_callback[match["ask_actor"]]
@@ -76,22 +87,40 @@ class Market:
             # remove fully matched orders
             self.orders = self.orders[self.orders.energy >= self.energy_unit]
 
-    def match(self, show=False):
-        # pay as bid. First come, first served
-        # default match can be replaced in different subclass
+    def match(self, data, energy_unit=0.1, show=False):
+        """
+        pay as bid. First come, first served
+        default match can be replaced in different subclass
+
+        :param data: (Dict[str, Dict]) in format: {"market_name": {{'bids': []], 'offers': []}}
+        :param energy_unit: minimal volue that can be traded
+        :param show: (Bool), print final matches
+        :return: matches: (Dict) matched orders respectively
+        """
+        # only a single market is expected
+        assert len(data.items()) == 1
+        bids = pd.DataFrame(data.get(list(data.keys())[0]).get("bids"))
+        asks = pd.DataFrame(data.get(list(data.keys())[0]).get("offers"))
+        # keep track of unmatched orders (currently only for debugging purposes)
+        orders = pd.concat([bids, asks]).set_index('id')
+        if len(asks) == 0 or len(bids) == 0:
+            # no asks or bids at all: no matches
+            return {}
 
         matches = []
-        for ask_id, ask in self.get_asks().iterrows():
-            for bid_id, bid in self.get_bids().iterrows():
-                if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit and ask.price <= bid.price:
+        for ask_id, ask in asks.iterrows():
+            for bid_id, bid in bids.iterrows():
+                if ask.energy >= energy_unit and bid.energy >= energy_unit and ask.price <= bid.price:
                     # match ask and bid
                     energy = min(ask.energy, bid.energy)
                     ask.energy -= energy
                     bid.energy -= energy
-                    self.orders.loc[ask_id] = ask
-                    self.orders.loc[bid_id] = bid
+                    # TODO: unmatched orders are not updated/ returned
+                    orders.loc[ask.id] = ask.drop('id')
+                    orders.loc[bid.id] = bid.drop('id')
+                    assert bid.time == ask.time
                     matches.append({
-                        "time": self.t,
+                        "time": bid.time,
                         "bid_actor": bid.actor_id,
                         "ask_actor": ask.actor_id,
                         "energy": energy,
