@@ -57,9 +57,13 @@ class Market:
         self.orders = self.orders.append(pd.DataFrame([order]), ignore_index=True)
         self.actor_callback[order.actor_id] = callback
 
-    def clear(self, reset=True):
-        # add final order id to book
+    def define_order_id(self):
+        # add final order id to book (remove outdated order id if existent)
+        self.orders = self.orders.drop('id', axis=1, errors='ignore')
         self.orders = self.orders.rename_axis('id').reset_index()
+
+    def clear(self, reset=True):
+        self.define_order_id()
         if reset:
             assert (self.orders['time'] == self.t).all()
 
@@ -99,32 +103,35 @@ class Market:
         """
         # only a single market is expected
         assert len(data.items()) == 1
-        bids = pd.DataFrame(data.get(list(data.keys())[0]).get("bids"))
-        asks = pd.DataFrame(data.get(list(data.keys())[0]).get("offers"))
-        # keep track of unmatched orders (currently only for debugging purposes)
-        orders = pd.concat([bids, asks]).set_index('id')
+        # bids = pd.DataFrame(data.get(list(data.keys())[0]).get("bids"))
+        # asks = pd.DataFrame(data.get(list(data.keys())[0]).get("offers"))
+        bids = data.get(list(data.keys())[0]).get("bids")
+        asks = data.get(list(data.keys())[0]).get("offers")
         if len(asks) == 0 or len(bids) == 0:
             # no asks or bids at all: no matches
             return {}
+        # keep track of unmatched orders (currently only for debugging purposes)
+        # orders = pd.concat([pd.DataFrame(bids), pd.DataFrame(asks)]).set_index('id')
 
         matches = []
-        for ask_id, ask in asks.iterrows():
-            for bid_id, bid in bids.iterrows():
-                if ask.energy >= energy_unit and bid.energy >= energy_unit and ask.price <= bid.price:
+        for ask in asks:
+            for bid in bids:
+                if ask["energy"] >= energy_unit and bid["energy"] >= energy_unit and ask["price"]\
+                        <= bid["price"]:
                     # match ask and bid
-                    energy = min(ask.energy, bid.energy)
-                    ask.energy -= energy
-                    bid.energy -= energy
+                    energy = min(ask["energy"], bid["energy"])
+                    ask["energy"] -= energy
+                    bid["energy"] -= energy
                     # TODO: unmatched orders are not updated/ returned
-                    orders.loc[ask.id] = ask.drop('id')
-                    orders.loc[bid.id] = bid.drop('id')
-                    assert bid.time == ask.time
+                    # orders.loc[ask["id"]] = ask
+                    # orders.loc[bid["id"]] = bid
+                    assert bid["time"] == ask["time"]
                     matches.append({
-                        "time": bid.time,
-                        "bid_actor": bid.actor_id,
-                        "ask_actor": ask.actor_id,
+                        "time": bid["time"],
+                        "bid_actor": bid["actor_id"],
+                        "ask_actor": ask["actor_id"],
                         "energy": energy,
-                        "price": bid.price
+                        "price": bid["price"]
                     })
 
         if show:

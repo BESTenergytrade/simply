@@ -49,13 +49,24 @@ class BestMarket(Market):
                         # add to list of nodes that form new clusters
                         nodes.append(v)
 
-    def match(self, show=False):
+    def match(self, data, energy_unit=0.1, show=False):
+        """
+        pay as clear. merit order with zones/clusters
 
-        asks = self.get_asks()
-        bids = self.get_bids()
+        :param data: (Dict[str, Dict]) in format: {"market_name": {{'bids': []], 'offers': []}}
+        :param energy_unit: (default: 0.1) minimal energy block in kWh that can be traded
+        :param show: (Bool), print final matches
+        :return: matches: (Dict) matched orders respectively
+        """
+        # only a single market is expected
+        assert len(data.items()) == 1
+        bids = pd.DataFrame(data.get(list(data.keys())[0]).get("bids"))
+        asks = pd.DataFrame(data.get(list(data.keys())[0]).get("offers"))
         if len(asks) == 0 or len(bids) == 0:
             # no asks or bids at all: no matches
             return []
+        # keep track of unmatched orders (currently only for debugging purposes)
+        # orders = pd.concat([bids, asks]).set_index('id')
 
         # split asks and bids into smallest energy unit, save original index
         asks = pd.DataFrame(asks)

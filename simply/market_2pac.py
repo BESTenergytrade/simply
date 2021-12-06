@@ -28,44 +28,44 @@ class TwoSidedPayAsClear(Market):
         """
         # only a single market is expected
         assert len(data.items()) == 1
-        bids = pd.DataFrame(data.get(list(data.keys())[0]).get("bids"))
-        asks = pd.DataFrame(data.get(list(data.keys())[0]).get("offers"))
-        # keep track of unmatched orders (currently only for debugging purposes)
-        orders = pd.concat([bids, asks]).set_index('id')
+        bids = data.get(list(data.keys())[0]).get("bids")
+        asks = data.get(list(data.keys())[0]).get("offers")
 
         # order orders by price
-        bids = bids.sort_values(["price", "energy"], ascending=False)
-        asks = asks.sort_values(["price", "energy"], ascending=True)
+        bids = sorted(bids, key=lambda item: item['price'], reverse=True)
+        asks = sorted(asks, key=lambda item: item['price'])
 
         if len(asks) == 0 or len(bids) == 0:
             # no asks or bids at all: no matches
             return {}
+        # TODO keep track of unmatched orders (currently only for debugging purposes)
+        # orders = pd.concat([pd.DataFrame(bids), pd.DataFrame(asks)]).set_index('id')
 
         # match!
-        bid_iter = bids.iterrows()
+        bid_iter = enumerate(bids)#.iterrows()
         bid_id, bid = next(bid_iter)
         matches = []
-        for ask_id, ask in asks.iterrows():
-            while bid is not None and ask.price <= bid.price:
+        for ask in asks:#.iterrows():
+            while bid is not None and ask["price"] <= bid["price"]:
                 # get common energy value
-                energy = min(ask.energy, bid.energy)
-                ask.energy -= energy
-                bid.energy -= energy
+                energy = min(ask["energy"], bid["energy"])
+                ask["energy"] -= energy
+                bid["energy"] -= energy
                 # TODO: unmatched orders are not updated/ returned
-                orders.loc[ask.id] = ask.drop('id')
-                orders.loc[bid.id] = bid.drop('id')
-                assert bid.time == ask.time
+                # orders.loc[ask.id] = ask.drop('id')
+                # orders.loc[bid.id] = bid.drop('id')
+                assert bid["time"] == ask["time"]
                 matches.append({
-                    "time": bid.time,
-                    "bid_actor": bid.actor_id,
-                    "ask_actor": ask.actor_id,
+                    "time": bid["time"],
+                    "bid_actor": bid["actor_id"],
+                    "ask_actor": ask["actor_id"],
                     "energy": energy,
-                    "price": ask.price
+                    "price": ask["price"]
                 })
-                if ask.energy < energy_unit:
+                if ask["energy"] < energy_unit:
                     # ask finished: next ask
                     break
-                if bid.energy < energy_unit:
+                if bid["energy"] < energy_unit:
                     # bid finished: next bid
                     try:
                         bid_id, bid = next(bid_iter)
