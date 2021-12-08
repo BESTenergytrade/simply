@@ -55,7 +55,7 @@ class PowerNetwork:
             a = actor_nodes.pop()
             c = connections.pop()
             map[a] = c
-            self.network.add_edge(c, a, weight=round(random.random(), 1))
+            self.network.add_edge(c, a, weight=0)
 
         # The Actor knows its grid connection node ID
         for a in actors:
