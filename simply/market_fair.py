@@ -50,6 +50,14 @@ class BestMarket(Market):
                         # add to list of nodes that form new clusters
                         nodes.append(v)
 
+        # get any one node from each cluster
+        root_nodes = {i: list(c)[0] for i, c in enumerate(self.clusters)}
+        ask_actor_ids = self.network.leaf_nodes
+        cluster_weight_matrix = self.network.get_cluster_weights(root_nodes.values(),
+                                                                 ask_actor_ids)
+        self.cluster_weight_matrix = dict(
+            zip(root_nodes.keys(), cluster_weight_matrix.values()))
+
     def match(self, data, energy_unit=0.1, show=False):
         """
         pay as clear. merit order with zones/clusters
@@ -62,11 +70,7 @@ class BestMarket(Market):
         # TODO: reduce matrix to cluster by cluster matrix
         # TODO: further move creation of weight matrix outside of matching function
         clusters = self.clusters
-        # get any one node from cluster
-        root_nodes = {i: list(c)[0] for i, c in enumerate(clusters)}
-        ask_actor_ids = self.network.leaf_nodes
-        cluster_weight_matrix = self.network.get_cluster_weights(root_nodes.values(), ask_actor_ids)
-        cluster_weight_matrix = dict(zip(root_nodes.keys(), cluster_weight_matrix.values()))
+        cluster_weight_matrix = self.cluster_weight_matrix
 
         # only a single market is expected
         assert len(data.items()) == 1
