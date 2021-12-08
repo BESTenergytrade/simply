@@ -50,6 +50,8 @@ class BestMarket(Market):
                         # add to list of nodes that form new clusters
                         nodes.append(v)
 
+        # calculate accumulated weights on path between clusters and actor nodes
+        # TODO: reduce matrix to cluster by cluster matrix
         # get any one node from each cluster
         root_nodes = {i: list(c)[0] for i, c in enumerate(self.clusters)}
         ask_actor_ids = self.network.leaf_nodes
@@ -67,8 +69,6 @@ class BestMarket(Market):
         :param show: (Bool), print final matches
         :return: matches: (Dict) matched orders respectively
         """
-        # TODO: reduce matrix to cluster by cluster matrix
-        # TODO: further move creation of weight matrix outside of matching function
         clusters = self.clusters
         cluster_weight_matrix = self.cluster_weight_matrix
 
