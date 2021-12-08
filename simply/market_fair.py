@@ -11,6 +11,7 @@ class BestMarket(Market):
             raise AttributeError("BestMarket needs power network")
         super().__init__(t, network)
 
+        # TODO move cluster definition to power network class
         # clustering of nodes by weight. Within cluster, edges have weight 0
         # clusters is list of sets with node IDs
         self.clusters = []
@@ -58,6 +59,15 @@ class BestMarket(Market):
         :param show: (Bool), print final matches
         :return: matches: (Dict) matched orders respectively
         """
+        # TODO: reduce matrix to cluster by cluster matrix
+        # TODO: further move creation of weight matrix outside of matching function
+        clusters = self.clusters
+        # get any one node from cluster
+        root_nodes = {i: list(c)[0] for i, c in enumerate(clusters)}
+        ask_actor_ids = self.network.leaf_nodes
+        cluster_weight_matrix = self.network.get_cluster_weights(root_nodes.values(), ask_actor_ids)
+        cluster_weight_matrix = dict(zip(root_nodes.keys(), cluster_weight_matrix.values()))
+
         # only a single market is expected
         assert len(data.items()) == 1
         bids = pd.DataFrame(data.get(list(data.keys())[0]).get("bids"))
@@ -70,19 +80,17 @@ class BestMarket(Market):
 
         # split asks and bids into smallest energy unit, save original index
         asks = pd.DataFrame(asks)
-        asks["order_id"] = asks.index
         asks = pd.DataFrame(asks.values.repeat(
-            asks.energy * (1/self.energy_unit), axis=0), columns=asks.columns)
-        asks.energy = self.energy_unit
+            asks.energy * (1/energy_unit), axis=0), columns=asks.columns)
+        asks.energy = energy_unit
         bids = pd.DataFrame(bids)
-        bids["order_id"] = bids.index
         bids = pd.DataFrame(bids.values.repeat(
-            bids.energy * (1/self.energy_unit), axis=0), columns=bids.columns)
-        bids.energy = self.energy_unit
+            bids.energy * (1/energy_unit), axis=0), columns=bids.columns)
+        bids.energy = energy_unit
 
         # keep track which clusters have to be (re)matched
         # start with all clusters
-        clusters_to_match = set(range(len(self.clusters)))
+        clusters_to_match = set(range(len(clusters)))
         # keep track of matches
         matches = []
         # keep track which asks to exclude in each zone (initially empty)
@@ -91,7 +99,7 @@ class BestMarket(Market):
         while clusters_to_match:
             # simulate local market within cluster
             cluster_idx = clusters_to_match.pop()
-            cluster = self.clusters[cluster_idx]
+            cluster = clusters[cluster_idx]
 
             # get local bids
             _bids = bids[bids.actor_id.isin(cluster)]
@@ -99,17 +107,13 @@ class BestMarket(Market):
                 # no bids within this cluster: can't match here
                 continue
 
-            # get any one node from cluster
-            for cluster_root in cluster:
-                break
-
             # get all asks that are not in exclude list for this cluster (copy asks, retain index)
             _asks = asks.drop(exclude[cluster_idx], axis=0, inplace=False)
             # annotate asking price by weight:
             # get node ID for all asks, preserve ordering
             ask_actor_ids = list(_asks.actor_id)
             # get weights from any node in cluster to different ask actors
-            weights = self.network.get_cluster_weights([cluster_root], ask_actor_ids)[cluster_root]
+            weights = cluster_weight_matrix[cluster_idx]
             # get weights in same order as ask node IDs
             ask_weights = [weights[i] for i in ask_actor_ids]
             # set adjusted price with network weight
@@ -129,11 +133,12 @@ class BestMarket(Market):
                     # still bids in queue
                     if ask.adjusted_price <= bid.price:
                         # bid and ask match: append to local solution
+                        assert bid["time"] == ask["time"]
                         _matches.append({
-                            "time": self.t,
+                            "time": bid.time,
                             "bid_actor": bid.actor_id,
                             "ask_actor": ask.actor_id,
-                            "energy": self.energy_unit,
+                            "energy": energy_unit,
                             "price": ask.adjusted_price,
                             # only for removing doubles later
                             "ask_id": ask_id,
@@ -183,11 +188,12 @@ class BestMarket(Market):
         for match in matches:
             # get original order id of ask/bid and adjust order energy
             ask_id = match["ask_id"]
-            ask_order_id = asks.loc[ask_id].order_id
-            self.orders.loc[ask_order_id, "energy"] -= match["energy"]
+            ask_order_id = asks.loc[ask_id].id
             bid_id = match["bid_id"]
-            bid_order_id = bids.loc[bid_id].order_id
-            self.orders.loc[bid_order_id, "energy"] -= match["energy"]
+            bid_order_id = bids.loc[bid_id].id
+            # TODO: move tracking of unmatched orders outside of matching function
+            # self.orders.loc[ask_order_id, "energy"] -= match["energy"]
+            # self.orders.loc[bid_order_id, "energy"] -= match["energy"]
 
             if ask_order_id not in _matches:
                 # ask not seen before: create empty dict
