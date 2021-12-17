@@ -16,7 +16,7 @@ class TwoSidedPayAsClear(Market):
     The matched energy value is substracted from its initial asking/bidding value till its smaller then 100 kWh
     (100 kWh because its the lowest tradable value).
     """
-    def match(self, show=True):
+    def match(self, show=False):
         # order orders by price
         bids = self.get_bids().sort_values(["price", "energy"], ascending=False)
         asks = self.get_asks().sort_values(["price", "energy"], ascending=True)
