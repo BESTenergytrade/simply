@@ -9,6 +9,9 @@ from simply.config import Config
 Config('')
 
 
+ENERGY_UNIT_CONVERSION_FACTOR = 1000  # simply: kW, D3A: MW
+
+
 class PayAsBidMatchingAlgorithm():
 
     def get_matches_recommendations(mycoDict):
@@ -18,16 +21,15 @@ class PayAsBidMatchingAlgorithm():
         for market_id, market in mycoDict.items():
             for time, orders in market.items():
                 m = Market(time = time + ":00")
-                m.energy_unit = 0.0005
                 bids = {}
                 asks = {}
 
                 for bid in orders["bids"]:
-                    order = Order(-1, bid["time_slot"], bid["id"], bid["energy"], bid["energy_rate"])
+                    order = Order(-1, bid["time_slot"], bid["id"], bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, bid["energy_rate"])
                     m.accept_order(order, None)
                     bids[bid["id"]] = bid
                 for ask in orders["offers"]:
-                    order = Order(1, ask["time_slot"], ask["id"], ask["energy"], ask["energy_rate"])
+                    order = Order(1, ask["time_slot"], ask["id"], ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, ask["energy_rate"])
                     m.accept_order(order, None)
                     asks[ask["id"]] = ask
 
@@ -39,7 +41,7 @@ class PayAsBidMatchingAlgorithm():
                         "time_slot": time,
                         "bids": bids[match["bid_actor"]],
                         "offers": asks[match["ask_actor"]],
-                        "selected_energy": match["energy"],
+                        "selected_energy": match["energy"] / ENERGY_UNIT_CONVERSION_FACTOR,
                         "trade_rate": match["price"],
                     })
 
