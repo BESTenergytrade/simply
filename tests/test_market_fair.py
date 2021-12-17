@@ -38,7 +38,7 @@ class TestBestMarket:
 
     def test_prices(self):
         # different prices
-        m = BestMarket(0, self.pn)
+        m = BestMarket(0, self.pn, 1)
         # ask above bid: no match
         m.accept_order(Order(-1,0,2,1,2), None)
         m.accept_order(Order(1,0,3,1,2.5), None)
