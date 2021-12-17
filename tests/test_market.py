@@ -78,13 +78,11 @@ class TestPayAsBid():
     def test_basic(self):
         m = Market(0)
         # no orders
-        m.define_order_id()
-        assert len(m.match(m.get_order_dict())) == 0
+        assert len(m.match()) == 0
         # bid and ask with same energy and price
         m.accept_order(Order(-1,0,0,1,1), None)
         m.accept_order(Order(1,0,1,1,1), None)
-        m.define_order_id()
-        matches = m.match(m.get_order_dict())
+        matches = m.match()
         assert len(matches) == 1
         # check match
         assert matches[0]["time"] == 0
@@ -99,8 +97,7 @@ class TestPayAsBid():
         # ask above bid: no match
         m.accept_order(Order(-1,0,0,1,2), None)
         m.accept_order(Order(1,0,1,1,2.5), None)
-        m.define_order_id()
-        matches = m.match(m.get_order_dict())
+        matches = m.match()
         assert len(matches) == 0
 
         # reset orders
@@ -108,8 +105,7 @@ class TestPayAsBid():
         # ask below bid: match with bid price
         m.accept_order(Order(-1,0,0,1,2), None)
         m.accept_order(Order(1,0,1,1,.5), None)
-        m.define_order_id()
-        matches = m.match(m.get_order_dict())
+        matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == 1
         assert matches[0]["price"] == 2
@@ -119,16 +115,14 @@ class TestPayAsBid():
         m = Market(0)
         m.accept_order(Order(-1,0,0,.1,1), None)
         m.accept_order(Order(1,0,1,1,1), None)
-        m.define_order_id()
-        matches = m.match(m.get_order_dict())
+        matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == 0.1
 
         m.orders = m.orders[:0]
         m.accept_order(Order(-1,0,0,100,1), None)
         m.accept_order(Order(1,0,1,.3,1), None)
-        m.define_order_id()
-        matches = m.match(m.get_order_dict())
+        matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == 0.3
 
@@ -138,8 +132,7 @@ class TestPayAsBid():
         m.accept_order(Order(-1,0,0,.1,1), None)
         m.accept_order(Order(-1,0,1,11,1), None)
         m.accept_order(Order(1,0,2,2,1), None)
-        m.define_order_id()
-        matches = m.match(m.get_order_dict())
+        matches = m.match()
         assert len(matches) == 2
         assert matches[0]["energy"] == 0.1
         assert matches[1]["energy"] == 1.9  # only 2 in ask
@@ -151,8 +144,7 @@ class TestPayAsBid():
         m.accept_order(Order(1,0,2,20,1), None)
         m.accept_order(Order(1,0,3,30,1), None)
         m.accept_order(Order(1,0,4,50,1), None)
-        m.define_order_id()
-        matches = m.match(m.get_order_dict())
+        matches = m.match()
         assert len(matches) == 4
         assert matches[0]["energy"] == 10
         assert matches[1]["energy"] == 20
