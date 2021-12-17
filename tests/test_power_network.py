@@ -15,10 +15,10 @@ class TestPowerNetwork:
         # only root: no leaves
         assert len(pn.leaf_nodes) == 0
 
-        network2 = nx.random_tree(2)
+        network2 = nx.random_tree(3)
         pn = PowerNetwork("", network2)
-        assert len(pn.network.nodes) == 2
-        assert len(pn.leaf_nodes) == 1
+        assert len(pn.network.nodes) == 3
+        assert len(pn.leaf_nodes) == 2
 
     def test_short_paths(self):
         network = nx.random_tree(2)
