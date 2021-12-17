@@ -28,8 +28,8 @@ def generate_recommendations(market_id, time, bids, asks, matches):
         recommendations.append({
             "market_id": market_id,
             "time_slot": time,
-            "bids": bids[match["bid_actor"]],
-            "offers": asks[match["ask_actor"]],
+            "bids": [bids[match["bid_actor"]]],
+            "offers": [asks[match["ask_actor"]]],
             "selected_energy": match["energy"] / ENERGY_UNIT_CONVERSION_FACTOR,
             "trade_rate": match["price"],
         })
