@@ -6,7 +6,7 @@ from simply.market import Market
 
 class BestMarket(Market):
 
-    def __init__(self, t, network=None):
+    def __init__(self, t, network=None, weight_factor=0.1):
         if network is None or not network.network.nodes:
             raise AttributeError("BestMarket needs power network")
         super().__init__(t, network)
@@ -15,7 +15,7 @@ class BestMarket(Market):
         # clusters is list of sets with node IDs
         self.clusters = []
         # reverse lookup: node ID -> cluster index
-        node_to_cluster = {}
+        self.node_to_cluster = {}
 
         # BFS: start with any node
         nodes = [list(network.network.nodes)[0]]
@@ -25,7 +25,7 @@ class BestMarket(Market):
             # start new cluster with this node
             cluster = len(self.clusters)
             self.clusters.append({u})
-            node_to_cluster[u] = cluster
+            self.node_to_cluster[u] = cluster
             # check neighbors using BFS
             cluster_nodes = [u]
             while cluster_nodes:
@@ -34,14 +34,14 @@ class BestMarket(Market):
                 for edge in network.network.edges(node, data = True):
                     # get target of this connection (neighbor of neighbor)
                     v = edge[1]
-                    if v in node_to_cluster:
+                    if v in self.node_to_cluster:
                         # already visited
                         continue
                     if edge[2].get("weight", 0) == 0:
                         # weight zero: part of cluster
                         # add to cluster set
                         self.clusters[-1].add(v)
-                        node_to_cluster[v] = cluster
+                        self.node_to_cluster[v] = cluster
                         # add to list of neighbors to check later
                         cluster_nodes.append(v)
                     else:
@@ -49,8 +49,28 @@ class BestMarket(Market):
                         # add to list of nodes that form new clusters
                         nodes.append(v)
 
-    def match(self, show=False):
+        # Calculate accumulated weights on path between clusters and actor nodes
+        # Get any one node from each cluster
+        root_nodes = {i: list(c)[0] for i, c in enumerate(self.clusters)}
+        # Get all actor IDs
+        ask_actor_ids = self.network.leaf_nodes
+        cluster_weight_matrix = self.network.get_cluster_weights(root_nodes.values(),
+                                                                 ask_actor_ids)
+        # Replace selected random root node in cluster by the cluster index
+        self.cluster_weight_matrix = dict(
+            zip(root_nodes.keys(), cluster_weight_matrix.values()))
 
+        # Calculate cluster by cluster weight matrix
+        cluster_weight_matrix = self.network.get_cluster_weights(root_nodes.values(),
+                                                                 root_nodes.values())
+        self.weight_factor = weight_factor
+        self.network_charge_matrix = [
+            [
+                weight_factor * c2 for j, c2 in c1.items()
+            ] for i, c1 in cluster_weight_matrix.items()
+        ]
+
+    def match(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
         if len(asks) == 0 or len(bids) == 0:
@@ -98,9 +118,9 @@ class BestMarket(Market):
             # get node ID for all asks, preserve ordering
             ask_actor_ids = list(_asks.actor_id)
             # get weights from any node in cluster to different ask actors
-            weights = self.network.get_cluster_weights([cluster_root], ask_actor_ids)[cluster_root]
+            weights = self.cluster_weight_matrix[cluster_idx]
             # get weights in same order as ask node IDs
-            ask_weights = [weights[i] for i in ask_actor_ids]
+            ask_weights = [weights[i] * self.weight_factor for i in ask_actor_ids]
             # set adjusted price with network weight
             _asks["adjusted_price"] = pd.Series(_asks.price + ask_weights, index=_asks.index)
 
