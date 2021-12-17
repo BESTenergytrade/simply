@@ -50,3 +50,5 @@ class Config:
         #   pac/2pac (two-sided pay-as-clear)
         #   fair/merit (custom BEST market)
         self.market_type = parser.get("default", "market_type", fallback="default").lower()
+        #
+        self.weight_factor = parser.getint("default", "weight_factor", fallback=0.1)

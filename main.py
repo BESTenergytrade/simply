@@ -41,7 +41,7 @@ if __name__ == "__main__":
     if "pac" in cfg.market_type:
         m = market_2pac.TwoSidedPayAsClear(0)
     elif cfg.market_type in ["fair", "merit"]:
-        m = market_fair.BestMarket(0, sc.power_network)
+        m = market_fair.BestMarket(0, sc.power_network, cfg.weight_factor)
     else:
         # default
         m = market.Market(0)

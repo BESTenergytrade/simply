@@ -15,7 +15,7 @@ class BestMarket(Market):
         # clusters is list of sets with node IDs
         self.clusters = []
         # reverse lookup: node ID -> cluster index
-        node_to_cluster = {}
+        self.node_to_cluster = {}
 
         # BFS: start with any node
         nodes = [list(network.network.nodes)[0]]
@@ -25,7 +25,7 @@ class BestMarket(Market):
             # start new cluster with this node
             cluster = len(self.clusters)
             self.clusters.append({u})
-            node_to_cluster[u] = cluster
+            self.node_to_cluster[u] = cluster
             # check neighbors using BFS
             cluster_nodes = [u]
             while cluster_nodes:
@@ -34,14 +34,14 @@ class BestMarket(Market):
                 for edge in network.network.edges(node, data = True):
                     # get target of this connection (neighbor of neighbor)
                     v = edge[1]
-                    if v in node_to_cluster:
+                    if v in self.node_to_cluster:
                         # already visited
                         continue
                     if edge[2].get("weight", 0) == 0:
                         # weight zero: part of cluster
                         # add to cluster set
                         self.clusters[-1].add(v)
-                        node_to_cluster[v] = cluster
+                        self.node_to_cluster[v] = cluster
                         # add to list of neighbors to check later
                         cluster_nodes.append(v)
                     else:
@@ -60,7 +60,6 @@ class BestMarket(Market):
         self.cluster_weight_matrix = dict(
             zip(root_nodes.keys(), cluster_weight_matrix.values()))
 
-        # TODO: Create actor-zone mapping dictionary
         # Calculate cluster by cluster weight matrix
         cluster_weight_matrix = self.network.get_cluster_weights(root_nodes.values(),
                                                                  root_nodes.values())
