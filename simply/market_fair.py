@@ -10,10 +10,9 @@ class BestMarket(Market):
     clusters = []
     # reverse lookup: node ID -> cluster index
     node_to_cluster = {}
-    # matrix with weights between clusters
-    cluster_weight_matrix = []
-    # ???
-    weight_factor = 0.1
+    # matrix with (scaled) weights between clusters
+    grid_fee_matrix = []
+
 
     def __init__(self, t, network=None, weight_factor=0.1):
         if network is None or not network.network.nodes:
@@ -59,18 +58,16 @@ class BestMarket(Market):
         root_nodes = {i: list(c)[0] for i, c in enumerate(self.clusters)}
         # init weight matrix with zeros
         num_root_nodes = len(root_nodes)
-        self.cluster_weight_matrix = [[0]*num_root_nodes for i in range(num_root_nodes)]
+        self.grid_fee_matrix = [[0]*num_root_nodes for i in range(num_root_nodes)]
         # fill weight matrix
         # matrix symmetric: only need to compute half of values, diagonal is 0
         for i, n1 in root_nodes.items():
             for j, n2 in root_nodes.items():
                 if i > j:
                     # get weight between n1 and n2
-                    w = self.network.get_path_weight(n1, n2)
-                    self.cluster_weight_matrix[i][j] = w
-                    self.cluster_weight_matrix[j][i] = w
-
-        self.weight_factor = weight_factor
+                    w = self.network.get_path_weight(n1, n2) * weight_factor
+                    self.grid_fee_matrix[i][j] = w
+                    self.grid_fee_matrix[j][i] = w
 
 
     def match(self, show=False):
@@ -123,9 +120,9 @@ class BestMarket(Market):
             # get cluster ID for all asks, preserve ordering
             ask_cluster_ids = list(_asks.cluster)
             # get weights from any node in cluster to different ask actors
-            weights = self.cluster_weight_matrix[cluster_idx]
+            weights = self.grid_fee_matrix[cluster_idx]
             # get weights in same order as ask node IDs
-            ask_weights = [weights[i] * self.weight_factor for i in ask_cluster_ids]
+            ask_weights = [weights[i] for i in ask_cluster_ids]
             # set adjusted price with network weight
             _asks["adjusted_price"] = pd.Series(_asks.price + ask_weights, index=_asks.index)
 
