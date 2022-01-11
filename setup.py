@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 try:
     with open("requirements.txt") as simply_req:
-        REQUIREMENTS = [].extend(simply_req)
+        REQUIREMENTS = simply_req.read()
 
 except OSError:
     # Shouldn't happen
