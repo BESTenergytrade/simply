@@ -68,6 +68,31 @@ class TestBestMarket:
         assert matches[0]["energy"] == pytest.approx(1)
         assert matches[0]["price"] == pytest.approx(3)  # 2 + weight(1)
 
+        m.orders = m.orders[:0]
+        # match different clusters, even though there are orders from same cluster
+        m.accept_order(Order(1,0,2,1,2), None)
+        m.accept_order(Order(-1,0,3,1,2), None)
+        m.accept_order(Order(-1,0,4,1,4), None)
+        # expected: match 2 and 4, even though 2 and 3 are in same cluster (worse conditions)
+        matches = m.match()
+        assert len(matches) == 1
+        assert matches[0]["ask_actor"] == 2
+        assert matches[0]["bid_actor"] == 4
+        assert matches[0]["energy"] == pytest.approx(1)
+        assert matches[0]["price"] == pytest.approx(3)  # 2 + weight(1)
+
+    def test_undefined(self):
+        # same price: depends on internal ordering
+        m = BestMarket(0, self.pn, 1)
+        m.accept_order(Order(-1,0,2,1,5), None)
+        m.accept_order(Order(1,0,3,1,4), None)
+        m.accept_order(Order(1,0,4,1,3), None)
+        matches = m.match()
+        # sum of energies must match, price must be identical
+        assert sum([m["energy"] for m in matches]) == pytest.approx(1)
+        for m in matches:
+            assert m["price"] == pytest.approx(4)
+
     def test_energy(self):
         # different energies
         m = BestMarket(0, self.pn)
