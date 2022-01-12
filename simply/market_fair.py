@@ -5,6 +5,12 @@ from simply.market import Market
 
 
 class BestMarket(Market):
+    """
+    Custom fair market mechanism.
+
+    Similar to two-sided pay-as-clear, but searches globally for best matches, taking network fees into account.
+    Nodes are first grouped into clusters (nodes with no transaction fees between them). Then, all clusters are evaluated individually, adding transaction fees to other clusters. If a match becomes disputed (order matched more than once), the higher offer is taken, while the other one is removed as a possible match and that cluster is re-evaluated. This converges to an optimal solution.
+    """
 
     # clusters is list of sets with node IDs
     clusters = []

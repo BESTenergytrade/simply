@@ -7,6 +7,17 @@ from simply.config import Config
 from simply.util import summerize_actor_trading
 
 
+"""
+Entry point for standalone functionality.
+
+Reads in configuration file (or uses defaults when none is supplied),
+creates or loads scenario and matches orders in each timestep.
+May show network plots or print market statistics, depending on config.
+
+Usage: python main.py [config file]
+"""
+
+
 if __name__ == "__main__":
     parser = ArgumentParser(description='Entry point for market simulation')
     parser.add_argument('config', nargs='?', default="", help='configuration file')

@@ -6,7 +6,19 @@ import matplotlib.pyplot as plt
 
 
 class PowerNetwork:
+    """
+    Representation of energy grid and associated grid fees.
+    """
+
     def __init__(self, name, network):
+        """
+        New network model. Sets edge weights to leaf nodes to 0 (cluster). Calculates shortest paths, as network is unlikely to change again.
+
+        :param name: name of network
+        :type name: string
+        :param network: graph representation
+        :type network: networkx graph
+        """
         self.name = name
         # all leaf nodes are potential connection points for actors
         self.leaf_nodes = sorted(n for n, d in network.degree() if d == 1)
@@ -71,6 +83,7 @@ class PowerNetwork:
 
     def get_path_weight(self, u, v):
         # get weight of path between nodes
+        # returns sum of edge weights on shortest path
         if u == v:
             return 0
         if self.short_paths is None:
@@ -86,6 +99,8 @@ class PowerNetwork:
 
     def get_cluster_weights(self, c1, c2):
         # get all weighted pathlength between two clusters of nodes
+        # returns dict with nodes from c1 -> nodes from c2 -> weight
+        # unused
         weights = {u: {} for u in c1}
         for u in c1:
             for v in c2:

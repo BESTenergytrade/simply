@@ -1,10 +1,3 @@
-"""
-jh: The script market_2pac orientes itself on the following description:
-https://gridsingularity.github.io/d3a/two-sided-pay-as-clear/. It follows the logic of a two-sided-pay-as-cleared-market.
-Bids and asks are ordered in a descending and ascending way and are matched as long as the price for asks
-is lower then the bidding price.
-
-"""
 import matplotlib.pyplot as plt
 
 from simply.market import Market
@@ -12,9 +5,9 @@ from simply.market import Market
 
 class TwoSidedPayAsClear(Market):
     """
-    jh: bids and asks are handed over from the script market.py, sorted and matched. The energy value is handed over.
-    The matched energy value is substracted from its initial asking/bidding value till its smaller then 100 kWh
-    (100 kWh because its the lowest tradable value).
+    Two sided Pay-As-Clear market mechanism, similar to https://gridsingularity.github.io/gsy-e/two-sided-pay-as-clear/
+
+    Each timestep, the highest bids are matched with the lowest offers.
     """
     def match(self, show=False):
         # order orders by price
@@ -77,4 +70,3 @@ class TwoSidedPayAsClear(Market):
             plt.show()
 
         return matches
-        # return super().match(show)
