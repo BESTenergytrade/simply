@@ -1,13 +1,36 @@
 run simply
 ==========
-
+# Getting Started
+**setup**
 ```sh
+# create virtual environment
 virtualenv venv --python=python3.8
 source venv/bin/activate
+# (1) install dependencies
 pip install -r requirements.txt
-
-python main.py
+# or (2) use setup
+pip install -e .
 ```
+
+**test**
+```sh
+pytest tests/
+```
+
+**run**
+```sh
+python main.py config.txt
+```
+If `config.txt` or individual fields are not specified, default values are used as described in `simply/config.py`
+
+**gsy-e wrapper**
+In order to use the simply matching algrithms in gsy-e through the [myco API](https://github.com/gridsingularity/gsy-myco-sdk), the wrapper can be used to translate the json string of gsy-e orders to the simply market model as shown in `market_wrapper.py`.
+
+Example run, while loading input from json file `orders.json` in gsy-e format:
+```sh
+python market_wrapper.py orders.json
+```
+
 glossary
 ========
 ## scenario
