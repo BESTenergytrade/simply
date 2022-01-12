@@ -5,6 +5,12 @@ import simply.config as cfg
 from simply.actor import Order
 
 class Market:
+    """
+    Representation of a market. Collects orders, implements a matching strategy for clearing, finalizes post-matching.
+
+    This class provides a basic matching strategy which may be overridden.
+    """
+
     def __init__(self, time, network=None):
         # TODO tbd if lists or dicts or ... is used
         self.orders = pd.DataFrame(columns = Order._fields)
@@ -16,19 +22,28 @@ class Market:
         self.network = network
 
     def get_bids(self):
+        # Get all open bids in market. Returns dataframe.
         return self.orders[self.orders["type"] == -1]
 
     def get_asks(self):
+        # Get all open asks in market. Returns dataframe.
         return self.orders[self.orders["type"] == 1]
 
     def print(self):
+        # Debug: print bids and asks to terminal.
         print(self.get_bids())
         print(self.get_asks())
 
     def accept_order(self, order, callback):
         """
+        Handle new order.
+
+        Order must have same timestep as market, type must be -1 or +1.
+        Energy is quantized according to the market's energy unit (round down).
+        Signature of callback function: matching time, sign for energy direction (opposite of order type), matched energy, matching price.
+
         :param order: Order (type, time, actor_id, energy, price)
-        :param callback: callback function
+        :param callback: callback function (called when order is successfully matched)
         :return:
         """
         if order.time != self.t:
@@ -44,6 +59,9 @@ class Market:
         self.actor_callback[order.actor_id] = callback
 
     def clear(self, reset=True):
+        """
+        Clear market. Match orders, call callbacks of matched orders, reset/tidy up dataframes.
+        """
         # TODO match bids
         matches = self.match(show=cfg.config.show_plots)
         self.matches.append(matches)
@@ -64,9 +82,20 @@ class Market:
             self.orders = self.orders[self.orders.energy >= self.energy_unit]
 
     def match(self, show=False):
-        # pay as bid. First come, first served
-        # default match can be replaced in different subclass
+        """
+        Example matching algorithm: pay as bid, first come first served.
 
+        Return structure: each match is a dict and has the following items:
+            time: current market time
+            bid_actor: ID of bidding actor
+            ask_actor: ID of asking actor
+            energy: matched energy (multiple of market's energy unit)
+            price: matching price
+
+        This is meant to be replaced in subclasses.
+        :param show: show or print plots (mainly for debugging)
+        :return: list of dictionaries with matches
+        """
         matches = []
         for ask_id, ask in self.get_asks().iterrows():
             for bid_id, bid in self.get_bids().iterrows():
@@ -91,6 +120,7 @@ class Market:
         return matches
 
     def save_matches(self, filename='matches.csv'):
+        # save all matches in market as dataframe to file
         matches_df = pd.concat(
             [pd.DataFrame.from_dict(self.matches[i]) for i in range(len(self.matches))]
         ).reset_index()

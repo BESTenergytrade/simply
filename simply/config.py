@@ -3,6 +3,33 @@ from numpy import linspace
 from pathlib import Path
 
 class Config:
+    """
+    Class holding all simulation-relevant information. Read in from configuration file.
+
+    After creation, the generated instance is available as Config.config,
+    the parsed file as Config.parser.
+
+    Config attributes, grouped by section, with default in brackets:
+    [default]
+    start - initial timestep [8]
+    nb_ts - number of timesteps to simulate [3]
+    step_size - length of timestep in hours [1]
+    list_ts - list of timesteps in simulation [generated, can't be overridden]
+    show_plots - show various plots [False]
+    show_prints - show debug info in terminal [False]
+    save_csv - save orders and mathced results to csv files [True]
+    path - path of scenario directory to load and/or store [./scenarios/default]
+    data_format - how to save actor data. "csv": save data in separate csv file and all actors in one config file, otherwise save config and data per actor in a single file ["cfg"]
+    reset_market: if set, discard unmatched orders after each interval [True]
+    update_scenario: if set, always save scenario in given path (even if loaded) [False]
+    market_type: selects matching strategy. Supported:
+        [default]/pab/basic (pay-as-bid)
+        pac/2pac (two-sided pay-as-clear)
+        fair/merit (custom BEST market)
+    weight_factor: conversion factor from grid fees to power network node weight [0.1]
+    [actor]
+    horizon - number of timesteps to look ahead for prediction [24]
+    """
 
     def __init__(self, cfg_file):
         global config
@@ -24,7 +51,7 @@ class Config:
         self.nb_ts = parser.getint("default", "nb_ts", fallback = 3)
         # interval between simulation timesteps
         self.step_size = parser.getint("default", "step_size", fallback = 1)
-        # list of timesteps in simualtion
+        # list of timesteps in simulation
         # not read from file but created from above information
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
 
@@ -45,10 +72,6 @@ class Config:
         self.update_scenario = parser.getboolean("default", "update_scenario", fallback=False)
 
         # which market type to use?
-        # supported:
-        #   pab/basic/default (pay-as-bid)
-        #   pac/2pac (two-sided pay-as-clear)
-        #   fair/merit (custom BEST market)
         self.market_type = parser.get("default", "market_type", fallback="default").lower()
         # weight factor: network charges to power network weight
         self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
