@@ -55,7 +55,7 @@ class Market:
         # make certain enough energy is traded
         if energy < self.energy_unit:
             return
-        self.orders = self.orders.append(pd.DataFrame([order]), ignore_index=True)
+        self.orders = pd.concat([self.orders , pd.DataFrame([order])], ignore_index=True)
         self.actor_callback[order.actor_id] = callback
 
     def clear(self, reset=True):
