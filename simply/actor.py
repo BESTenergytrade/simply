@@ -6,6 +6,15 @@ import matplotlib.pyplot as plt
 from simply.util import gaussian_pv
 import simply.config as cfg
 
+"""
+Struct to hold order
+
+type: sign of order, representing bid (-1) or ask (+1)
+time: timestamp when order was created
+actor_id: ID of ordering actor
+energy: sum of energy needed or provided. Will be rounded down according to the market's energy unit
+price: bidding/asking price for 1 kWh
+"""
 Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
 
 
@@ -55,12 +64,19 @@ class Actor:
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps, "pm": pm}
 
     def plot(self, columns):
+        """
+        Plot columns from an actor's predicted schedule.
+        """
         pd.concat(
             [self.pred[columns].add_suffix("_pred"), self.data[columns]], axis=1
         ).plot()
         plt.show()
 
     def generate_order(self):
+        """
+        Generate new order for current timestep according to predicted schedule.
+        Returns order.
+        """
         # TODO calculate amount of energy to fulfil personal schedule
         energy = self.pred["schedule"][self.t]
         # TODO simulate strategy: manipulation, etc.
@@ -76,6 +92,9 @@ class Actor:
         return new
 
     def receive_market_results(self, time, sign, energy, price):
+        """
+        Callback function when order is matched. Updates the actor's traded info.
+        """
         # TODO update schedule, if possible e.g. battery
         # TODO post settlement of differences
         # cleared market is in the past
@@ -87,6 +106,9 @@ class Actor:
         self.traded[time] = tuple(e + [post[i]] for i,e in enumerate(pre))
 
     def to_dict(self, external_data=False):
+        """
+        Builds dictionary for saving. external_data returns simple data instead of member dump.
+        """
         if external_data:
             args_no_df = {
                 "id": self.id, "df": {}, "csv": self.csv_file, "ls": self.load_scale, "ps": self.pv_scale, "pm": {}
@@ -96,6 +118,9 @@ class Actor:
             return self.args
 
     def save_csv(self, dirpath):
+        """
+        Saves data and pred dataframes to given file.
+        """
         # TODO if "predicted" values do not equal actual time series values, also errors need to be saved
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
@@ -104,6 +129,9 @@ class Actor:
 
 
 def create_random(actor_id):
+    """
+    Create actor instance with random dataframes .
+    """
     # TODO improve random signals
     nb_ts = 24
     time_idx = pd.date_range("2021-01-01", freq="H", periods=nb_ts)

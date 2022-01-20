@@ -8,6 +8,11 @@ from simply import power_network
 
 
 class Scenario:
+    """
+    Representation of the world state: who is present (actors) and how everything is connected (power_network).
+    RNG seed is preserved so results can be reproduced.
+    """
+
     def __init__(self, network, actors, map_actors, rng_seed=None):
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
