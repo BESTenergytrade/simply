@@ -1,6 +1,8 @@
 from simply.actor import Order
 from simply.market_2pac import TwoSidedPayAsClear
 
+import pytest
+
 def test_basic():
     m = TwoSidedPayAsClear(0)
     # no orders: no matches
@@ -56,7 +58,7 @@ def test_energy():
     m.accept_order(Order(1,0,1,.3,1), None)
     matches = m.match()
     assert len(matches) == 1
-    assert matches[0]["energy"] == 0.3
+    assert matches[0]["energy"] == pytest.approx(0.3)
 
 def test_multiple():
     # multiple bids to satisfy one ask
