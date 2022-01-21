@@ -4,6 +4,10 @@ import pandas as pd
 from simply.market import Market
 
 
+LARGE_ORDER_THRESHOLD = 2**32
+MARKET_MAKER_THRESHOLD = 2**63-1
+
+
 class BestMarket(Market):
     """
     Custom fair market mechanism.
@@ -79,6 +83,21 @@ class BestMarket(Market):
     def match(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
+
+        # filter out market makers (infinite bus) and really large orders
+        large_asks_mask = asks["energy"] >= LARGE_ORDER_THRESHOLD
+        large_asks = asks[large_asks_mask]
+        asks_mm = large_asks[large_asks["energy"] >= MARKET_MAKER_THRESHOLD]
+        asks = asks[~large_asks_mask]
+        if len(large_asks) > len(asks_mm):
+            print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
+        large_bids_mask = bids["energy"] >= LARGE_ORDER_THRESHOLD
+        large_bids = bids[large_bids_mask]
+        bids_mm = large_bids[large_bids["energy"] >= MARKET_MAKER_THRESHOLD]
+        bids = bids[~large_bids_mask]
+        if len(large_bids) > len(bids_mm):
+            print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
+
         if len(asks) == 0 or len(bids) == 0:
             # no asks or bids at all: no matches
             return []
@@ -223,6 +242,40 @@ class BestMarket(Market):
 
         # retrieve matches from nested dict
         matches = [m for ask_matches in _matches.values() for m in ask_matches.values()]
+
+        # match with market maker
+        # find unmatched orders
+        orders = self.orders[(self.orders["energy"] + self.EPS) > self.energy_unit]
+        # ignore large orders
+        orders = orders[~orders.index.isin(large_asks.index)]
+        orders = orders[~orders.index.isin(large_bids.index)]
+        # match asks with bid market maker
+        asks = orders[orders.type == 1]
+        if not bids_mm.empty:
+            # bidding market maker: highest price
+            bid_mm = bids_mm.sort_values("price", ascending=False).iloc[0]
+            asks = asks[asks["price"] <= bid_mm.price]
+            matches += list(asks.apply(lambda ask: {
+                "time": self.t,
+                "bid_actor": str(bid_mm.actor_id),
+                "ask_actor": ask.actor_id,
+                "energy": ask.energy,
+                "price": bid_mm.price,
+            }, axis = 1, result_type = "reduce"))
+
+        # match bids with ask market maker
+        bids = orders[orders.type == -1]
+        if not asks_mm.empty:
+            # asking market maker: lowest price
+            ask_mm = asks_mm.sort_values("price", ascending=True).iloc[0]
+            bids = bids[bids["price"] >= ask_mm.price]
+            matches += list(bids.apply(lambda bid: {
+                "time": self.t,
+                "bid_actor": str(ask_mm.actor_id),
+                "ask_actor": bid.actor_id,
+                "energy": bid.energy,
+                "price": ask_mm.price,
+            }, axis = 1, result_type = "reduce"))
 
         if show:
             print(matches)

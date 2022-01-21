@@ -20,6 +20,7 @@ class Market:
         self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
         self.actor_callback = {}
         self.network = network
+        self.EPS = 1e-10
 
     def get_bids(self):
         # Get all open bids in market. Returns dataframe.
@@ -71,8 +72,10 @@ class Market:
             ask_actor_callback = self.actor_callback[match["ask_actor"]]
             energy = match["energy"]
             price = match["price"]
-            bid_actor_callback(self.t, 1, energy, price)
-            ask_actor_callback(self.t,-1, energy, price)
+            if bid_actor_callback is not None:
+                bid_actor_callback(self.t, 1, energy, price)
+            if ask_actor_callback is not None:
+                ask_actor_callback(self.t,-1, energy, price)
 
         if reset:
             # don't retain orders for next cycle
