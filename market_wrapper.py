@@ -58,6 +58,26 @@ class PayAsBidMatchingAlgorithm():
         return recommendations
 
 
+class PayAsClearMatchingAlgorithm():
+
+    def get_matches_recommendations(mycoDict):
+
+        recommendations = []
+
+        for market_id, market_name in mycoDict.items():
+            for time, orders in market_name.items():
+                m = market_2pac.TwoSidedPayAsClear(time=time + ":00")
+                bids = {bid["id"]: bid for bid in orders["bids"]}
+                asks = {ask["id"]: ask for ask in orders["offers"]}
+
+                accept_orders(m, orders)
+                matches = m.match()
+
+                recommendations += generate_recommendations(market_id, time, bids, asks, matches)
+
+        return recommendations
+
+
 if __name__ == "__main__":
     parser = ArgumentParser(description='Wrapper for myco API')
     parser.add_argument('file', help='myco API data file')
@@ -66,5 +86,6 @@ if __name__ == "__main__":
     with open(args.file, 'r') as f:
         mycoDict = json.load(f)
 
-    recommendation = PayAsBidMatchingAlgorithm.get_matches_recommendations(mycoDict)
+    # recommendation = PayAsBidMatchingAlgorithm.get_matches_recommendations(mycoDict)
+    recommendation = PayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
     print(json.dumps(recommendation, indent=2))
