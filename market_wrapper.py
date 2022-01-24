@@ -1,5 +1,6 @@
-from simply.market import Market
+from simply import market, market_2pac, market_fair
 from simply.actor import Order
+from simply import power_network
 
 from argparse import ArgumentParser
 import json
@@ -43,9 +44,9 @@ class PayAsBidMatchingAlgorithm():
 
         recommendations = []
 
-        for market_id, market in mycoDict.items():
-            for time, orders in market.items():
-                m = Market(time = time + ":00")
+        for market_id, market_name in mycoDict.items():
+            for time, orders in market_name.items():
+                m = market.Market(time=time+":00")
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 
