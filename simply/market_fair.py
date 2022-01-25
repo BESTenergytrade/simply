@@ -98,7 +98,7 @@ class BestMarket(Market):
         if len(large_bids) > len(bids_mm):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
 
-        if len(asks) == 0 or len(bids) == 0:
+        if (asks.empty and bids.empty) or (asks.empty and asks_mm.empty) or (bids.empty and bid_mm.empty):
             # no asks or bids at all: no matches
             return []
 
@@ -257,7 +257,7 @@ class BestMarket(Market):
             asks = asks[asks["price"] <= bid_mm.price]
             matches += list(asks.apply(lambda ask: {
                 "time": self.t,
-                "bid_actor": id_mm.actor_id,
+                "bid_actor": bid_mm.actor_id,
                 "ask_actor": ask.actor_id,
                 "energy": ask.energy,
                 "price": bid_mm.price,
@@ -271,8 +271,8 @@ class BestMarket(Market):
             bids = bids[bids["price"] >= ask_mm.price]
             matches += list(bids.apply(lambda bid: {
                 "time": self.t,
-                "bid_actor": ask_mm.actor_id,
-                "ask_actor": bid.actor_id,
+                "bid_actor": bid.actor_id,
+                "ask_actor": ask_mm.actor_id,
                 "energy": bid.energy,
                 "price": ask_mm.price,
             }, axis = 1, result_type = "reduce"))
