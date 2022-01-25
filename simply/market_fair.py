@@ -98,7 +98,7 @@ class BestMarket(Market):
         if len(large_bids) > len(bids_mm):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
 
-        if (asks.empty and asks_mm.empty) or (bids.empty and bid_mm.empty):
+        if (asks.empty and bids.empty) or (asks.empty and asks_mm.empty) or (bids.empty and bid_mm.empty):
             # no asks or bids at all: no matches
             return []
 
