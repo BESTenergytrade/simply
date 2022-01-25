@@ -257,7 +257,7 @@ class BestMarket(Market):
             asks = asks[asks["price"] <= bid_mm.price]
             matches += list(asks.apply(lambda ask: {
                 "time": self.t,
-                "bid_actor": str(bid_mm.actor_id),
+                "bid_actor": id_mm.actor_id,
                 "ask_actor": ask.actor_id,
                 "energy": ask.energy,
                 "price": bid_mm.price,
@@ -271,7 +271,7 @@ class BestMarket(Market):
             bids = bids[bids["price"] >= ask_mm.price]
             matches += list(bids.apply(lambda bid: {
                 "time": self.t,
-                "bid_actor": str(ask_mm.actor_id),
+                "bid_actor": ask_mm.actor_id,
                 "ask_actor": bid.actor_id,
                 "energy": bid.energy,
                 "price": ask_mm.price,
