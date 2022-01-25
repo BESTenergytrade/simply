@@ -13,18 +13,14 @@ ENERGY_UNIT_CONVERSION_FACTOR = 1000  # simply: kW, D3A: MW
 
 
 def accept_orders(market, orders):
+    # generate simply Order, put it into market
+    # apply conversion factor except for market maker orders
     for bid in orders["bids"]:
-        energy = bid["energy"]
-        if energy < 2**63-1:
-            # apply conversion factor except for market maker orders
-            energy *= ENERGY_UNIT_CONVERSION_FACTOR
+        energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
         order = Order(-1, bid["time_slot"], bid["id"], energy, bid["energy_rate"])
         market.accept_order(order, None)
     for ask in orders["offers"]:
-        energy = ask["energy"]
-        if energy < 2**63-1:
-            # apply conversion factor except for market maker orders
-            energy *= ENERGY_UNIT_CONVERSION_FACTOR
+        energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
         order = Order(1, ask["time_slot"], ask["id"], energy, ask["energy_rate"])
         market.accept_order(order, None)
 
