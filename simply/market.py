@@ -20,6 +20,7 @@ class Market:
         self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
         self.actor_callback = {}
         self.network = network
+        self.EPS = 1e-10
 
     def get_bids(self):
         # Get all open bids in market. Returns dataframe.
@@ -51,10 +52,11 @@ class Market:
         if order.type not in [-1, 1]:
             raise ValueError("Wrong order type ({})".format(order.type))
         # make certain energy has step size of energy_unit
-        energy = (order.energy // self.energy_unit) * self.energy_unit
+        energy = ((order.energy + self.EPS) // self.energy_unit) * self.energy_unit
         # make certain enough energy is traded
         if energy < self.energy_unit:
             return
+        order = order._replace(energy=energy)
         self.orders = pd.concat([self.orders , pd.DataFrame([order])], ignore_index=True)
         self.actor_callback[order.actor_id] = callback
 
@@ -71,8 +73,10 @@ class Market:
             ask_actor_callback = self.actor_callback[match["ask_actor"]]
             energy = match["energy"]
             price = match["price"]
-            bid_actor_callback(self.t, 1, energy, price)
-            ask_actor_callback(self.t,-1, energy, price)
+            if bid_actor_callback is not None:
+                bid_actor_callback(self.t, 1, energy, price)
+            if ask_actor_callback is not None:
+                ask_actor_callback(self.t,-1, energy, price)
 
         if reset:
             # don't retain orders for next cycle
