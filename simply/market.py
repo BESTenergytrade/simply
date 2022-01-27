@@ -52,10 +52,11 @@ class Market:
         if order.type not in [-1, 1]:
             raise ValueError("Wrong order type ({})".format(order.type))
         # make certain energy has step size of energy_unit
-        energy = (order.energy // self.energy_unit) * self.energy_unit
+        energy = ((order.energy + self.EPS) // self.energy_unit) * self.energy_unit
         # make certain enough energy is traded
         if energy < self.energy_unit:
             return
+        order = order._replace(energy=energy)
         self.orders = pd.concat([self.orders , pd.DataFrame([order])], ignore_index=True)
         self.actor_callback[order.actor_id] = callback
 
