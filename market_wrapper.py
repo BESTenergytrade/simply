@@ -4,6 +4,7 @@ from simply import power_network
 
 from argparse import ArgumentParser
 import json
+from abc import ABC, abstractmethod
 
 from simply.config import Config
 # default config
@@ -42,7 +43,13 @@ def generate_recommendations(market_id, time, bids, asks, matches):
     return recommendations
 
 
-class PayAsBidMatchingAlgorithm():
+class MatchingAlgorithm(ABC):
+    @abstractmethod
+    def get_matches_recommendations(mycoDict):
+        pass
+
+
+class PayAsBidMatchingAlgorithm(MatchingAlgorithm):
 
     def get_matches_recommendations(mycoDict):
 
@@ -62,7 +69,7 @@ class PayAsBidMatchingAlgorithm():
         return recommendations
 
 
-class PayAsClearMatchingAlgorithm():
+class PayAsClearMatchingAlgorithm(MatchingAlgorithm):
 
     def get_matches_recommendations(mycoDict):
 
@@ -82,7 +89,7 @@ class PayAsClearMatchingAlgorithm():
         return recommendations
 
 
-class ClusterPayAsClearMatchingAlgorithm():
+class ClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
 
     def get_matches_recommendations(mycoDict):
         pn = power_network.create_random(1)
