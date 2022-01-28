@@ -44,54 +44,43 @@ def generate_recommendations(market_id, time, bids, asks, matches):
 
 
 class MatchingAlgorithm(ABC):
+    @staticmethod
+    def __get_market_matches(mycoDict, market):
+        recommendations = []
+
+        for market_id, market_name in mycoDict.items():
+            for time, orders in market_name.items():
+                m = market(time=time+":00")
+                bids = {bid["id"]: bid for bid in orders["bids"]}
+                asks = {ask["id"]: ask for ask in orders["offers"]}
+
+                accept_orders(m, orders)
+                matches = m.match()
+
+                recommendations += generate_recommendations(market_id, time, bids, asks, matches)
+
+        return recommendations
+
     @abstractmethod
-    def get_matches_recommendations(mycoDict):
+    def get_matches_recommendations(cls, mycoDict):
         pass
 
 
 class PayAsBidMatchingAlgorithm(MatchingAlgorithm):
-
-    def get_matches_recommendations(mycoDict):
-
-        recommendations = []
-
-        for market_id, market_name in mycoDict.items():
-            for time, orders in market_name.items():
-                m = market.Market(time=time+":00")
-                bids = {bid["id"]: bid for bid in orders["bids"]}
-                asks = {ask["id"]: ask for ask in orders["offers"]}
-
-                accept_orders(m, orders)
-                matches = m.match()
-
-                recommendations += generate_recommendations(market_id, time, bids, asks, matches)
-
-        return recommendations
+    @classmethod
+    def get_matches_recommendations(cls, mycoDict):
+        return cls._MatchingAlgorithm__get_market_matches(mycoDict, market.Market)
 
 
 class PayAsClearMatchingAlgorithm(MatchingAlgorithm):
-
-    def get_matches_recommendations(mycoDict):
-
-        recommendations = []
-
-        for market_id, market_name in mycoDict.items():
-            for time, orders in market_name.items():
-                m = market_2pac.TwoSidedPayAsClear(time=time + ":00")
-                bids = {bid["id"]: bid for bid in orders["bids"]}
-                asks = {ask["id"]: ask for ask in orders["offers"]}
-
-                accept_orders(m, orders)
-                matches = m.match()
-
-                recommendations += generate_recommendations(market_id, time, bids, asks, matches)
-
-        return recommendations
+    @classmethod
+    def get_matches_recommendations(cls, mycoDict):
+        return cls._MatchingAlgorithm__get_market_matches(mycoDict, market_2pac.TwoSidedPayAsClear)
 
 
 class ClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
-
-    def get_matches_recommendations(mycoDict):
+    @classmethod
+    def get_matches_recommendations(cls, mycoDict):
         pn = power_network.create_random(1)
         recommendations = []
 
