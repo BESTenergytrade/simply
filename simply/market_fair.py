@@ -153,7 +153,7 @@ class BestMarket(Market):
 
             # order local bids and asks by price
             _bids = _bids.sort_values(["price"], ascending=False)
-            _asks = _asks.sort_values(["adjusted_price"], ascending=True)
+            _asks = _asks.sort_values(["adjusted_price", "price"], ascending=[True, False])
 
             # match local bids and asks
             bid_iter = _bids.iterrows()
