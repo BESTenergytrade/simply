@@ -46,6 +46,15 @@ def generate_recommendations(market_id, time, bids, asks, matches):
 class MatchingAlgorithm(ABC):
     @staticmethod
     def get_market_matches(mycoDict, market):
+        """
+        Unpacks order dictionary per market and time slot
+        and match the orders using the given market.
+
+        :param mycoDict: hierarchical dictionary with market name and time slot each containing
+        a dict with bids and offers in lists {'bids': []], 'offers': []}
+        :param market: Market object that implements the matching algorithm
+        :return: list of dictionaries with matches in all given markets and time slots
+        """
         recommendations = []
 
         for market_id, market_name in mycoDict.items():
@@ -67,18 +76,27 @@ class MatchingAlgorithm(ABC):
 
 
 class PayAsBidMatchingAlgorithm(MatchingAlgorithm):
+    """
+    Wrapper class for the pay as bid matching algorithm
+    """
     @classmethod
     def get_matches_recommendations(cls, mycoDict):
         return super().get_market_matches(mycoDict, market.Market)
 
 
 class PayAsClearMatchingAlgorithm(MatchingAlgorithm):
+    """
+    Wrapper class for the pay as clear matching algorithm
+    """
     @classmethod
     def get_matches_recommendations(cls, mycoDict):
         return super().get_market_matches(mycoDict, market_2pac.TwoSidedPayAsClear)
 
 
 class ClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
+    """
+    Wrapper class of the cluster-based market fair matching algorithm
+    """
     @classmethod
     def get_matches_recommendations(cls, mycoDict):
         pn = power_network.create_random(1)
