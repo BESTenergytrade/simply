@@ -6,10 +6,13 @@ import pytest
 class TestMarket:
 
     def test_init(self):
+        """Tests the initialisation of instance of the Market class with current market time set to 0."""
         m = Market(0)
         assert m.t == 0
 
     def test_accept_order(self):
+        """Tests if Market class accept_order method correctly adds new orders with appropriate time, type and energy
+             to the orders dataframe and raises ValueError when order with inappropriate time and type are added."""
         # Order(type, time, actor_id, energy, price), callback
         m = Market(0)
         assert len(m.orders) == 0
@@ -28,6 +31,8 @@ class TestMarket:
             m.accept_order(Order(0,0,0,1,1), None)
 
     def test_order_energy(self):
+        """"Tests that orders are accepted based on energy unit with energy above the unit being rounded down
+        and energy below the unit not being accepted."""
         m = Market(0)
         # round to energy unit
         m.energy_unit = 0.1
@@ -57,6 +62,8 @@ class TestMarket:
 
 
     def test_get_bids(self):
+        """Tests the Market class get_bids method returns a dataframe with the correct number of bids when
+            new bids and asks are added to the Market instance via the accept_orders method."""
         m = Market(0)
         assert m.get_bids().shape[0] == 0
         # add ask
@@ -70,6 +77,8 @@ class TestMarket:
         assert m.get_bids().shape[0] == 2
 
     def test_get_asks(self):
+        """Tests the Market class get_asks method returns a dataframe with the correct number of asks when
+            new bids and asks are added to the Market instance via the accept_orders method."""
         m = Market(0)
         assert m.get_asks().shape[0] == 0
         # add bid
@@ -83,6 +92,7 @@ class TestMarket:
         assert m.get_asks().shape[0] == 2
 
     def test_clear(self):
+        """Tests that matches are saved when the Market class's clear method is called."""
         m = Market(0)
         m.accept_order(Order(-1,0,0,1,1), None)
         # no match possible (only one order)
@@ -105,6 +115,8 @@ class TestMarket:
 class TestPayAsBid():
 
     def test_basic(self):
+        """Tests the basic functionality of the Market object to accept bids and asks via the accept_order method
+            and correctly match asks and bids when the match method is called."""
         m = Market(0)
         # no orders
         assert len(m.match()) == 0
@@ -121,6 +133,8 @@ class TestPayAsBid():
         assert matches[0]["price"] == 1
 
     def test_prices(self):
+        """Tests that the match method only registers matches when the ask is less than or equal to the bid. If the ask
+            is less than the bid then the match is made using the price of the bid."""
         # different prices, pay as bid
         m = Market(0)
         # ask above bid: no match
@@ -140,6 +154,8 @@ class TestPayAsBid():
         assert matches[0]["price"] == 2
 
     def test_energy(self):
+        """Tests that matches can be made when when the amount of energy requested by the bid differs from the total
+           amount of energy being offered by the ask."""
         # different energies
         m = Market(0)
         m.accept_order(Order(-1,0,0,.1,1), None)
@@ -156,6 +172,7 @@ class TestPayAsBid():
         assert matches[0]["energy"] == pytest.approx(0.3)
 
     def test_multiple(self):
+        """Tests that multiple bids can be matched with one ask while there is available energy within the order."""
         # multiple bids to satisfy one ask
         m = Market(0)
         m.accept_order(Order(-1,0,0,.1,1), None)
