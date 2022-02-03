@@ -35,8 +35,8 @@ def generate_recommendations(market_id, time, bids, asks, matches):
             "market_id": market_id,
             "time_slot": time,
             'matching_requirements': None,
-            "bids": [bids[match["bid_actor"]]],
-            "offers": [asks[match["ask_actor"]]],
+            "bid": bids[match["bid_actor"]],
+            "offer": asks[match["ask_actor"]],
             "selected_energy": match["energy"] / ENERGY_UNIT_CONVERSION_FACTOR,
             "trade_rate": match["price"],
         })
