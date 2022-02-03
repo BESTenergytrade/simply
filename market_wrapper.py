@@ -20,11 +20,11 @@ def accept_orders(market, time, orders):
     for bid in orders["bids"]:
         energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
         order = Order(-1, time, bid["buyer"], energy, bid["energy_rate"])
-        market.accept_order(order, None)
+        market.accept_order(order, None, bid["id"])
     for ask in orders["offers"]:
         energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
         order = Order(1, time, ask["seller"], energy, ask["energy_rate"])
-        market.accept_order(order, None)
+        market.accept_order(order, None, ask["id"])
 
 
 def generate_recommendations(market_id, time, bids, asks, matches):
@@ -35,8 +35,8 @@ def generate_recommendations(market_id, time, bids, asks, matches):
             "market_id": market_id,
             "time_slot": time,
             'matching_requirements': None,
-            "bid": bids[match["bid_actor"]],
-            "offer": asks[match["ask_actor"]],
+            "bid": bids[match["bid_id"]],
+            "offer": asks[match["ask_id"]],
             "selected_energy": match["energy"] / ENERGY_UNIT_CONVERSION_FACTOR,
             "trade_rate": match["price"],
         })
@@ -55,7 +55,7 @@ class MatchingAlgorithm(ABC):
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 
-                accept_orders(m, orders)
+                accept_orders(m, time+":00", orders)
                 matches = m.match()
 
                 recommendations += generate_recommendations(market_id, time, bids, asks, matches)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     with open(args.file, 'r') as f:
         mycoDict = json.load(f)
 
-    # recommendation = PayAsBidMatchingAlgorithm.get_matches_recommendations(mycoDict)
+    recommendation = PayAsBidMatchingAlgorithm.get_matches_recommendations(mycoDict)
     # recommendation = PayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
-    recommendation = ClusterPayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
+    # recommendation = ClusterPayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
     print(json.dumps(recommendation, indent=2))

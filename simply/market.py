@@ -35,7 +35,7 @@ class Market:
         print(self.get_bids())
         print(self.get_asks())
 
-    def accept_order(self, order, callback):
+    def accept_order(self, order, callback, order_id=None):
         """
         Handle new order.
 
@@ -57,7 +57,12 @@ class Market:
         if energy < self.energy_unit:
             return
         order = order._replace(energy=energy)
-        self.orders = pd.concat([self.orders , pd.DataFrame([order])], ignore_index=True)
+        if order_id is None:
+            self.orders = pd.concat([self.orders, pd.DataFrame([order])], ignore_index=True)
+        else:
+            assert order_id not in self.orders.index
+            new_order = pd.DataFrame([order], index=[order_id])
+            self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
 
     def clear(self, reset=True):
@@ -112,6 +117,8 @@ class Market:
                     self.orders.loc[bid_id] = bid
                     matches.append({
                         "time": self.t,
+                        "bid_id": bid_id,
+                        "ask_id": ask_id,
                         "bid_actor": bid.actor_id,
                         "ask_actor": ask.actor_id,
                         "energy": energy,
