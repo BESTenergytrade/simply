@@ -85,7 +85,7 @@ class TestBestMarket:
         assert matches[0]["price"] == pytest.approx(3)  # 2 + weight(1)
 
     def test_undefined(self):
-        """Tests that energy units matched sum to 1 and that each unit is sold for 4."""
+        """Tests correct accounting for the sum of energy and price."""
         # same price: depends on internal ordering
         m = BestMarket(0, self.pn, 1)
         m.accept_order(Order(-1,0,2,1,5), None)
