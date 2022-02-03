@@ -77,7 +77,7 @@ class PowerNetwork:
 
     def add_actors_map(self, map):
         for a, c in map.items():
-            self.network.add_edge(c, a, weight=round(random.random(), 1))
+            self.network.add_edge(c, a, weight=0)
 
         return map
 
