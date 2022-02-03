@@ -45,7 +45,7 @@ def generate_recommendations(market_id, time, bids, asks, matches):
 
 class MatchingAlgorithm(ABC):
     @staticmethod
-    def __get_market_matches(mycoDict, market):
+    def get_market_matches(mycoDict, market):
         recommendations = []
 
         for market_id, market_name in mycoDict.items():
@@ -69,13 +69,13 @@ class MatchingAlgorithm(ABC):
 class PayAsBidMatchingAlgorithm(MatchingAlgorithm):
     @classmethod
     def get_matches_recommendations(cls, mycoDict):
-        return cls._MatchingAlgorithm__get_market_matches(mycoDict, market.Market)
+        return super().get_market_matches(mycoDict, market.Market)
 
 
 class PayAsClearMatchingAlgorithm(MatchingAlgorithm):
     @classmethod
     def get_matches_recommendations(cls, mycoDict):
-        return cls._MatchingAlgorithm__get_market_matches(mycoDict, market_2pac.TwoSidedPayAsClear)
+        return super().get_market_matches(mycoDict, market_2pac.TwoSidedPayAsClear)
 
 
 class ClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
