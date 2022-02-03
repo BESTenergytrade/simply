@@ -14,16 +14,16 @@ Config('')
 ENERGY_UNIT_CONVERSION_FACTOR = 1000  # simply: kW, D3A: MW
 
 
-def accept_orders(market, orders):
+def accept_orders(market, time, orders):
     # generate simply Order, put it into market
     # apply conversion factor except for market maker orders
     for bid in orders["bids"]:
         energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
-        order = Order(-1, bid["time_slot"], bid["id"], energy, bid["energy_rate"])
+        order = Order(-1, time, bid["buyer"], energy, bid["energy_rate"])
         market.accept_order(order, None)
     for ask in orders["offers"]:
         energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
-        order = Order(1, ask["time_slot"], ask["id"], energy, ask["energy_rate"])
+        order = Order(1, time, ask["seller"], energy, ask["energy_rate"])
         market.accept_order(order, None)
 
 
@@ -34,6 +34,7 @@ def generate_recommendations(market_id, time, bids, asks, matches):
         recommendations.append({
             "market_id": market_id,
             "time_slot": time,
+            'matching_requirements': None,
             "bids": [bids[match["bid_actor"]]],
             "offers": [asks[match["ask_actor"]]],
             "selected_energy": match["energy"] / ENERGY_UNIT_CONVERSION_FACTOR,
@@ -98,7 +99,7 @@ class ClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 
-                accept_orders(m, orders)
+                accept_orders(m, time + ":00", orders)
                 matches = m.match()
 
                 recommendations += generate_recommendations(market_id, time, bids, asks,
