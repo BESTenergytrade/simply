@@ -99,7 +99,7 @@ class TestBestMarket:
 
     def test_energy(self):
         """Tests that the amount of energy traded equals the maximum amount available that is less than or equal to
-            the amount request by the bid."""
+            the amount requested by the bid."""
         # different energies
         m = BestMarket(0, self.pn)
         m.accept_order(Order(-1,0,2,.1,1), None)
@@ -116,7 +116,7 @@ class TestBestMarket:
         assert matches[0]["energy"] == pytest.approx(0.3)
 
     def test_multiple(self):
-        """Tests that matches can be made which require multiple asks to satisfy one bid and multiple bids to
+        """Tests that matches can be made which require multiple asks to satisfy one bid or multiple bids to
             satisfy one ask."""
         # multiple bids to satisfy one ask
         m = BestMarket(0, self.pn)
@@ -143,7 +143,7 @@ class TestBestMarket:
         assert matches[3]["energy"] == pytest.approx(40)  # only 100 in bid
 
     def test_match_ordering(self):
-        """Test that checks that matching prioritises asks in cluster local to bid."""
+        """Test to check that matching favors local orders in case of equal (adjusted) price."""
         m = BestMarket(0, self.pn, 1)
         m.accept_order(Order(-1, 0, 2, 1, 4), None)
         m.accept_order(Order(1, 0, 3, 1, 4), None)
@@ -180,7 +180,7 @@ class TestBestMarket:
         m.accept_order(Order(-1, 0, 2, 1, 4), None)
         m.accept_order(Order(1, 0, 3, large_order_threshold+1, 4), None)
         matches = m.match()
-        # match cluster must be closest to bid cluster
+        # large ask is discarded, no match possible
         assert len(matches) == 0
 
     def test_market_maker_orders(self):
@@ -190,5 +190,7 @@ class TestBestMarket:
         m.accept_order(Order(-1, 0, 2, 1, 4), None)
         m.accept_order(Order(1, 0, 3, market_maker_threshold+1, 4), None)
         matches = m.match()
-        # match cluster must be closest to bid cluster
+        # matched with market maker
         assert len(matches) == 1
+        assert matches[0]['energy'] == pytest.approx(1)
+        assert matches[0]['price'] == pytest.approx(4)

@@ -92,7 +92,7 @@ class TestMarket:
         assert m.get_asks().shape[0] == 2
 
     def test_clear(self):
-        """Tests that matches are saved when the Market class's clear method is called."""
+        """Tests that new list of matches is saved when the Market class's clear method is called."""
         m = Market(0)
         m.accept_order(Order(-1,0,0,1,1), None)
         # no match possible (only one order)
@@ -133,8 +133,8 @@ class TestPayAsBid():
         assert matches[0]["price"] == 1
 
     def test_prices(self):
-        """Tests that the match method only registers matches when the ask is less than or equal to the bid. If the ask
-            is less than the bid then the match is made using the price of the bid."""
+        """Tests that the match method only registers matches when the ask is less than or equal to the bid.
+        If matched, the price of the bid is taken."""
         # different prices, pay as bid
         m = Market(0)
         # ask above bid: no match
@@ -154,7 +154,7 @@ class TestPayAsBid():
         assert matches[0]["price"] == 2
 
     def test_energy(self):
-        """Tests that matches can be made when when the amount of energy requested by the bid differs from the total
+        """Tests that matches can be made when the amount of energy requested by the bid differs from the total
            amount of energy being offered by the ask."""
         # different energies
         m = Market(0)
