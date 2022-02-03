@@ -12,7 +12,6 @@ class Market:
     """
 
     def __init__(self, time, network=None):
-        # TODO tbd if lists or dicts or ... is used
         self.orders = pd.DataFrame(columns = Order._fields)
         self.t = time
         self.trades = None
@@ -57,6 +56,8 @@ class Market:
         if energy < self.energy_unit:
             return
         order = order._replace(energy=energy)
+        # If an order ID parameter is not set, ignore it
+        # otherwise adopt the ID, while checking it is not already used
         if order_id is None:
             self.orders = pd.concat([self.orders, pd.DataFrame([order])], ignore_index=True)
         else:
@@ -96,6 +97,8 @@ class Market:
 
         Return structure: each match is a dict and has the following items:
             time: current market time
+            bid_id: ID of bid order
+            ask_id: ID of ask order
             bid_actor: ID of bidding actor
             ask_actor: ID of asking actor
             energy: matched energy (multiple of market's energy unit)

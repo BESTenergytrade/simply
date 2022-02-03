@@ -15,7 +15,7 @@ ENERGY_UNIT_CONVERSION_FACTOR = 1000  # simply: kW, D3A: MW
 
 
 def accept_orders(market, time, orders):
-    # generate simply Order, put it into market
+    # generate simply Order, put it into market including predefined order IDs
     # apply conversion factor except for market maker orders
     for bid in orders["bids"]:
         energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
