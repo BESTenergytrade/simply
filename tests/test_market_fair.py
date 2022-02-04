@@ -134,7 +134,6 @@ class TestBestMarket:
         m.accept_order(Order(-1,0,2,.3,1), None, "ID1")
         m.accept_order(Order(1,0,3,9223372036854775807,1), None, "ID2")
         matches = m.match()
-        print(matches)
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
         assert matches[0]["bid_id"] == "ID1"
@@ -146,7 +145,6 @@ class TestBestMarket:
         m.accept_order(Order(-1, 0, 2, 9223372036854775807, 1), None, "ID3")
         m.accept_order(Order(1, 0, 3, .3, 1), None, "ID4")
         matches = m.match()
-        print(matches)
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
         assert matches[0]["bid_id"] == "ID3"
