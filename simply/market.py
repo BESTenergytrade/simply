@@ -112,6 +112,8 @@ class Market:
         matches = []
         for ask_id, ask in self.get_asks().iterrows():
             for bid_id, bid in self.get_bids().iterrows():
+                if ask.actor_id == bid.actor_id:
+                    continue
                 if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit and ask.price <= bid.price:
                     # match ask and bid
                     energy = min(ask.energy, bid.energy)
