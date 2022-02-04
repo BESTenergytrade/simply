@@ -27,6 +27,13 @@ class TestMarket:
         with pytest.raises(ValueError):
             m.accept_order(Order(0,0,0,1,1), None)
 
+    def test_not_accept_existing_order_id(self):
+        # The order ID is used twice, but should be unique -> else raise ValueError
+        m = Market(0)
+        m.accept_order(Order(-1, 0, 2, .2, 1), None, "ID1")
+        with pytest.raises(ValueError):
+            m.accept_order(Order(1, 0, 3, 1, 1), None, "ID1")
+
     def test_order_energy(self):
         m = Market(0)
         # round to energy unit
@@ -154,6 +161,17 @@ class TestPayAsBid():
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
+
+    def test_setting_order_id(self):
+        # Check if matched orders retain original ID
+        m = Market(0)
+        m.accept_order(Order(-1, 0, 2, .2, 1), None, "ID1")
+        m.accept_order(Order(1, 0, 3, 1, 1), None, "ID2")
+        matches = m.match()
+        assert len(matches) == 1
+        assert matches[0]["energy"] == pytest.approx(0.2)
+        assert matches[0]["bid_id"] == "ID1"
+        assert matches[0]["ask_id"] == "ID2"
 
     def test_multiple(self):
         # multiple bids to satisfy one ask

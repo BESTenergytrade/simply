@@ -60,6 +60,17 @@ def test_energy():
     assert len(matches) == 1
     assert matches[0]["energy"] == pytest.approx(0.3)
 
+def test_setting_order_id():
+    # Check if matched orders retain original ID
+    m = TwoSidedPayAsClear(0)
+    m.accept_order(Order(-1,0,2,.2,1), None, "ID1")
+    m.accept_order(Order(1,0,3,1,1), None, "ID2")
+    matches = m.match()
+    assert len(matches) == 1
+    assert matches[0]["energy"] == pytest.approx(0.2)
+    assert matches[0]["bid_id"] == "ID1"
+    assert matches[0]["ask_id"] == "ID2"
+
 def test_multiple():
     # multiple bids to satisfy one ask
     m = TwoSidedPayAsClear(0)
