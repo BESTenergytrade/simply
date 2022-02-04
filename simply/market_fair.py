@@ -253,10 +253,12 @@ class BestMarket(Market):
         asks = orders[orders.type == 1]
         if not bids_mm.empty:
             # bidding market maker: highest price
-            bid_mm = bids_mm.sort_values("price", ascending=False).iloc[0]
-            asks = asks[asks["price"] <= bid_mm.price]
+            bid_mm = bids_mm.sort_values("price", ascending=False).reset_index().iloc[0]
+            asks = asks[asks["price"] <= bid_mm.price].reset_index()
             matches += list(asks.apply(lambda ask: {
                 "time": self.t,
+                "bid_id": bid_mm["index"],
+                "ask_id": ask["index"],
                 "bid_actor": bid_mm.actor_id,
                 "ask_actor": ask.actor_id,
                 "energy": ask.energy,
@@ -267,10 +269,12 @@ class BestMarket(Market):
         bids = orders[orders.type == -1]
         if not asks_mm.empty:
             # asking market maker: lowest price
-            ask_mm = asks_mm.sort_values("price", ascending=True).iloc[0]
-            bids = bids[bids["price"] >= ask_mm.price]
+            ask_mm = asks_mm.sort_values("price", ascending=True).reset_index().iloc[0]
+            bids = bids[bids["price"] >= ask_mm.price].reset_index()
             matches += list(bids.apply(lambda bid: {
                 "time": self.t,
+                "bid_id": bid["index"],
+                "ask_id": ask_mm["index"],
                 "bid_actor": bid.actor_id,
                 "ask_actor": ask_mm.actor_id,
                 "energy": bid.energy,
