@@ -109,7 +109,7 @@ class TestBestMarket:
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
 
-    def test_not_except_existing_order_id(self):
+    def test_not_accept_existing_order_id(self):
         # The order ID is used twice, but should be unique -> else raise ValueError
         m = BestMarket(0, self.pn)
         m.accept_order(Order(-1, 0, 2, .2, 1), None, "ID1")
