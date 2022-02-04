@@ -4,6 +4,8 @@ import networkx as nx
 from networkx.readwrite import json_graph
 import matplotlib.pyplot as plt
 
+import simply.config as cfg
+
 
 class PowerNetwork:
     """
@@ -19,9 +21,19 @@ class PowerNetwork:
         :param network: graph representation
         :type network: networkx graph
         """
+
         self.name = name
         # all leaf nodes are potential connection points for actors
         self.leaf_nodes = sorted(n for n, d in network.degree() if d == 1)
+
+        # holds shortest paths from each node to each other node
+        short_paths = None
+        # clusters is list of sets with node IDs. Unused.
+        self.clusters = []
+        # reverse lookup: node ID -> cluster index. Unused.
+        self.node_to_cluster = {}
+        # matrix with (scaled) weights between clusters
+        self.grid_fee_matrix = []
 
         #clusters: leaves with their parents (no weight between them)
         for leaf in self.leaf_nodes:
@@ -29,11 +41,62 @@ class PowerNetwork:
                 d["weight"] = 0
 
         self.network = network
-        self.short_paths = None
         self.update_shortest_paths()
+        self.generate_grid_fee_matrix(cfg.parser.getfloat("network", "weight_factor", fallback=1))
 
     def update_shortest_paths(self):
         self.short_paths = nx.shortest_path(self.network, weight="weight")
+
+    def generate_grid_fee_matrix(self, weight_factor = 1):
+        # clustering of nodes by weight. Within cluster, edges have weight 0
+
+        # BFS: start with any node
+        nodes = [list(self.network.nodes)[0]]
+        while nodes:
+            # get first node from list. Guaranteed to not be part of prior cluster
+            u = nodes.pop(0)
+            # start new cluster with this node
+            cluster = len(self.clusters)
+            self.clusters.append({u})
+            self.node_to_cluster[u] = cluster
+            # check neighbors using BFS
+            cluster_nodes = [u]
+            while cluster_nodes:
+                # get next neighbor node
+                node = cluster_nodes.pop(0)
+                for edge in self.network.edges(node, data = True):
+                    # get target of this connection (neighbor of neighbor)
+                    v = edge[1]
+                    if v in self.node_to_cluster:
+                        # already visited
+                        continue
+                    if edge[2].get("weight", 0) == 0:
+                        # weight zero: part of cluster
+                        # add to cluster set
+                        self.clusters[-1].add(v)
+                        self.node_to_cluster[v] = cluster
+                        # add to list of neighbors to check later
+                        cluster_nodes.append(v)
+                    else:
+                        # not part of cluster
+                        # add to list of nodes that form new clusters
+                        nodes.append(v)
+
+        # Calculate accumulated weights on path between clusters and actor nodes
+        # Get any one node from each cluster
+        root_nodes = {i: list(c)[0] for i, c in enumerate(self.clusters)}
+        # init weight matrix with zeros
+        num_root_nodes = len(root_nodes)
+        self.grid_fee_matrix = [[0]*num_root_nodes for i in range(num_root_nodes)]
+        # fill weight matrix
+        # matrix symmetric: only need to compute half of values, diagonal is 0
+        for i, n1 in root_nodes.items():
+            for j, n2 in root_nodes.items():
+                if i > j:
+                    # get weight between n1 and n2
+                    w = self.get_path_weight(n1, n2) * weight_factor
+                    self.grid_fee_matrix[i][j] = w
+                    self.grid_fee_matrix[j][i] = w
 
     def to_image(self, width, height):
         fig = self.plot(False)

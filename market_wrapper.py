@@ -19,11 +19,13 @@ def accept_orders(market, orders):
     # apply conversion factor except for market maker orders
     for bid in orders["bids"]:
         energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
-        order = Order(-1, bid["time_slot"], bid["id"], energy, bid["energy_rate"])
+        cluster = (bid["attributes"] or dict()).get("cluster")
+        order = Order(-1, bid["time_slot"], bid["id"], cluster, energy, bid["energy_rate"])
         market.accept_order(order, None)
     for ask in orders["offers"]:
         energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
-        order = Order(1, ask["time_slot"], ask["id"], energy, ask["energy_rate"])
+        cluster = (bid["attributes"] or dict()).get("cluster")
+        order = Order(1, ask["time_slot"], ask["id"], cluster, energy, ask["energy_rate"])
         market.accept_order(order, None)
 
 
@@ -112,7 +114,7 @@ class ClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
                 map_actors = {actor: node_id for actor, node_id in zip(actors, actor_nodes)}
                 pn.add_actors_map(map_actors)
 
-                m = market_fair.BestMarket(t=time + ":00", network=pn)
+                m = market_fair.BestMarket(time=time + ":00", network=pn)
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 

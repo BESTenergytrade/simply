@@ -16,84 +16,20 @@ class BestMarket(Market):
     Nodes are first grouped into clusters (nodes with no transaction fees between them). Then, all clusters are evaluated individually, adding transaction fees to other clusters. If a match becomes disputed (order matched more than once), the higher offer is taken, while the other one is removed as a possible match and that cluster is re-evaluated. This converges to an optimal solution.
     """
 
-    # clusters is list of sets with node IDs
-    clusters = []
-    # reverse lookup: node ID -> cluster index
-    node_to_cluster = {}
-    # matrix with (scaled) weights between clusters
-    grid_fee_matrix = []
-
-
-    def __init__(self, t, network=None, weight_factor=0.1):
-        if network is None or not network.network.nodes:
-            raise AttributeError("BestMarket needs power network")
-        super().__init__(t, network)
-
-        # clustering of nodes by weight. Within cluster, edges have weight 0
-
-        # BFS: start with any node
-        nodes = [list(network.network.nodes)[0]]
-        while nodes:
-            # get first node from list. Guaranteed to not be part of prior cluster
-            u = nodes.pop(0)
-            # start new cluster with this node
-            cluster = len(self.clusters)
-            self.clusters.append({u})
-            self.node_to_cluster[u] = cluster
-            # check neighbors using BFS
-            cluster_nodes = [u]
-            while cluster_nodes:
-                # get next neighbor node
-                node = cluster_nodes.pop(0)
-                for edge in network.network.edges(node, data = True):
-                    # get target of this connection (neighbor of neighbor)
-                    v = edge[1]
-                    if v in self.node_to_cluster:
-                        # already visited
-                        continue
-                    if edge[2].get("weight", 0) == 0:
-                        # weight zero: part of cluster
-                        # add to cluster set
-                        self.clusters[-1].add(v)
-                        self.node_to_cluster[v] = cluster
-                        # add to list of neighbors to check later
-                        cluster_nodes.append(v)
-                    else:
-                        # not part of cluster
-                        # add to list of nodes that form new clusters
-                        nodes.append(v)
-
-        # Calculate accumulated weights on path between clusters and actor nodes
-        # Get any one node from each cluster
-        root_nodes = {i: list(c)[0] for i, c in enumerate(self.clusters)}
-        # init weight matrix with zeros
-        num_root_nodes = len(root_nodes)
-        self.grid_fee_matrix = [[0]*num_root_nodes for i in range(num_root_nodes)]
-        # fill weight matrix
-        # matrix symmetric: only need to compute half of values, diagonal is 0
-        for i, n1 in root_nodes.items():
-            for j, n2 in root_nodes.items():
-                if i > j:
-                    # get weight between n1 and n2
-                    w = self.network.get_path_weight(n1, n2) * weight_factor
-                    self.grid_fee_matrix[i][j] = w
-                    self.grid_fee_matrix[j][i] = w
-
-
     def match(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
 
         # filter out market makers (infinite bus) and really large orders
-        large_asks_mask = asks["energy"] >= LARGE_ORDER_THRESHOLD
+        large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
         large_asks = asks[large_asks_mask]
-        asks_mm = large_asks[large_asks["energy"] >= MARKET_MAKER_THRESHOLD]
+        asks_mm = large_asks[large_asks.energy >= MARKET_MAKER_THRESHOLD]
         asks = asks[~large_asks_mask]
         if len(large_asks) > len(asks_mm):
             print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
-        large_bids_mask = bids["energy"] >= LARGE_ORDER_THRESHOLD
+        large_bids_mask = bids.energy >= LARGE_ORDER_THRESHOLD
         large_bids = bids[large_bids_mask]
-        bids_mm = large_bids[large_bids["energy"] >= MARKET_MAKER_THRESHOLD]
+        bids_mm = large_bids[large_bids.energy >= MARKET_MAKER_THRESHOLD]
         bids = bids[~large_bids_mask]
         if len(large_bids) > len(bids_mm):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
@@ -102,23 +38,25 @@ class BestMarket(Market):
             # no asks or bids at all: no matches
             return []
 
+        # filter out orders without cluster (can still be matched with market maker)
+        asks = asks[~asks.cluster.isna()]
+        bids = bids[~bids.cluster.isna()]
+
         # split asks and bids into smallest energy unit, save original index, add cluster idx
         asks = pd.DataFrame(asks)
         asks["order_id"] = asks.index
-        asks["cluster"] = asks["actor_id"].map(self.node_to_cluster)
         asks = pd.DataFrame(asks.values.repeat(
             asks.energy * (1/self.energy_unit), axis=0), columns=asks.columns)
         asks.energy = self.energy_unit
         bids = pd.DataFrame(bids)
         bids["order_id"] = bids.index
-        bids["cluster"] = bids["actor_id"].map(self.node_to_cluster)
         bids = pd.DataFrame(bids.values.repeat(
             bids.energy * (1/self.energy_unit), axis=0), columns=bids.columns)
         bids.energy = self.energy_unit
 
         # keep track which clusters have to be (re)matched
         # start with all clusters
-        clusters_to_match = set(range(len(self.clusters)))
+        clusters_to_match = set(range(len(self.grid_fee_matrix)))
         # keep track of matches
         matches = []
         # keep track which asks to exclude in each zone (initially empty)
@@ -127,17 +65,12 @@ class BestMarket(Market):
         while clusters_to_match:
             # simulate local market within cluster
             cluster_idx = clusters_to_match.pop()
-            cluster = self.clusters[cluster_idx]
 
             # get local bids
-            _bids = bids[bids.actor_id.isin(cluster)]
+            _bids = bids[bids.cluster == cluster_idx]
             if len(_bids) == 0:
                 # no bids within this cluster: can't match here
                 continue
-
-            # get any one node from cluster
-            for cluster_root in cluster:
-                break
 
             # get all asks that are not in exclude list for this cluster (copy asks, retain index)
             _asks = asks.drop(exclude[cluster_idx], axis=0, inplace=False)
