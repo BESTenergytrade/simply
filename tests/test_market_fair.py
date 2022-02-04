@@ -109,6 +109,49 @@ class TestBestMarket:
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
 
+    def test_not_except_existing_order_id(self):
+        # The order ID is used twice, but should be unique -> else raise ValueError
+        m = BestMarket(0, self.pn)
+        m.accept_order(Order(-1, 0, 2, .2, 1), None, "ID1")
+        with pytest.raises(ValueError):
+            m.accept_order(Order(1, 0, 3, 1, 1), None, "ID1")
+
+    def test_setting_order_id(self):
+        # Check if matched orders retain original ID
+        m = BestMarket(0, self.pn)
+        m.accept_order(Order(-1,0,2,.2,1), None, "ID1")
+        m.accept_order(Order(1,0,3,1,1), None, "ID2")
+        matches = m.match()
+        assert len(matches) == 1
+        assert matches[0]["energy"] == pytest.approx(0.2)
+        assert matches[0]["bid_id"] == "ID1"
+        assert matches[0]["ask_id"] == "ID2"
+
+    def test_setting_id_market_maker(self):
+        # Check if matched orders retain original ID for selling or buying market makers
+        m = BestMarket(0, self.pn)
+        # Test asking market maker with order ID
+        m.accept_order(Order(-1,0,2,.3,1), None, "ID1")
+        m.accept_order(Order(1,0,3,9223372036854775807,1), None, "ID2")
+        matches = m.match()
+        print(matches)
+        assert len(matches) == 1
+        assert matches[0]["energy"] == pytest.approx(0.3)
+        assert matches[0]["bid_id"] == "ID1"
+        assert matches[0]["ask_id"] == "ID2"
+
+        # Reset orders
+        m.orders = m.orders[:0]
+        # Test bidding market maker with order ID
+        m.accept_order(Order(-1, 0, 2, 9223372036854775807, 1), None, "ID3")
+        m.accept_order(Order(1, 0, 3, .3, 1), None, "ID4")
+        matches = m.match()
+        print(matches)
+        assert len(matches) == 1
+        assert matches[0]["energy"] == pytest.approx(0.3)
+        assert matches[0]["bid_id"] == "ID3"
+        assert matches[0]["ask_id"] == "ID4"
+
     def test_multiple(self):
         # multiple bids to satisfy one ask
         m = BestMarket(0, self.pn)
