@@ -60,11 +60,11 @@ class MatchingAlgorithm(ABC):
 
         for market_id, market_name in mycoDict.items():
             for time, orders in market_name.items():
-                m = market(time=time+":00")
+                m = market(time=time)
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 
-                accept_orders(m, time+":00", orders)
+                accept_orders(m, time, orders)
                 matches = m.match()
 
                 recommendations += generate_recommendations(market_id, time, bids, asks, matches)
@@ -113,11 +113,11 @@ class ClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
                 map_actors = {actor: node_id for actor, node_id in zip(actors, actor_nodes)}
                 pn.add_actors_map(map_actors)
 
-                m = market_fair.BestMarket(t=time + ":00", network=pn)
+                m = market_fair.BestMarket(t=time, network=pn)
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 
-                accept_orders(m, time + ":00", orders)
+                accept_orders(m, time, orders)
                 matches = m.match()
 
                 recommendations += generate_recommendations(market_id, time, bids, asks,
