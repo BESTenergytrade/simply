@@ -34,6 +34,13 @@ class TestMarket:
         with pytest.raises(ValueError):
             m.accept_order(Order(1, 0, 3, 1, 1), None, "ID1")
 
+    def test_setting_order_id_wrong(self):
+        # Check if error is raised when previously defined order IDs will be overridden i.e. ignored
+        m = Market(0)
+        m.accept_order(Order(-1, 0, 2, .2, 1), None, "ID1")
+        with pytest.raises(IndexError):
+            m.accept_order(Order(1, 0, 3, 1, 1), None, None)
+
     def test_order_energy(self):
         m = Market(0)
         # round to energy unit

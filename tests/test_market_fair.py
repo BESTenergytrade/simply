@@ -120,13 +120,6 @@ class TestBestMarket:
         assert matches[0]["bid_id"] == "ID1"
         assert matches[0]["ask_id"] == "ID2"
 
-    def test_setting_order_id_wrong(self):
-        # Check if error is raised when previously defined order IDs will be overridden i.e. ignored
-        m = BestMarket(0, self.pn)
-        m.accept_order(Order(-1, 0, 2, .2, 1), None, "ID1")
-        with pytest.raises(IndexError):
-            m.accept_order(Order(1, 0, 3, 1, 1), None, None)
-
     def test_setting_id_market_maker(self):
         # Check if matched orders retain original ID for selling or buying market makers
         m = BestMarket(0, self.pn)
