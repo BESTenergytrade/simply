@@ -98,8 +98,9 @@ class BestMarket(Market):
         if len(large_bids) > len(bids_mm):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
 
-        if (asks.empty and bids.empty) or (asks.empty and asks_mm.empty) or (bids.empty and
-                                                                             bids_mm.empty):
+        if (asks.empty and bids.empty)\
+                or (asks.empty and asks_mm.empty)\
+                or (bids.empty and bids_mm.empty):
             # no asks or bids at all: no matches
             return []
 
@@ -255,34 +256,39 @@ class BestMarket(Market):
         # match asks with bid market maker
         asks = orders[orders.type == 1]
         if not bids_mm.empty:
-            # bidding market maker: highest price
-            bid_mm = bids_mm.sort_values("price", ascending=False).reset_index().iloc[0]
-            asks = asks[asks["price"] <= bid_mm.price].reset_index()
-            matches += list(asks.apply(lambda ask: {
-                "time": self.t,
-                "bid_id": bid_mm["index"],
-                "ask_id": ask["index"],
-                "bid_actor": bid_mm.actor_id,
-                "ask_actor": ask.actor_id,
-                "energy": ask.energy,
-                "price": bid_mm.price,
-            }, axis = 1, result_type = "reduce"))
+            # bidding market maker represented by order ID of highest price
+            bid_mm_id = bids_mm['price'].astype(float).idxmax()
+            bid_mm = bids_mm.loc[bid_mm_id]
+            asks = asks[asks["price"] <= bid_mm.price]
+            for ask_id, ask in asks.iterrows():
+                matches.append({
+                    "time": self.t,
+                    "bid_id": bid_mm_id,
+                    "ask_id": ask_id,
+                    "bid_actor": bid_mm.actor_id,
+                    "ask_actor": ask.actor_id,
+                    "energy": ask.energy,
+                    "price": bid_mm.price,
+                })
 
         # match bids with ask market maker
         bids = orders[orders.type == -1]
         if not asks_mm.empty:
-            # asking market maker: lowest price
-            ask_mm = asks_mm.sort_values("price", ascending=True).reset_index().iloc[0]
-            bids = bids[bids["price"] >= ask_mm.price].reset_index()
-            matches += list(bids.apply(lambda bid: {
-                "time": self.t,
-                "bid_id": bid["index"],
-                "ask_id": ask_mm["index"],
-                "bid_actor": bid.actor_id,
-                "ask_actor": ask_mm.actor_id,
-                "energy": bid.energy,
-                "price": ask_mm.price,
-            }, axis = 1, result_type = "reduce"))
+            # asking market maker represented by order ID of lowest price
+            ask_mm_id = asks_mm['price'].astype(float).idxmin()
+            ask_mm = asks_mm.loc[ask_mm_id]
+            # indices of matched bids equal order IDs respectively
+            bids = bids[bids["price"] >= ask_mm.price]
+            for bid_id, bid in bids.iterrows():
+                matches.append({
+                    "time": self.t,
+                    "bid_id": bid_id,
+                    "ask_id": ask_mm_id,
+                    "bid_actor": bid.actor_id,
+                    "ask_actor": ask_mm.actor_id,
+                    "energy": bid.energy,
+                    "price": ask_mm.price,
+                })
 
         if show:
             print(matches)
