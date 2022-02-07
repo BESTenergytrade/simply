@@ -44,6 +44,9 @@ class Market:
 
         :param order: Order (type, time, actor_id, energy, price)
         :param callback: callback function (called when order is successfully matched)
+        :param order_id: (optional) define order ID of the order to be inserted, otherwise
+          consecutive numbers are used (if this leads to overriding indices, an IndexError is
+          raised)
         :return:
         """
         if order.time != self.t:
@@ -56,9 +59,14 @@ class Market:
         if energy < self.energy_unit:
             return
         order = order._replace(energy=energy)
-        # If an order ID parameter is not set, ignore it
+        # If an order ID parameter is not set,
+        #   - raise error if current consecuitve number does not equal the total number of orders
+        #   - otherwise ignore index -> consecutive numbers are intact
         # otherwise adopt the ID, while checking it is not already used
         if order_id is None:
+            if len(self.orders) != 0 and len(self.orders)-1 != self.orders.index.max():
+                raise IndexError("Previous order IDs were defined externally and reset when "
+                                 "inserting orders without predefined order_id.")
             self.orders = pd.concat([self.orders, pd.DataFrame([order])], ignore_index=True)
         else:
             if order_id in self.orders.index:
