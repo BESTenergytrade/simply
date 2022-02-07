@@ -1,5 +1,5 @@
 from simply.actor import Order
-from simply.market_fair import BestMarket
+from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD
 from simply.power_network import PowerNetwork
 import networkx as nx
 import pytest
@@ -125,8 +125,9 @@ class TestBestMarket:
         m = BestMarket(0, self.pn)
         # Test asking market maker with order ID
         m.accept_order(Order(-1,0,2,.3,1), None, "ID1")
-        m.accept_order(Order(1,0,3,9223372036854775807,1), None, "ID2")
+        m.accept_order(Order(1,0,3,MARKET_MAKER_THRESHOLD,1), None, "ID2")
         matches = m.match()
+        print(matches)
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
         assert matches[0]["bid_id"] == "ID1"
@@ -135,7 +136,7 @@ class TestBestMarket:
         # Reset orders
         m.orders = m.orders[:0]
         # Test bidding market maker with order ID
-        m.accept_order(Order(-1, 0, 2, 9223372036854775807, 1), None, "ID3")
+        m.accept_order(Order(-1, 0, 2, MARKET_MAKER_THRESHOLD, 1), None, "ID3")
         m.accept_order(Order(1, 0, 3, .3, 1), None, "ID4")
         matches = m.match()
         assert len(matches) == 1
