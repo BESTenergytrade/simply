@@ -18,12 +18,12 @@ class TestBestMarket:
         assert len(matches) == 0
 
         # only one type: no match
-        m.accept_order(Order(-1,0,2,None,1,1), None)
+        m.accept_order(Order(-1,0,2,None,1,1))
         matches = m.match()
         assert len(matches) == 0
 
         # bid and ask with same energy and price
-        m.accept_order(Order(1,0,3,None,1,1), None)
+        m.accept_order(Order(1,0,3,None,1,1))
         matches = m.match()
         assert len(matches) == 1
         # check match
@@ -37,16 +37,16 @@ class TestBestMarket:
         # test prices with a given power network
         m = BestMarket(0, self.pn)
         # ask above bid: no match
-        m.accept_order(Order(-1,0,2,None,1,2), None)
-        m.accept_order(Order(1,0,3,None,1,2.5), None)
+        m.accept_order(Order(-1,0,2,None,1,2))
+        m.accept_order(Order(1,0,3,None,1,2.5))
         matches = m.match()
         assert len(matches) == 0
 
         # reset orders
         m.orders = m.orders[:0]
         # ask below bid: take highest asking price
-        m.accept_order(Order(-1,0,2,None,1,2.5), None)
-        m.accept_order(Order(1,0,3,None,1,2), None)
+        m.accept_order(Order(-1,0,2,None,1,2.5))
+        m.accept_order(Order(1,0,3,None,1,2))
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(1)
@@ -54,15 +54,15 @@ class TestBestMarket:
 
         m.orders = m.orders[:0]
         # weight between nodes too high
-        m.accept_order(Order(-1,0,2,None,1,3), None)
-        m.accept_order(Order(1,0,4,None,1,3), None)
+        m.accept_order(Order(-1,0,2,None,1,3))
+        m.accept_order(Order(1,0,4,None,1,3))
         matches = m.match()
         assert len(matches) == 0
 
         m.orders = m.orders[:0]
         # weight between nodes low enough
-        m.accept_order(Order(-1,0,4,None,1,3), None)
-        m.accept_order(Order(1,0,2,None,1,2), None)
+        m.accept_order(Order(-1,0,4,None,1,3))
+        m.accept_order(Order(1,0,2,None,1,2))
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(1)
@@ -70,9 +70,9 @@ class TestBestMarket:
 
         m.orders = m.orders[:0]
         # match different clusters, even though there are orders from same cluster
-        m.accept_order(Order(1,0,2,None,1,2), None)
-        m.accept_order(Order(-1,0,3,None,1,2), None)
-        m.accept_order(Order(-1,0,4,None,1,4), None)
+        m.accept_order(Order(1,0,2,None,1,2))
+        m.accept_order(Order(-1,0,3,None,1,2))
+        m.accept_order(Order(-1,0,4,None,1,4))
         # expected: match 2 and 4, even though 2 and 3 are in same cluster (worse conditions)
         matches = m.match()
         assert len(matches) == 1
@@ -84,9 +84,9 @@ class TestBestMarket:
         m.orders = m.orders[:0]
         # same price: favor local orders
         # example: adjusted price is 4, actors 2 and 3 are same cluster
-        m.accept_order(Order(-1,0,2,None,1,5), None)
-        m.accept_order(Order(1,0,3,None,1,4), None)
-        m.accept_order(Order(1,0,4,None,1,3), None)
+        m.accept_order(Order(-1,0,2,None,1,5))
+        m.accept_order(Order(1,0,3,None,1,4))
+        m.accept_order(Order(1,0,4,None,1,3))
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["ask_actor"] == 3
@@ -99,16 +99,16 @@ class TestBestMarket:
         m = BestMarket(0, grid_fee_matrix = [[0,1],[1,0]])
 
         # ask above bid: no match
-        m.accept_order(Order(-1,0,2,0,1,2), None)
-        m.accept_order(Order(1,0,3,0,1,2.5), None)
+        m.accept_order(Order(-1,0,2,0,1,2))
+        m.accept_order(Order(1,0,3,0,1,2.5))
         matches = m.match()
         assert len(matches) == 0
 
         # reset orders
         m.orders = m.orders[:0]
         # ask below bid: take highest asking price
-        m.accept_order(Order(-1,0,2,1,1,2.5), None)
-        m.accept_order(Order(1,0,3,1,1,2), None)
+        m.accept_order(Order(-1,0,2,1,1,2.5))
+        m.accept_order(Order(1,0,3,1,1,2))
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(1)
@@ -116,15 +116,15 @@ class TestBestMarket:
 
         m.orders = m.orders[:0]
         # weight between nodes too high
-        m.accept_order(Order(-1,0,2,0,1,3), None)
-        m.accept_order(Order(1,0,4,1,1,3), None)
+        m.accept_order(Order(-1,0,2,0,1,3))
+        m.accept_order(Order(1,0,4,1,1,3))
         matches = m.match()
         assert len(matches) == 0
 
         m.orders = m.orders[:0]
         # weight between nodes low enough
-        m.accept_order(Order(-1,0,4,0,1,3), None)
-        m.accept_order(Order(1,0,2,1,1,2), None)
+        m.accept_order(Order(-1,0,4,0,1,3))
+        m.accept_order(Order(1,0,2,1,1,2))
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(1)
@@ -132,9 +132,9 @@ class TestBestMarket:
 
         m.orders = m.orders[:0]
         # match different clusters, even though there are orders from same cluster
-        m.accept_order(Order(1,0,2,0,1,2), None)
-        m.accept_order(Order(-1,0,3,0,1,2), None)
-        m.accept_order(Order(-1,0,4,1,1,4), None)
+        m.accept_order(Order(1,0,2,0,1,2))
+        m.accept_order(Order(-1,0,3,0,1,2))
+        m.accept_order(Order(-1,0,4,1,1,4))
         # expected: match 2 and 4, even though 2 and 3 are in same cluster (worse conditions)
         matches = m.match()
         assert len(matches) == 1
@@ -146,9 +146,9 @@ class TestBestMarket:
         m.orders = m.orders[:0]
         # same price: favor local orders
         # example: adjusted price is 4, actors 2 and 3 are same cluster
-        m.accept_order(Order(-1,0,2,1,1,5), None)
-        m.accept_order(Order(1,0,3,1,1,4), None)
-        m.accept_order(Order(1,0,4,0,1,3), None)
+        m.accept_order(Order(-1,0,2,1,1,5))
+        m.accept_order(Order(1,0,3,1,1,4))
+        m.accept_order(Order(1,0,4,0,1,3))
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["ask_actor"] == 3
@@ -159,15 +159,15 @@ class TestBestMarket:
     def test_energy(self):
         # different energies
         m = BestMarket(0, self.pn)
-        m.accept_order(Order(-1,0,2,None,.1,1), None)
-        m.accept_order(Order(1,0,3,None,1,1), None)
+        m.accept_order(Order(-1,0,2,None,.1,1))
+        m.accept_order(Order(1,0,3,None,1,1))
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.1)
 
         m.orders = m.orders[:0]
-        m.accept_order(Order(-1,0,2,None,100,1), None)
-        m.accept_order(Order(1,0,3,None,.3,1), None)
+        m.accept_order(Order(-1,0,2,None,100,1))
+        m.accept_order(Order(1,0,3,None,.3,1))
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
@@ -175,8 +175,8 @@ class TestBestMarket:
     def test_setting_order_id(self):
         # Check if matched orders retain original ID
         m = BestMarket(0, self.pn)
-        m.accept_order(Order(-1,0,2,None,.2,1), None, "ID1")
-        m.accept_order(Order(1,0,3,None,1,1), None, "ID2")
+        m.accept_order(Order(-1,0,2,None,.2,1), "ID1")
+        m.accept_order(Order(1,0,3,None,1,1), "ID2")
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.2)
@@ -187,8 +187,8 @@ class TestBestMarket:
         # Check if matched orders retain original ID for selling or buying market makers
         m = BestMarket(0, self.pn)
         # Test asking market maker with order ID
-        m.accept_order(Order(-1,0,2,None,.3,1), None, "ID1")
-        m.accept_order(Order(1,0,3,None,MARKET_MAKER_THRESHOLD,1), None, "ID2")
+        m.accept_order(Order(-1,0,2,None,.3,1), "ID1")
+        m.accept_order(Order(1,0,3,None,MARKET_MAKER_THRESHOLD,1), "ID2")
         matches = m.match()
         print(matches)
         assert len(matches) == 1
@@ -199,8 +199,8 @@ class TestBestMarket:
         # Reset orders
         m.orders = m.orders[:0]
         # Test bidding market maker with order ID
-        m.accept_order(Order(-1,0,2,None,MARKET_MAKER_THRESHOLD,1), None, "ID3")
-        m.accept_order(Order(1,0,3,None,.3,1), None, "ID4")
+        m.accept_order(Order(-1,0,2,None,MARKET_MAKER_THRESHOLD,1), "ID3")
+        m.accept_order(Order(1,0,3,None,.3,1), "ID4")
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
@@ -210,9 +210,9 @@ class TestBestMarket:
     def test_multiple(self):
         # multiple bids to satisfy one ask
         m = BestMarket(0, self.pn)
-        m.accept_order(Order(-1,0,2,None,.1,4), None)
-        m.accept_order(Order(-1,0,3,None,3,3), None)
-        m.accept_order(Order(1,0,4,None,2,1), None)
+        m.accept_order(Order(-1,0,2,None,.1,4))
+        m.accept_order(Order(-1,0,3,None,3,3))
+        m.accept_order(Order(1,0,4,None,2,1))
         matches = m.match()
         assert len(matches) == 2
         assert matches[0]["energy"] == pytest.approx(0.1)
@@ -220,11 +220,11 @@ class TestBestMarket:
 
         # multiple asks to satisfy one bid
         m.orders = m.orders[:0]
-        m.accept_order(Order(1,0,2,None,10,1), None)
-        m.accept_order(Order(1,0,2,None,20,2), None)
-        m.accept_order(Order(1,0,3,None,30,3), None)
-        m.accept_order(Order(1,0,3,None,50,4), None)
-        m.accept_order(Order(-1,0,4,None,100,5), None)
+        m.accept_order(Order(1,0,2,None,10,1))
+        m.accept_order(Order(1,0,2,None,20,2))
+        m.accept_order(Order(1,0,3,None,30,3))
+        m.accept_order(Order(1,0,3,None,50,4))
+        m.accept_order(Order(-1,0,4,None,100,5))
         matches = m.match()
         assert len(matches) == 4
         assert matches[0]["energy"] == pytest.approx(10)
