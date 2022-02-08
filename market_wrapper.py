@@ -13,21 +13,19 @@ Config('')
 
 ENERGY_UNIT_CONVERSION_FACTOR = 1000  # simply: kW, D3A: MW
 
-
-def accept_orders(market, orders):
-    # generate simply Order, put it into market
+def accept_orders(market, time, orders):
+    # generate simply Order, put it into market including predefined order IDs
     # apply conversion factor except for market maker orders
     for bid in orders["bids"]:
         energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
-        cluster = (bid["attributes"] or dict()).get("cluster")
-        order = Order(-1, bid["time_slot"], bid["id"], cluster, energy, bid["energy_rate"])
-        market.accept_order(order, None)
+        cluster = (bid.get("attributes") or {}).get("cluster")
+        order = Order(-1, time, bid["buyer"], cluster, energy, bid["energy_rate"])
+        market.accept_order(order, order_id=bid["id"])
     for ask in orders["offers"]:
         energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
-        cluster = (bid["attributes"] or dict()).get("cluster")
-        order = Order(1, ask["time_slot"], ask["id"], cluster, energy, ask["energy_rate"])
-        market.accept_order(order, None)
-
+        cluster = (ask.get("attributes") or {}).get("cluster")
+        order = Order(1, time, ask["seller"], cluster, energy, ask["energy_rate"])
+        market.accept_order(order, order_id=ask["id"])
 
 def generate_recommendations(market_id, time, bids, asks, matches):
     recommendations = []
@@ -36,8 +34,9 @@ def generate_recommendations(market_id, time, bids, asks, matches):
         recommendations.append({
             "market_id": market_id,
             "time_slot": time,
-            "bids": [bids[match["bid_actor"]]],
-            "offers": [asks[match["ask_actor"]]],
+            'matching_requirements': None,
+            "bid": bids[match["bid_id"]],
+            "offer": asks[match["ask_id"]],
             "selected_energy": match["energy"] / ENERGY_UNIT_CONVERSION_FACTOR,
             "trade_rate": match["price"],
         })
@@ -61,11 +60,11 @@ class MatchingAlgorithm(ABC):
 
         for market_id, market_name in mycoDict.items():
             for time, orders in market_name.items():
-                m = market(time=time+":00")
+                m = market(time=time)
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 
-                accept_orders(m, orders)
+                accept_orders(m, time, orders)
                 matches = m.match()
 
                 recommendations += generate_recommendations(market_id, time, bids, asks, matches)
@@ -114,11 +113,11 @@ class ClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
                 map_actors = {actor: node_id for actor, node_id in zip(actors, actor_nodes)}
                 pn.add_actors_map(map_actors)
 
-                m = market_fair.BestMarket(time=time + ":00", network=pn)
+                m = market_fair.BestMarket(time=time, network=pn)
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 
-                accept_orders(m, orders)
+                accept_orders(m, time, orders)
                 matches = m.match()
 
                 recommendations += generate_recommendations(market_id, time, bids, asks,
@@ -135,7 +134,7 @@ if __name__ == "__main__":
     with open(args.file, 'r') as f:
         mycoDict = json.load(f)
 
-    # recommendation = PayAsBidMatchingAlgorithm.get_matches_recommendations(mycoDict)
+    recommendation = PayAsBidMatchingAlgorithm.get_matches_recommendations(mycoDict)
     # recommendation = PayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
-    recommendation = ClusterPayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
+    # recommendation = ClusterPayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
     print(json.dumps(recommendation, indent=2))

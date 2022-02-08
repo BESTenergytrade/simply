@@ -12,7 +12,6 @@ class Market:
     """
 
     def __init__(self, time, network=None, grid_fee_matrix=None):
-        # TODO tbd if lists or dicts or ... is used
         self.orders = pd.DataFrame(columns = Order._fields)
         self.t = time
         self.trades = None
@@ -39,7 +38,7 @@ class Market:
         print(self.get_bids())
         print(self.get_asks())
 
-    def accept_order(self, order, callback):
+    def accept_order(self, order, order_id=None, callback=None):
         """
         Handle new order.
 
@@ -49,6 +48,9 @@ class Market:
 
         :param order: Order (type, time, actor_id, energy, price)
         :param callback: callback function (called when order is successfully matched)
+        :param order_id: (optional) define order ID of the order to be inserted, otherwise
+          consecutive numbers are used (if this leads to overriding indices, an IndexError is
+          raised)
         :return:
         """
         if order.time != self.t:
@@ -67,7 +69,20 @@ class Market:
         if energy < self.energy_unit:
             return
         order = order._replace(energy=energy)
-        self.orders = pd.concat([self.orders , pd.DataFrame([order])], ignore_index=True)
+        # If an order ID parameter is not set,
+        #   - raise error if current consecuitve number does not equal the total number of orders
+        #   - otherwise ignore index -> consecutive numbers are intact
+        # otherwise adopt the ID, while checking it is not already used
+        if order_id is None:
+            if len(self.orders) != 0 and len(self.orders)-1 != self.orders.index.max():
+                raise IndexError("Previous order IDs were defined externally and reset when "
+                                 "inserting orders without predefined order_id.")
+            self.orders = pd.concat([self.orders, pd.DataFrame([order])], ignore_index=True)
+        else:
+            if order_id in self.orders.index:
+                raise ValueError("Order ID ({}) already exists".format(order_id))
+            new_order = pd.DataFrame([order], index=[order_id])
+            self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
 
     def clear(self, reset=True):
@@ -101,6 +116,8 @@ class Market:
 
         Return structure: each match is a dict and has the following items:
             time: current market time
+            bid_id: ID of bid order
+            ask_id: ID of ask order
             bid_actor: ID of bidding actor
             ask_actor: ID of asking actor
             energy: matched energy (multiple of market's energy unit)
@@ -113,6 +130,8 @@ class Market:
         matches = []
         for ask_id, ask in self.get_asks().iterrows():
             for bid_id, bid in self.get_bids().iterrows():
+                if ask.actor_id == bid.actor_id:
+                    continue
                 if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit and ask.price <= bid.price:
                     # match ask and bid
                     energy = min(ask.energy, bid.energy)
@@ -122,6 +141,8 @@ class Market:
                     self.orders.loc[bid_id] = bid
                     matches.append({
                         "time": self.t,
+                        "bid_id": bid_id,
+                        "ask_id": ask_id,
                         "bid_actor": bid.actor_id,
                         "ask_actor": ask.actor_id,
                         "energy": energy,

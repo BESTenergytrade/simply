@@ -62,7 +62,7 @@ if __name__ == "__main__":
         for a in sc.actors:
             # TODO concurrent bidding of actors
             order = a.generate_order()
-            m.accept_order(order, a.receive_market_results)
+            m.accept_order(order, callback=a.receive_market_results)
 
         m.clear(reset=cfg.reset_market)
         if cfg.show_prints:
