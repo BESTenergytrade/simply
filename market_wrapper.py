@@ -13,21 +13,19 @@ Config('')
 
 ENERGY_UNIT_CONVERSION_FACTOR = 1000  # simply: kW, D3A: MW
 
-
 def accept_orders(market, time, orders):
     # generate simply Order, put it into market including predefined order IDs
     # apply conversion factor except for market maker orders
     for bid in orders["bids"]:
         energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
         cluster = (bid.get("attributes") or {}).get("cluster")
-        order = Order(-1, time, bid["id"], cluster, energy, bid["energy_rate"])
-        market.accept_order(order, None, bid["id"])
+        order = Order(-1, time, bid["buyer"], cluster, energy, bid["energy_rate"])
+        market.accept_order(order, order_id=bid["id"])
     for ask in orders["offers"]:
         energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
         cluster = (ask.get("attributes") or {}).get("cluster")
-        order = Order(1, time, ask["id"], cluster, energy, ask["energy_rate"])
-        market.accept_order(order, None, ask["id"])
-
+        order = Order(1, time, ask["seller"], cluster, energy, ask["energy_rate"])
+        market.accept_order(order, order_id=ask["id"])
 
 def generate_recommendations(market_id, time, bids, asks, matches):
     recommendations = []

@@ -38,7 +38,7 @@ class Market:
         print(self.get_bids())
         print(self.get_asks())
 
-    def accept_order(self, order, callback, order_id=None):
+    def accept_order(self, order, order_id=None, callback=None):
         """
         Handle new order.
 

@@ -186,10 +186,10 @@ class BestMarket(Market):
         # ignore large orders
         orders = orders[~orders.index.isin(large_asks.index)]
         orders = orders[~orders.index.isin(large_bids.index)]
-        # match asks with bid market maker
+        # match asks only with bid market maker with highest price
         asks = orders[orders.type == 1]
         if not bids_mm.empty:
-            # bidding market maker represented by order ID of highest price
+            # select bidding market maker by order ID, that has highest price
             bid_mm_id = bids_mm['price'].astype(float).idxmax()
             bid_mm = bids_mm.loc[bid_mm_id]
             asks = asks[asks["price"] <= bid_mm.price]
@@ -204,10 +204,10 @@ class BestMarket(Market):
                     "price": bid_mm.price,
                 })
 
-        # match bids with ask market maker
+        # match bids only with ask market maker with lowest price
         bids = orders[orders.type == -1]
         if not asks_mm.empty:
-            # asking market maker represented by order ID of lowest price
+            # select asking market maker by order ID, that has lowest price
             ask_mm_id = asks_mm['price'].astype(float).idxmin()
             ask_mm = asks_mm.loc[ask_mm_id]
             # indices of matched bids equal order IDs respectively
