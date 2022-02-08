@@ -127,9 +127,13 @@ class Market:
         :param show: show or print plots (mainly for debugging)
         :return: list of dictionaries with matches
         """
+        # order by price (while previously original ordering is reversed for equal prices)
+        # i.e. higher probability of matching for higher ask prices or lower bid prices
+        bids = self.get_bids().iloc[::-1].sort_values(["price"], ascending=False)
+        asks = self.get_asks().iloc[::-1].sort_values(["price"], ascending=True)
         matches = []
-        for ask_id, ask in self.get_asks().iterrows():
-            for bid_id, bid in self.get_bids().iterrows():
+        for ask_id, ask in asks.iterrows():
+            for bid_id, bid in bids.iterrows():
                 if ask.actor_id == bid.actor_id:
                     continue
                 if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit and ask.price <= bid.price:
