@@ -11,7 +11,7 @@ class Market:
     This class provides a basic matching strategy which may be overridden.
     """
 
-    def __init__(self, time, network=None):
+    def __init__(self, time, network=None, grid_fee_matrix=None):
         # TODO tbd if lists or dicts or ... is used
         self.orders = pd.DataFrame(columns = Order._fields)
         self.t = time
@@ -20,6 +20,10 @@ class Market:
         self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
         self.actor_callback = {}
         self.network = network
+        if grid_fee_matrix is not None:
+            self.grid_fee_matrix = grid_fee_matrix
+        elif network is not None:
+            self.grid_fee_matrix = network.grid_fee_matrix
         self.EPS = 1e-10
 
     def get_bids(self):
@@ -51,6 +55,12 @@ class Market:
             raise ValueError("Wrong order time ({}), market is at time {}".format(order.time, self.t))
         if order.type not in [-1, 1]:
             raise ValueError("Wrong order type ({})".format(order.type))
+
+        # look up cluster
+        if order.cluster is None and self.network is not None:
+            cluster = self.network.node_to_cluster.get(order.actor_id)
+            order = order._replace(cluster=cluster)
+
         # make certain energy has step size of energy_unit
         energy = ((order.energy + self.EPS) // self.energy_unit) * self.energy_unit
         # make certain enough energy is traded
