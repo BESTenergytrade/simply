@@ -4,8 +4,6 @@ FLOATING_POINT_TOLERANCE = 0.00001
 from market_wrapper import (PayAsBidMatchingAlgorithm)
 
 
-import pytest
-
 class TestPayAsBidMatchingAlgorithm:
     """Test the pay-as-bid matching algorithm"""
 
@@ -145,7 +143,8 @@ class TestPayAsBidMatchingAlgorithm:
              "selected_energy": 10, "trade_rate": 1.5, "matching_requirements": None},
 
         ]
-        assert recommendations == expected_recommendations
+        # ordering of matches within recommendation list is not important
+        assert [i for i in recommendations if i not in expected_recommendations] == []
 
     @staticmethod
     def test_energy_unit():
@@ -232,7 +231,8 @@ class TestPayAsBidMatchingAlgorithm:
              "offer": {"id": 4, "seller": "A", "energy_rate": 1, "energy": 70},
              "selected_energy": 20, "trade_rate": 3, "matching_requirements": None},
         ]
-        assert recommendations == expected_recommendations
+        # ordering of matches within recommendation list is not important
+        assert [i for i in recommendations if i not in expected_recommendations] == []
 
     @staticmethod
     def test_perform_pay_as_bid_match_single_bid_multiple_offers():
@@ -265,4 +265,5 @@ class TestPayAsBidMatchingAlgorithm:
              "offer": {"id": 10, "seller": "A", "energy_rate": 1, "energy": 20},
              "selected_energy": 20, "trade_rate": 3, "matching_requirements": None},
         ]
-        assert recommendations == expected_recommendations
+        # ordering of matches within recommendation list is not important
+        assert [i for i in recommendations if i not in expected_recommendations] == []
