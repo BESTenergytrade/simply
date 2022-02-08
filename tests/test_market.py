@@ -30,16 +30,16 @@ class TestMarket:
     def test_not_accept_existing_order_id(self):
         # The order ID is used twice, but should be unique -> else raise ValueError
         m = Market(0)
-        m.accept_order(Order(-1, 0, 2, .2, 1), None, "ID1")
+        m.accept_order(Order(-1,0,2,None,.2,1), None, "ID1")
         with pytest.raises(ValueError):
-            m.accept_order(Order(1, 0, 3, 1, 1), None, "ID1")
+            m.accept_order(Order(1,0,3,None,1,1), None, "ID1")
 
     def test_setting_order_id_wrong(self):
         # Check if error is raised when previously defined order IDs will be overridden i.e. ignored
         m = Market(0)
-        m.accept_order(Order(-1, 0, 2, .2, 1), None, "ID1")
+        m.accept_order(Order(-1,0,2,None,.2,1), None, "ID1")
         with pytest.raises(IndexError):
-            m.accept_order(Order(1, 0, 3, 1, 1), None, None)
+            m.accept_order(Order(1,0,3,None,1,1), None, None)
 
     def test_order_energy(self):
         m = Market(0)
@@ -172,8 +172,8 @@ class TestPayAsBid():
     def test_setting_order_id(self):
         # Check if matched orders retain original ID
         m = Market(0)
-        m.accept_order(Order(-1, 0, 2, .2, 1), None, "ID1")
-        m.accept_order(Order(1, 0, 3, 1, 1), None, "ID2")
+        m.accept_order(Order(-1,0,2,None,.2,1), None, "ID1")
+        m.accept_order(Order(1,0,3,None,1,1), None, "ID2")
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.2)

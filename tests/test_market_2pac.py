@@ -63,8 +63,8 @@ def test_energy():
 def test_setting_order_id():
     # Check if matched orders retain original ID
     m = TwoSidedPayAsClear(0)
-    m.accept_order(Order(-1,0,2,.2,1), None, "ID1")
-    m.accept_order(Order(1,0,3,1,1), None, "ID2")
+    m.accept_order(Order(-1,0,2,None,.2,1), None, "ID1")
+    m.accept_order(Order(1,0,3,None,1,1), None, "ID2")
     matches = m.match()
     assert len(matches) == 1
     assert matches[0]["energy"] == pytest.approx(0.2)

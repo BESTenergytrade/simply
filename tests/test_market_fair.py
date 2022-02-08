@@ -175,8 +175,8 @@ class TestBestMarket:
     def test_setting_order_id(self):
         # Check if matched orders retain original ID
         m = BestMarket(0, self.pn)
-        m.accept_order(Order(-1,0,2,.2,1), None, "ID1")
-        m.accept_order(Order(1,0,3,1,1), None, "ID2")
+        m.accept_order(Order(-1,0,2,None,.2,1), None, "ID1")
+        m.accept_order(Order(1,0,3,None,1,1), None, "ID2")
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.2)
@@ -187,8 +187,8 @@ class TestBestMarket:
         # Check if matched orders retain original ID for selling or buying market makers
         m = BestMarket(0, self.pn)
         # Test asking market maker with order ID
-        m.accept_order(Order(-1,0,2,.3,1), None, "ID1")
-        m.accept_order(Order(1,0,3,MARKET_MAKER_THRESHOLD,1), None, "ID2")
+        m.accept_order(Order(-1,0,2,None,.3,1), None, "ID1")
+        m.accept_order(Order(1,0,3,None,MARKET_MAKER_THRESHOLD,1), None, "ID2")
         matches = m.match()
         print(matches)
         assert len(matches) == 1
@@ -199,8 +199,8 @@ class TestBestMarket:
         # Reset orders
         m.orders = m.orders[:0]
         # Test bidding market maker with order ID
-        m.accept_order(Order(-1, 0, 2, MARKET_MAKER_THRESHOLD, 1), None, "ID3")
-        m.accept_order(Order(1, 0, 3, .3, 1), None, "ID4")
+        m.accept_order(Order(-1,0,2,None,MARKET_MAKER_THRESHOLD,1), None, "ID3")
+        m.accept_order(Order(1,0,3,None,.3,1), None, "ID4")
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
