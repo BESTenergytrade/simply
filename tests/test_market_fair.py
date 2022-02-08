@@ -9,7 +9,7 @@ class TestBestMarket:
 
     nw = nx.Graph()
     nw.add_edges_from([(0,1, {"weight": 1}), (1,2), (1,3), (0,4)])
-    pn = PowerNetwork("", nw)
+    pn = PowerNetwork("", nw, weight_factor = 1)
 
     def test_basic(self):
         m = BestMarket(0, self.pn)
@@ -33,8 +33,8 @@ class TestBestMarket:
         assert matches[0]["energy"] == pytest.approx(1)
         assert matches[0]["price"] == pytest.approx(1)
 
-    def test_prices(self):
-        # different prices
+    def test_prices_network(self):
+        # test prices with a given power network
         m = BestMarket(0, self.pn)
         # ask above bid: no match
         m.accept_order(Order(-1,0,2,None,1,2), None)
@@ -92,6 +92,69 @@ class TestBestMarket:
         assert matches[0]["ask_actor"] == 3
         assert matches[0]["energy"] == pytest.approx(1)
         assert matches[0]["price"] == pytest.approx(4)
+
+    def test_prices_matrix(self):
+        # test prices with a given grid fee matrix
+        # example: cost 1 for trade between clusters
+        m = BestMarket(0, grid_fee_matrix = [[0,1],[1,0]])
+
+        # ask above bid: no match
+        m.accept_order(Order(-1,0,2,0,1,2), None)
+        m.accept_order(Order(1,0,3,0,1,2.5), None)
+        matches = m.match()
+        assert len(matches) == 0
+
+        # reset orders
+        m.orders = m.orders[:0]
+        # ask below bid: take highest asking price
+        m.accept_order(Order(-1,0,2,1,1,2.5), None)
+        m.accept_order(Order(1,0,3,1,1,2), None)
+        matches = m.match()
+        assert len(matches) == 1
+        assert matches[0]["energy"] == pytest.approx(1)
+        assert matches[0]["price"] == pytest.approx(2)
+
+        m.orders = m.orders[:0]
+        # weight between nodes too high
+        m.accept_order(Order(-1,0,2,0,1,3), None)
+        m.accept_order(Order(1,0,4,1,1,3), None)
+        matches = m.match()
+        assert len(matches) == 0
+
+        m.orders = m.orders[:0]
+        # weight between nodes low enough
+        m.accept_order(Order(-1,0,4,0,1,3), None)
+        m.accept_order(Order(1,0,2,1,1,2), None)
+        matches = m.match()
+        assert len(matches) == 1
+        assert matches[0]["energy"] == pytest.approx(1)
+        assert matches[0]["price"] == pytest.approx(3)  # 2 + weight(1)
+
+        m.orders = m.orders[:0]
+        # match different clusters, even though there are orders from same cluster
+        m.accept_order(Order(1,0,2,0,1,2), None)
+        m.accept_order(Order(-1,0,3,0,1,2), None)
+        m.accept_order(Order(-1,0,4,1,1,4), None)
+        # expected: match 2 and 4, even though 2 and 3 are in same cluster (worse conditions)
+        matches = m.match()
+        assert len(matches) == 1
+        assert matches[0]["ask_actor"] == 2
+        assert matches[0]["bid_actor"] == 4
+        assert matches[0]["energy"] == pytest.approx(1)
+        assert matches[0]["price"] == pytest.approx(3)  # 2 + weight(1)
+
+        m.orders = m.orders[:0]
+        # same price: favor local orders
+        # example: adjusted price is 4, actors 2 and 3 are same cluster
+        m.accept_order(Order(-1,0,2,1,1,5), None)
+        m.accept_order(Order(1,0,3,1,1,4), None)
+        m.accept_order(Order(1,0,4,0,1,3), None)
+        matches = m.match()
+        assert len(matches) == 1
+        assert matches[0]["ask_actor"] == 3
+        assert matches[0]["energy"] == pytest.approx(1)
+        assert matches[0]["price"] == pytest.approx(4)
+
 
     def test_energy(self):
         # different energies

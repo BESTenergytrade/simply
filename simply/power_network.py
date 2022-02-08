@@ -12,7 +12,8 @@ class PowerNetwork:
     Representation of energy grid and associated grid fees.
     """
 
-    def __init__(self, name, network):
+    def __init__(self, name, network,
+                 weight_factor=cfg.parser.getfloat("network", "weight_factor", fallback=1)):
         """
         New network model. Sets edge weights to leaf nodes to 0 (cluster). Calculates shortest paths, as network is unlikely to change again.
 
@@ -20,6 +21,8 @@ class PowerNetwork:
         :type name: string
         :param network: graph representation
         :type network: networkx graph
+        :param weight_factor: scale graph edge weights to power transmission cost. Can be set in config: network->weight_factor. Default 1
+        :type weight_factor: float
         """
 
         self.name = name
@@ -27,7 +30,7 @@ class PowerNetwork:
         self.leaf_nodes = sorted(n for n, d in network.degree() if d == 1)
 
         # holds shortest paths from each node to each other node
-        short_paths = None
+        self.short_paths = None
         # clusters is list of sets with node IDs. Unused.
         self.clusters = []
         # reverse lookup: node ID -> cluster index. Unused.
@@ -42,7 +45,7 @@ class PowerNetwork:
 
         self.network = network
         self.update_shortest_paths()
-        self.generate_grid_fee_matrix(cfg.parser.getfloat("network", "weight_factor", fallback=1))
+        self.generate_grid_fee_matrix(weight_factor)
 
     def update_shortest_paths(self):
         self.short_paths = nx.shortest_path(self.network, weight="weight")
