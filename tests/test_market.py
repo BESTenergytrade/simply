@@ -10,13 +10,18 @@ class TestMarket:
         assert m.t == 0
 
     def test_accept_order(self):
-        # Order(type, time, actor_id, energy, price), callback
+        # Order(type, time, actor_id, energy, price), order_id, callback
         m = Market(0)
         assert len(m.orders) == 0
         m.accept_order(Order(1,0,0,None,1,1))
         assert len(m.orders) == 1
-        m.accept_order(Order(-1,0,0,None,1,1), sum)
+        # order IDs are numbered consecutively by default, order ID 1 here does not violate this
+        # structure, callback function arbitrary (not called)
+        m.accept_order(Order(-1,0,0,None,1,1), 1, sum)
         assert len(m.orders) == 2
+        # order IDs are numbered consecutively by default, so order ID 0 should already exist
+        with pytest.raises(ValueError):
+            m.accept_order(Order(1,1,0,None,1,1), 0)
         # reject orders from the future
         with pytest.raises(ValueError):
             m.accept_order(Order(1,1,0,None,1,1))
