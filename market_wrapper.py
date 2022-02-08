@@ -19,12 +19,12 @@ def accept_orders(market, time, orders):
     # apply conversion factor except for market maker orders
     for bid in orders["bids"]:
         energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
-        cluster = (bid["attributes"] or dict()).get("cluster")
+        cluster = (bid.get("attributes") or {}).get("cluster")
         order = Order(-1, time, bid["id"], cluster, energy, bid["energy_rate"])
         market.accept_order(order, None, bid["id"])
     for ask in orders["offers"]:
         energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
-        cluster = (bid["attributes"] or dict()).get("cluster")
+        cluster = (ask.get("attributes") or {}).get("cluster")
         order = Order(1, time, ask["id"], cluster, energy, ask["energy_rate"])
         market.accept_order(order, None, ask["id"])
 
