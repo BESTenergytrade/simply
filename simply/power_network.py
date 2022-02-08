@@ -12,8 +12,7 @@ class PowerNetwork:
     Representation of energy grid and associated grid fees.
     """
 
-    def __init__(self, name, network,
-                 weight_factor=cfg.parser.getfloat("network", "weight_factor", fallback=1)):
+    def __init__(self, name, network, weight_factor=None):
         """
         New network model. Sets edge weights to leaf nodes to 0 (cluster). Calculates shortest paths, as network is unlikely to change again.
 
@@ -42,6 +41,9 @@ class PowerNetwork:
         for leaf in self.leaf_nodes:
             for u,v,d in network.edges(leaf, data=True):
                 d["weight"] = 0
+
+        if weight_factor is None:
+            weight_factor = cfg.parser.getfloat("network", "weight_factor", fallback=1)
 
         self.network = network
         self.update_shortest_paths()
