@@ -148,19 +148,18 @@ class TestPayAsBidMatchingAlgorithm:
         assert recommendations == expected_recommendations
 
     @staticmethod
-    def test_energy_int_type():
+    def test_energy_unit():
         """
-        Test whether the matched offers and bids have the correct types.
+        Test the granularity of energy is matched.
         """
-        # TODO integer m.energy_unit = 1
         data = {
             "market1": {
                 "2021-10-06T12:00": {
                     "bids": [
-                        {"id": 3, "buyer": "C", "energy_rate": 3, "energy": 20.1}
+                        {"id": 3, "buyer": "C", "energy_rate": 3, "energy": 20.001}
                     ],
                     "offers": [
-                        {"id": 4, "seller": "A", "energy_rate": 1, "energy": 25}
+                        {"id": 4, "seller": "A", "energy_rate": 1.0, "energy": 25}
                     ],
                 }
             }
@@ -169,11 +168,10 @@ class TestPayAsBidMatchingAlgorithm:
         expected_recommendations = [
             {"market_id": "market1",
              "time_slot": "2021-10-06T12:00",
-             "bid": {"id": 3, "buyer": "C", "energy_rate": 3, "energy": 20},
-             "offer": {"id": 4, "seller": "A", "energy_rate": 1.00001, "energy": 25},
-             "selected_energy": 20, "trade_rate": 3, "matching_requirements": None},
+             "bid": {"id": 3, "buyer": "C", "energy_rate": 3, "energy": 20.001},
+             "offer": {"id": 4, "seller": "A", "energy_rate": 1, "energy": 25},
+             "selected_energy": 20.001, "trade_rate": 3, "matching_requirements": None},
         ]
-        assert recommendations[0]["selected_energy"] is int
         assert recommendations == expected_recommendations
 
     @staticmethod
