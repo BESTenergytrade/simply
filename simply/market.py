@@ -77,7 +77,10 @@ class Market:
             if len(self.orders) != 0 and len(self.orders)-1 != self.orders.index.max():
                 raise IndexError("Previous order IDs were defined externally and reset when "
                                  "inserting orders without predefined order_id.")
-            self.orders = pd.concat([self.orders, pd.DataFrame([order])], ignore_index=True)
+            self.orders = pd.concat(
+                [self.orders, pd.DataFrame([order], dtype=object)],
+                ignore_index=True
+            )
         else:
             if order_id in self.orders.index:
                 raise ValueError("Order ID ({}) already exists".format(order_id))
