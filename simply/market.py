@@ -84,7 +84,7 @@ class Market:
         else:
             if order_id in self.orders.index:
                 raise ValueError("Order ID ({}) already exists".format(order_id))
-            new_order = pd.DataFrame([order], index=[order_id])
+            new_order = pd.DataFrame([order], dtype=object, index=[order_id])
             self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
 
