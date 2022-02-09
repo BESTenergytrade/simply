@@ -189,20 +189,20 @@ class TestPayAsBid():
         # multiple bids to satisfy one ask
         m = Market(0)
         m.accept_order(Order(-1,0,0,None,.1,1))
-        m.accept_order(Order(-1,0,1,None,11,1))
+        m.accept_order(Order(-1,0,1,None,1,1))
         m.accept_order(Order(1,0,2,None,2,1))
         matches = m.match()
         assert len(matches) == 2
-        assert matches[0]["energy"] == 0.1
-        assert matches[1]["energy"] == 1.9  # only 2 in ask
+        assert matches[0]["energy"] == 1
+        assert matches[1]["energy"] == 0.1
 
         # multiple asks to satisfy one bid (in-order)
         m.orders = m.orders[:0]
         m.accept_order(Order(-1,0,0,None,100,1))
-        m.accept_order(Order(1,0,1,None,10,1))
-        m.accept_order(Order(1,0,2,None,20,1))
-        m.accept_order(Order(1,0,3,None,30,1))
-        m.accept_order(Order(1,0,4,None,50,1))
+        m.accept_order(Order(1,0,1,None,10,0.6))
+        m.accept_order(Order(1,0,2,None,20,0.7))
+        m.accept_order(Order(1,0,3,None,30,0.8))
+        m.accept_order(Order(1,0,4,None,50,0.9))
         matches = m.match()
         assert len(matches) == 4
         assert matches[0]["energy"] == 10
