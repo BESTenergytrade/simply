@@ -77,11 +77,14 @@ class Market:
             if len(self.orders) != 0 and len(self.orders)-1 != self.orders.index.max():
                 raise IndexError("Previous order IDs were defined externally and reset when "
                                  "inserting orders without predefined order_id.")
-            self.orders = pd.concat([self.orders, pd.DataFrame([order])], ignore_index=True)
+            self.orders = pd.concat(
+                [self.orders, pd.DataFrame([order], dtype=object)],
+                ignore_index=True
+            )
         else:
             if order_id in self.orders.index:
                 raise ValueError("Order ID ({}) already exists".format(order_id))
-            new_order = pd.DataFrame([order], index=[order_id])
+            new_order = pd.DataFrame([order], dtype=object, index=[order_id])
             self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
 
@@ -127,9 +130,13 @@ class Market:
         :param show: show or print plots (mainly for debugging)
         :return: list of dictionaries with matches
         """
+        # order by price (while previously original ordering is reversed for equal prices)
+        # i.e. higher probability of matching for higher ask prices or lower bid prices
+        bids = self.get_bids().iloc[::-1].sort_values(["price"], ascending=False)
+        asks = self.get_asks().iloc[::-1].sort_values(["price"], ascending=True)
         matches = []
-        for ask_id, ask in self.get_asks().iterrows():
-            for bid_id, bid in self.get_bids().iterrows():
+        for ask_id, ask in asks.iterrows():
+            for bid_id, bid in bids.iterrows():
                 if ask.actor_id == bid.actor_id:
                     continue
                 if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit and ask.price <= bid.price:
