@@ -15,7 +15,7 @@ actor_id: ID of ordering actor
 energy: sum of energy needed or provided. Will be rounded down according to the market's energy unit
 price: bidding/asking price for 1 kWh
 """
-Order = namedtuple("Order", ("type", "time", "actor_id", "energy", "price"))
+Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 
 
 class Actor:
@@ -84,8 +84,7 @@ class Actor:
         # TODO take flexibility into account to generate the bid
 
         # TODO replace order type by enum
-        new = Order(np.sign(energy), self.t, self.id, abs(energy), price)
-        # TODO place bid on market
+        new = Order(np.sign(energy), self.t, self.id, None, abs(energy), price)
         self.orders.append(new)
         self.t += 1
 

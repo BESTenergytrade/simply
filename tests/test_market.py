@@ -3,7 +3,6 @@ from simply.market import Market
 
 import pytest
 
-
 class TestMarket:
 
     def test_init(self):

@@ -11,8 +11,7 @@ class Market:
     This class provides a basic matching strategy which may be overridden.
     """
 
-    def __init__(self, time, network=None):
-        # TODO tbd if lists or dicts or ... is used
+    def __init__(self, time, network=None, grid_fee_matrix=None):
         self.orders = pd.DataFrame(columns = Order._fields)
         self.t = time
         self.trades = None
@@ -20,6 +19,10 @@ class Market:
         self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
         self.actor_callback = {}
         self.network = network
+        if grid_fee_matrix is not None:
+            self.grid_fee_matrix = grid_fee_matrix
+        elif network is not None:
+            self.grid_fee_matrix = network.grid_fee_matrix
         self.EPS = 1e-10
 
     def get_bids(self):
@@ -35,7 +38,7 @@ class Market:
         print(self.get_bids())
         print(self.get_asks())
 
-    def accept_order(self, order, callback):
+    def accept_order(self, order, order_id=None, callback=None):
         """
         Handle new order.
 
@@ -45,19 +48,44 @@ class Market:
 
         :param order: Order (type, time, actor_id, energy, price)
         :param callback: callback function (called when order is successfully matched)
+        :param order_id: (optional) define order ID of the order to be inserted, otherwise
+          consecutive numbers are used (if this leads to overriding indices, an IndexError is
+          raised)
         :return:
         """
         if order.time != self.t:
             raise ValueError("Wrong order time ({}), market is at time {}".format(order.time, self.t))
         if order.type not in [-1, 1]:
             raise ValueError("Wrong order type ({})".format(order.type))
+
+        # look up cluster
+        if order.cluster is None and self.network is not None:
+            cluster = self.network.node_to_cluster.get(order.actor_id)
+            order = order._replace(cluster=cluster)
+
         # make certain energy has step size of energy_unit
         energy = ((order.energy + self.EPS) // self.energy_unit) * self.energy_unit
         # make certain enough energy is traded
         if energy < self.energy_unit:
             return
         order = order._replace(energy=energy)
-        self.orders = pd.concat([self.orders , pd.DataFrame([order])], ignore_index=True)
+        # If an order ID parameter is not set,
+        #   - raise error if current consecuitve number does not equal the total number of orders
+        #   - otherwise ignore index -> consecutive numbers are intact
+        # otherwise adopt the ID, while checking it is not already used
+        if order_id is None:
+            if len(self.orders) != 0 and len(self.orders)-1 != self.orders.index.max():
+                raise IndexError("Previous order IDs were defined externally and reset when "
+                                 "inserting orders without predefined order_id.")
+            self.orders = pd.concat(
+                [self.orders, pd.DataFrame([order], dtype=object)],
+                ignore_index=True
+            )
+        else:
+            if order_id in self.orders.index:
+                raise ValueError("Order ID ({}) already exists".format(order_id))
+            new_order = pd.DataFrame([order], dtype=object, index=[order_id])
+            self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
 
     def clear(self, reset=True):
@@ -91,6 +119,8 @@ class Market:
 
         Return structure: each match is a dict and has the following items:
             time: current market time
+            bid_id: ID of bid order
+            ask_id: ID of ask order
             bid_actor: ID of bidding actor
             ask_actor: ID of asking actor
             energy: matched energy (multiple of market's energy unit)
@@ -100,9 +130,15 @@ class Market:
         :param show: show or print plots (mainly for debugging)
         :return: list of dictionaries with matches
         """
+        # order by price (while previously original ordering is reversed for equal prices)
+        # i.e. higher probability of matching for higher ask prices or lower bid prices
+        bids = self.get_bids().iloc[::-1].sort_values(["price"], ascending=False)
+        asks = self.get_asks().iloc[::-1].sort_values(["price"], ascending=True)
         matches = []
-        for ask_id, ask in self.get_asks().iterrows():
-            for bid_id, bid in self.get_bids().iterrows():
+        for ask_id, ask in asks.iterrows():
+            for bid_id, bid in bids.iterrows():
+                if ask.actor_id == bid.actor_id:
+                    continue
                 if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit and ask.price <= bid.price:
                     # match ask and bid
                     energy = min(ask.energy, bid.energy)
@@ -112,6 +148,8 @@ class Market:
                     self.orders.loc[bid_id] = bid
                     matches.append({
                         "time": self.t,
+                        "bid_id": bid_id,
+                        "ask_id": ask_id,
                         "bid_actor": bid.actor_id,
                         "ask_actor": ask.actor_id,
                         "energy": energy,
