@@ -194,7 +194,7 @@ class TestPayAsBid():
         matches = m.match()
         assert len(matches) == 2
         assert matches[0]["energy"] == 0.1
-        assert matches[1]["energy"] == 1.9
+        assert matches[1]["energy"] == 1.9  # only 2 in ask
 
         # multiple asks to satisfy one bid (in-order)
         m.orders = m.orders[:0]
