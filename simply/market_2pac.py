@@ -32,6 +32,8 @@ class TwoSidedPayAsClear(Market):
                 self.orders.loc[bid_id] = bid
                 matches.append({
                     "time": self.t,
+                    "bid_id": bid_id,
+                    "ask_id": ask_id,
                     "bid_actor": bid.actor_id,
                     "ask_actor": ask.actor_id,
                     "energy": energy,
