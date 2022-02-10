@@ -188,13 +188,13 @@ class TestPayAsBid():
     def test_multiple(self):
         # multiple bids to satisfy one ask
         m = Market(0)
-        m.accept_order(Order(-1,0,0,None,.1,1))
-        m.accept_order(Order(-1,0,1,None,1,1))
+        m.accept_order(Order(-1,0,0,None,.1,1.1))
+        m.accept_order(Order(-1,0,1,None,11,1))
         m.accept_order(Order(1,0,2,None,2,1))
         matches = m.match()
         assert len(matches) == 2
-        assert matches[0]["energy"] == 1
-        assert matches[1]["energy"] == 0.1
+        assert matches[0]["energy"] == 0.1
+        assert matches[1]["energy"] == 1.9
 
         # multiple asks to satisfy one bid (in-order)
         m.orders = m.orders[:0]
