@@ -37,15 +37,18 @@ class TwoSidedPayAsClear(Market):
                     "energy": energy,
                     "price": ask.price
                 })
-                if ask.energy < self.energy_unit:
-                    # ask finished: next ask
-                    break
+
                 if bid.energy < self.energy_unit:
                     # bid finished: next bid
                     try:
                         bid_id, bid = next(bid_iter)
                     except StopIteration:
                         bid = None
+
+                if ask.energy < self.energy_unit:
+                    # ask finished: next ask
+                    break
+
 
         # adjust price to market clearing price (highest asking price)
         for match in matches:
