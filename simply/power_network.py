@@ -14,11 +14,13 @@ class PowerNetwork:
 
     def __init__(self, name, network, weight_factor=None):
         """
-        New network model. Sets edge weights to leaf nodes to 0 (cluster). Calculates shortest paths, as network is
-        unlikely to change again.
+        New network model. Sets edge weights to leaf nodes to 0 (cluster).
+        Calculates shortest paths, as network is unlikely to change again.
 
-        :param name: name of network :type name: string :param network: graph representation :type network: networkx
-        graph :param weight_factor: scale graph edge weights to power transmission cost. Can be set in config:
+        :param name: name of network :type name: string :param network:
+        graph representation :type network: networkx
+        graph :param weight_factor: scale graph edge weights to power
+        transmission cost. Can be set in config:
         network->weight_factor. Default 1 :type weight_factor: float
         """
 

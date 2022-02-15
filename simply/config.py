@@ -20,8 +20,8 @@ class Config:
     show_prints - show debug info in terminal [False]
     save_csv - save orders and mathced results to csv files [True]
     path - path of scenario directory to load and/or store [./scenarios/default]
-    data_format - how to save actor data. "csv": save data in separate csv file and all actors in one config file,
-    otherwise save config and data per actor in a single file ["cfg"]
+    data_format - how to save actor data. "csv": save data in separate csv file and all actors
+    in one config file, otherwise save config and data per actor in a single file ["cfg"]
     reset_market: if set, discard unmatched orders after each interval [True]
     update_scenario: if set, always save scenario in given path (even if loaded) [False]
     market_type: selects matching strategy. Supported:

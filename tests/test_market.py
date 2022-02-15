@@ -113,7 +113,8 @@ class TestMarket:
         assert m.get_asks().shape[0] == 2
 
     def test_clear(self):
-        """Tests that new list of matches is saved when the Market class's clear method is called."""
+        """Tests that new list of matches is saved when the Market class's clear method
+        is called."""
         m = Market(0)
         m.accept_order(Order(-1, 0, 0, None, 1, 1))
         # no match possible (only one order)

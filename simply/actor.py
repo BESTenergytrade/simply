@@ -53,7 +53,7 @@ class Actor:
                 prediction_multiplier = self.error_scale * np.random.rand(self.horizon)
                 pm[column] = prediction_multiplier.tolist()
             self.pred[column] = self.data[column].iloc[self.t: self.t + self.horizon] \
-                                + prediction_multiplier
+                + prediction_multiplier
 
         if "schedule" in df.columns:
             self.pred["schedule"] = df["schedule"]
@@ -159,7 +159,7 @@ def create_random(actor_id):
     net_price_factor = 0.7
     df["prices"] = df.apply(
         lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor
-                     * slot["prices"], axis=1
+        * slot["prices"], axis=1
     )
 
     return Actor(actor_id, df, ls=ls, ps=ps)

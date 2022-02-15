@@ -11,8 +11,8 @@ class TestBestMarket:
     pn = PowerNetwork("", nw, weight_factor=1)
 
     def test_basic(self):
-        """Tests the basic functionality of the BestMarket object to accept bids and asks via the accept_order
-        method and correctly match asks and bids when the match method is called."""
+        """Tests the basic functionality of the BestMarket object to accept bids and asks via the
+        accept_order method and correctly match asks and bids when the match method is called."""
         m = BestMarket(0, self.pn)
         # no orders: no matches
         matches = m.match()
@@ -159,8 +159,8 @@ class TestBestMarket:
         assert matches[0]["price"] == pytest.approx(4)
 
     def test_energy(self):
-        """Tests that the amount of energy traded equals the maximum amount available that is less than or equal to
-            the amount requested by the bid."""
+        """Tests that the amount of energy traded equals the maximum amount available that is
+        less than or equal to the amount requested by the bid."""
         # different energies
         m = BestMarket(0, self.pn)
         m.accept_order(Order(-1, 0, 2, None, .1, 1))

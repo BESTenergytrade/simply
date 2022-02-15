@@ -6,7 +6,8 @@ from simply.actor import Order
 
 class Market:
     """
-    Representation of a market. Collects orders, implements a matching strategy for clearing, finalizes post-matching.
+    Representation of a market. Collects orders, implements a matching strategy for clearing,
+    finalizes post-matching.
 
     This class provides a basic matching strategy which may be overridden.
     """
