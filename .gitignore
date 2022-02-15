@@ -2,3 +2,7 @@
 *.sw[op]
 /venv
 /scenarios
+/simply.egg-info/
+.idea/.name
+.idea/workspace.xml
+.DS_Store

@@ -1,5 +1,5 @@
 from simply.actor import Order
-from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD
+from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD
 from simply.power_network import PowerNetwork
 import networkx as nx
 import pytest
@@ -12,6 +12,8 @@ class TestBestMarket:
     pn = PowerNetwork("", nw, weight_factor = 1)
 
     def test_basic(self):
+        """Tests the basic functionality of the BestMarket object to accept bids and asks via the accept_order method
+            and correctly match asks and bids when the match method is called."""
         m = BestMarket(0, self.pn)
         # no orders: no matches
         matches = m.match()
@@ -34,6 +36,7 @@ class TestBestMarket:
         assert matches[0]["price"] == pytest.approx(1)
 
     def test_prices_network(self):
+        """Tests that the prices of the orders are correctly affected by the weights of the PowerNetwork."""
         # test prices with a given power network
         m = BestMarket(0, self.pn)
         # ask above bid: no match
@@ -155,8 +158,9 @@ class TestBestMarket:
         assert matches[0]["energy"] == pytest.approx(1)
         assert matches[0]["price"] == pytest.approx(4)
 
-
     def test_energy(self):
+        """Tests that the amount of energy traded equals the maximum amount available that is less than or equal to
+            the amount requested by the bid."""
         # different energies
         m = BestMarket(0, self.pn)
         m.accept_order(Order(-1,0,2,None,.1,1))
@@ -208,6 +212,8 @@ class TestBestMarket:
         assert matches[0]["ask_id"] == "ID4"
 
     def test_multiple(self):
+        """Tests that matches can be made which require multiple asks to satisfy one bid or multiple bids to
+            satisfy one ask."""
         # multiple bids to satisfy one ask
         m = BestMarket(0, self.pn)
         m.accept_order(Order(-1,0,2,None,.1,4))
@@ -231,3 +237,54 @@ class TestBestMarket:
         assert matches[1]["energy"] == pytest.approx(20)
         assert matches[2]["energy"] == pytest.approx(30)
         assert matches[3]["energy"] == pytest.approx(40)  # only 100 in bid
+
+    def test_match_ordering(self):
+        """Test to check that matching favors local orders in case of equal (adjusted) price."""
+        m = BestMarket(0, self.pn)
+        m.accept_order(Order(-1, 0, 2, None, 1, 4))
+        m.accept_order(Order(1, 0, 3, None, 1, 4))
+        m.accept_order(Order(1, 0, 4, None, 1, 3))
+        matches = m.match()
+        # match cluster must be closest to bid cluster
+        assert matches[0]['cluster'] == 1
+
+        # test across multiple clusters
+        lnw = nx.Graph()
+        lnw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4), (2, 5, {"weight": 1}), (5, 6)])
+        lpn = PowerNetwork("", lnw)
+        m = BestMarket(0, lpn)
+        m.accept_order(Order(-1, 0, 6, None, 1, 5))
+        m.accept_order(Order(1, 0, 3, None, 1, 4))
+        m.accept_order(Order(1, 0, 4, None, 1, 3))
+        matches = m.match()
+        # match cluster must be closest to bid cluster
+        assert matches[0]['cluster'] == 2
+
+        # test that match doesn't prioritise local with price differential
+        m = BestMarket(0, lpn)
+        m.accept_order(Order(-1, 0, 6, None, 1, 100))
+        m.accept_order(Order(1, 0, 3, None, 1, 50))
+        m.accept_order(Order(1, 0, 4, None, 1, 3))
+        matches = m.match()
+        # match cluster must be closest to bid cluster
+        assert matches[0]['price'] == 5
+
+    def test_filter_large_orders(self):
+        """Test to check that very large orders are ignored."""
+        m = BestMarket(0, self.pn)
+        m.accept_order(Order(-1, 0, 2, None, 1, 4))
+        m.accept_order(Order(1, 0, 3, None, LARGE_ORDER_THRESHOLD+1, 4))
+        matches = m.match()
+        # large ask is discarded, no match possible
+        assert len(matches) == 0
+
+    def test_market_maker_orders(self):
+        """Test to check that market maker orders are not being ignored."""
+        m = BestMarket(0, self.pn)
+        m.accept_order(Order(-1, 0, 2, None, 1, 4))
+        m.accept_order(Order(1, 0, 3, None, MARKET_MAKER_THRESHOLD, 4))
+        matches = m.match()
+        # matched with market maker
+        assert len(matches) == 1
+        assert matches[0]['energy'] == pytest.approx(1)
+        assert matches[0]['price'] == pytest.approx(4)
