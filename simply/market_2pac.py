@@ -5,10 +5,12 @@ from simply.market import Market
 
 class TwoSidedPayAsClear(Market):
     """
-    Two sided Pay-As-Clear market mechanism, similar to https://gridsingularity.github.io/gsy-e/two-sided-pay-as-clear/
+    Two sided Pay-As-Clear market mechanism, similar to
+    https://gridsingularity.github.io/gsy-e/two-sided-pay-as-clear/
 
     Each timestep, the highest bids are matched with the lowest offers.
     """
+
     def match(self, show=False):
         # order orders by price
         bids = self.get_bids().sort_values(["price", "energy"], ascending=False)
@@ -59,10 +61,10 @@ class TwoSidedPayAsClear(Market):
             # value asignment in iterrows does not change dataframe -> original shown
             bid_x, bid_y = bids["energy"].to_list(), bids["price"].to_list()
             bid_y = [bid_y[0]] + bid_y
-            bid_x_sum = [0] + [sum(bid_x[:(i+1)]) for i,_ in enumerate(bid_x)]
+            bid_x_sum = [0] + [sum(bid_x[:(i + 1)]) for i, _ in enumerate(bid_x)]
             ask_x, ask_y = asks["energy"].to_list(), asks["price"].to_list()
             ask_y = [ask_y[0]] + ask_y
-            ask_x_sum = [0] + [sum(ask_x[:(i+1)]) for i,_ in enumerate(ask_x)]
+            ask_x_sum = [0] + [sum(ask_x[:(i + 1)]) for i, _ in enumerate(ask_x)]
 
             plt.step(bid_x_sum, bid_y, where="pre", label="bids")
             plt.step(ask_x_sum, ask_y, where="pre", label="asks")

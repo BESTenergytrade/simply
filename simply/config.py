@@ -2,6 +2,7 @@ from configparser import ConfigParser, MissingSectionHeaderError
 from numpy import linspace
 from pathlib import Path
 
+
 class Config:
     """
     Class holding all simulation-relevant information. Read in from configuration file.
@@ -19,7 +20,8 @@ class Config:
     show_prints - show debug info in terminal [False]
     save_csv - save orders and mathced results to csv files [True]
     path - path of scenario directory to load and/or store [./scenarios/default]
-    data_format - how to save actor data. "csv": save data in separate csv file and all actors in one config file, otherwise save config and data per actor in a single file ["cfg"]
+    data_format - how to save actor data. "csv": save data in separate csv file and all actors in one config file,
+    otherwise save config and data per actor in a single file ["cfg"]
     reset_market: if set, discard unmatched orders after each interval [True]
     update_scenario: if set, always save scenario in given path (even if loaded) [False]
     market_type: selects matching strategy. Supported:
@@ -46,11 +48,11 @@ class Config:
 
         # default section: basic simulation properties
         # start timestep
-        self.start = parser.getint("default", "start", fallback = 8)
+        self.start = parser.getint("default", "start", fallback=8)
         # number of timesteps in simulation
-        self.nb_ts = parser.getint("default", "nb_ts", fallback = 3)
+        self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
         # interval between simulation timesteps
-        self.step_size = parser.getint("default", "step_size", fallback = 1)
+        self.step_size = parser.getint("default", "step_size", fallback=1)
         # list of timesteps in simulation
         # not read from file but created from above information
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
@@ -63,7 +65,7 @@ class Config:
         self.save_csv = parser.getboolean("default", "save_csv", fallback=True)
 
         # path of scenario file to load and/or store
-        self.path = parser.get("default", "path", fallback = "./scenarios/default")
+        self.path = parser.get("default", "path", fallback="./scenarios/default")
         self.path = Path(self.path)
         self.data_format = parser.get("default", "data_format", fallback="cfg")
         # reset market after each interval (discard unmatched orders)

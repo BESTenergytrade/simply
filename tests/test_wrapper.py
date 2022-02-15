@@ -1,7 +1,6 @@
-from simply.actor import Order
-from simply.market import Market
-FLOATING_POINT_TOLERANCE = 0.00001
 from market_wrapper import (PayAsBidMatchingAlgorithm)
+
+FLOATING_POINT_TOLERANCE = 0.00001
 
 
 class TestPayAsBidMatchingAlgorithm:
@@ -11,7 +10,7 @@ class TestPayAsBidMatchingAlgorithm:
     def test_perform_simple_pay_as_bid_match():
         """
         Test whether the matches from a list of offers and bids are the expected ones.
-        Single bid and single offer with floating point tollerance
+        Single bid and single offer with floating point tolerance
         """
         data = {
             "market1": {

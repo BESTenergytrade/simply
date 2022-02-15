@@ -52,7 +52,8 @@ class Actor:
             except KeyError:
                 prediction_multiplier = self.error_scale * np.random.rand(self.horizon)
                 pm[column] = prediction_multiplier.tolist()
-            self.pred[column] = self.data[column].iloc[self.t : self.t + self.horizon] + prediction_multiplier
+            self.pred[column] = self.data[column].iloc[self.t: self.t + self.horizon] \
+                                + prediction_multiplier
 
         if "schedule" in df.columns:
             self.pred["schedule"] = df["schedule"]
@@ -61,7 +62,8 @@ class Actor:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
         self.orders = []
         self.traded = {}
-        self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps, "pm": pm}
+        self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
+                     "pm": pm}
 
     def plot(self, columns):
         """
@@ -102,15 +104,17 @@ class Actor:
         # append traded energy and price to actor's trading info
         post = (sign * energy, price)
         pre = self.traded.get(time, ([], []))
-        self.traded[time] = tuple(e + [post[i]] for i,e in enumerate(pre))
+        self.traded[time] = tuple(e + [post[i]] for i, e in enumerate(pre))
 
     def to_dict(self, external_data=False):
         """
-        Builds dictionary for saving. external_data returns simple data instead of member dump.
+        Builds dictionary for saving. external_data returns simple data instead of
+        member dump.
         """
         if external_data:
             args_no_df = {
-                "id": self.id, "df": {}, "csv": self.csv_file, "ls": self.load_scale, "ps": self.pv_scale, "pm": {}
+                "id": self.id, "df": {}, "csv": self.csv_file, "ls": self.load_scale,
+                "ps": self.pv_scale, "pm": {}
             }
             return args_no_df
         else:
@@ -120,10 +124,12 @@ class Actor:
         """
         Saves data and pred dataframes to given file.
         """
-        # TODO if "predicted" values do not equal actual time series values, also errors need to be saved
+        # TODO if "predicted" values do not equal actual time series values,
+        #  also errors need to be saved
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
-        save_df = pd.concat([self.data[["load", "pv"]], self.pred[["schedule", "prices"]]], axis=1)
+        save_df = pd.concat([self.data[["load", "pv"]],
+                             self.pred[["schedule", "prices"]]], axis=1)
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
@@ -148,11 +154,12 @@ def create_random(actor_id):
     df["schedule"] = ps * df["pv"] - ls * df["load"]
     max_price = 0.3
     df["prices"] *= max_price
-    # Adapt order price by a factor to compensate net pricing of ask orders (i.e. positive power)
-    # Bids however include network charges
+    # Adapt order price by a factor to compensate net pricing of ask orders
+    # (i.e. positive power) Bids however include network charges
     net_price_factor = 0.7
     df["prices"] = df.apply(
-        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor * slot["prices"], axis=1
+        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor
+                     * slot["prices"], axis=1
     )
 
     return Actor(actor_id, df, ls=ls, ps=ps)

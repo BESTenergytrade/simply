@@ -14,14 +14,12 @@ class PowerNetwork:
 
     def __init__(self, name, network, weight_factor=None):
         """
-        New network model. Sets edge weights to leaf nodes to 0 (cluster). Calculates shortest paths, as network is unlikely to change again.
+        New network model. Sets edge weights to leaf nodes to 0 (cluster). Calculates shortest paths, as network is
+        unlikely to change again.
 
-        :param name: name of network
-        :type name: string
-        :param network: graph representation
-        :type network: networkx graph
-        :param weight_factor: scale graph edge weights to power transmission cost. Can be set in config: network->weight_factor. Default 1
-        :type weight_factor: float
+        :param name: name of network :type name: string :param network: graph representation :type network: networkx
+        graph :param weight_factor: scale graph edge weights to power transmission cost. Can be set in config:
+        network->weight_factor. Default 1 :type weight_factor: float
         """
 
         self.name = name
@@ -37,9 +35,9 @@ class PowerNetwork:
         # matrix with (scaled) weights between clusters
         self.grid_fee_matrix = []
 
-        #clusters: leaves with their parents (no weight between them)
+        # clusters: leaves with their parents (no weight between them)
         for leaf in self.leaf_nodes:
-            for u,v,d in network.edges(leaf, data=True):
+            for u, v, d in network.edges(leaf, data=True):
                 d["weight"] = 0
 
         if weight_factor is None:
@@ -52,7 +50,7 @@ class PowerNetwork:
     def update_shortest_paths(self):
         self.short_paths = nx.shortest_path(self.network, weight="weight")
 
-    def generate_grid_fee_matrix(self, weight_factor = 1):
+    def generate_grid_fee_matrix(self, weight_factor=1):
         # clustering of nodes by weight. Within cluster, edges have weight 0
 
         # BFS: start with any node
@@ -69,7 +67,7 @@ class PowerNetwork:
             while cluster_nodes:
                 # get next neighbor node
                 node = cluster_nodes.pop(0)
-                for edge in self.network.edges(node, data = True):
+                for edge in self.network.edges(node, data=True):
                     # get target of this connection (neighbor of neighbor)
                     v = edge[1]
                     if v in self.node_to_cluster:
@@ -92,7 +90,7 @@ class PowerNetwork:
         root_nodes = {i: list(c)[0] for i, c in enumerate(self.clusters)}
         # init weight matrix with zeros
         num_root_nodes = len(root_nodes)
-        self.grid_fee_matrix = [[0]*num_root_nodes for i in range(num_root_nodes)]
+        self.grid_fee_matrix = [[0] * num_root_nodes for _ in range(num_root_nodes)]
         # fill weight matrix
         # matrix symmetric: only need to compute half of values, diagonal is 0
         for i, n1 in root_nodes.items():
@@ -103,7 +101,7 @@ class PowerNetwork:
                     self.grid_fee_matrix[i][j] = w
                     self.grid_fee_matrix[j][i] = w
 
-    def to_image(self, width, height):
+    def to_image(self):
         fig = self.plot(False)
         fig.savefig(self.name + ".png")
 
@@ -172,7 +170,7 @@ class PowerNetwork:
         weights = {u: {} for u in c1}
         for u in c1:
             for v in c2:
-                weights[u][v] = self.get_path_weight(u,v)
+                weights[u][v] = self.get_path_weight(u, v)
         return weights
 
 
