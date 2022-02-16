@@ -1,18 +1,19 @@
 import pandas as pd
-import random
 
 import simply.config as cfg
 from simply.actor import Order
 
+
 class Market:
     """
-    Representation of a market. Collects orders, implements a matching strategy for clearing, finalizes post-matching.
+    Representation of a market. Collects orders, implements a matching strategy for clearing,
+    finalizes post-matching.
 
     This class provides a basic matching strategy which may be overridden.
     """
 
     def __init__(self, time, network=None, grid_fee_matrix=None):
-        self.orders = pd.DataFrame(columns = Order._fields)
+        self.orders = pd.DataFrame(columns=Order._fields)
         self.t = time
         self.trades = None
         self.matches = []
@@ -44,7 +45,8 @@ class Market:
 
         Order must have same timestep as market, type must be -1 or +1.
         Energy is quantized according to the market's energy unit (round down).
-        Signature of callback function: matching time, sign for energy direction (opposite of order type), matched energy, matching price.
+        Signature of callback function: matching time, sign for energy direction
+        (opposite of order type), matched energy, matching price.
 
         :param order: Order (type, time, actor_id, energy, price)
         :param callback: callback function (called when order is successfully matched)
@@ -54,7 +56,8 @@ class Market:
         :return:
         """
         if order.time != self.t:
-            raise ValueError("Wrong order time ({}), market is at time {}".format(order.time, self.t))
+            raise ValueError("Wrong order time ({}), market is at time {}".format(order.time,
+                                                                                  self.t))
         if order.type not in [-1, 1]:
             raise ValueError("Wrong order type ({})".format(order.type))
 
@@ -74,7 +77,7 @@ class Market:
         #   - otherwise ignore index -> consecutive numbers are intact
         # otherwise adopt the ID, while checking it is not already used
         if order_id is None:
-            if len(self.orders) != 0 and len(self.orders)-1 != self.orders.index.max():
+            if len(self.orders) != 0 and len(self.orders) - 1 != self.orders.index.max():
                 raise IndexError("Previous order IDs were defined externally and reset when "
                                  "inserting orders without predefined order_id.")
             self.orders = pd.concat(
@@ -104,7 +107,7 @@ class Market:
             if bid_actor_callback is not None:
                 bid_actor_callback(self.t, 1, energy, price)
             if ask_actor_callback is not None:
-                ask_actor_callback(self.t,-1, energy, price)
+                ask_actor_callback(self.t, -1, energy, price)
 
         if reset:
             # don't retain orders for next cycle
@@ -139,7 +142,8 @@ class Market:
             for bid_id, bid in bids.iterrows():
                 if ask.actor_id == bid.actor_id:
                     continue
-                if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit and ask.price <= bid.price:
+                if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit \
+                        and ask.price <= bid.price:
                     # match ask and bid
                     energy = min(ask.energy, bid.energy)
                     ask.energy -= energy

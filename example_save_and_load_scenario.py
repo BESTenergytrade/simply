@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-import pandas as pd
 from pathlib import Path
-import os
 import numpy as np
 
 from simply import scenario
@@ -11,6 +9,7 @@ from simply.util import summerize_actor_trading
 
 show_plots = False
 show_prints = False
+
 
 # TODO Config, datetime, etc.
 class Config:
@@ -25,7 +24,8 @@ class Config:
 if __name__ == "__main__":
     cfg = Config()
     sc = scenario.create_random(12, 10)
-    # TODO make output folder for config file and Scenario json files, output series in csv and plots files
+    # TODO make output folder for config file and Scenario json files, output series in csv and
+    #  plots files
 
     sc.save(cfg.path)
 
@@ -43,10 +43,7 @@ if __name__ == "__main__":
             # TODO concurrent bidding of actors
             order = a.generate_order()
             m.accept_order(order, a.receive_market_results)
-
         m.clear()
-
-
         if show_prints:
             print(sc.to_dict())
             m.print()

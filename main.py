@@ -31,8 +31,10 @@ if __name__ == "__main__":
         sc = scenario.load(cfg.path, cfg.data_format)
     else:
         if cfg.path.exists():
-            raise Exception('The path: ' + str(cfg.path) + ' already exists with another file structure. '
-                            'Please remove or rename folder to avoid confusion and restart simulation.')
+            raise Exception('The path: ' + str(cfg.path) +
+                            ' already exists with another file structure.'
+                            'Please remove or rename folder to avoid confusion and restart '
+                            'simulation.')
         # TODO Use config file for scenario generation
         nb_actors = 5
         nb_nodes = 3

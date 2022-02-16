@@ -7,25 +7,27 @@ import json
 from abc import ABC, abstractmethod
 
 from simply.config import Config
+
 # default config
 Config('')
 
-
 ENERGY_UNIT_CONVERSION_FACTOR = 1000  # simply: kW, D3A: MW
+
 
 def accept_orders(market, time, orders):
     # generate simply Order, put it into market including predefined order IDs
     # apply conversion factor except for market maker orders
     for bid in orders["bids"]:
-        energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
+        energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2 ** 63 - 1)
         cluster = (bid.get("attributes") or {}).get("cluster")
         order = Order(-1, time, bid["buyer"], cluster, energy, bid["energy_rate"])
         market.accept_order(order, order_id=bid["id"])
     for ask in orders["offers"]:
-        energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2**63-1)
+        energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2 ** 63 - 1)
         cluster = (ask.get("attributes") or {}).get("cluster")
         order = Order(1, time, ask["seller"], cluster, energy, ask["energy_rate"])
         market.accept_order(order, order_id=ask["id"])
+
 
 def generate_recommendations(market_id, time, bids, asks, matches):
     recommendations = []
@@ -80,6 +82,7 @@ class PayAsBidMatchingAlgorithm(MatchingAlgorithm):
     """
     Wrapper class for the pay as bid matching algorithm
     """
+
     @classmethod
     def get_matches_recommendations(cls, mycoDict):
         return super().get_market_matches(mycoDict, market.Market)
@@ -89,6 +92,7 @@ class PayAsClearMatchingAlgorithm(MatchingAlgorithm):
     """
     Wrapper class for the pay as clear matching algorithm
     """
+
     @classmethod
     def get_matches_recommendations(cls, mycoDict):
         return super().get_market_matches(mycoDict, market_2pac.TwoSidedPayAsClear)
@@ -98,6 +102,7 @@ class ClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
     """
     Wrapper class of the cluster-based market fair matching algorithm
     """
+
     @classmethod
     def get_matches_recommendations(cls, mycoDict):
         pn = power_network.create_random(1)

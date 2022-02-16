@@ -2,6 +2,7 @@ import networkx as nx
 
 from simply.power_network import PowerNetwork, create_random
 
+
 class TestPowerNetwork:
 
     def test_init(self):

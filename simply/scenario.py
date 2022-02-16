@@ -9,8 +9,8 @@ from simply import power_network
 
 class Scenario:
     """
-    Representation of the world state: who is present (actors) and how everything is connected (power_network).
-    RNG seed is preserved so results can be reproduced.
+    Representation of the world state: who is present (actors) and how everything is
+     connected (power_network). RNG seed is preserved so results can be reproduced.
     """
 
     def __init__(self, network, actors, map_actors, rng_seed=None):
@@ -22,7 +22,7 @@ class Scenario:
         # maps node ids to actors
         self.map_actors = map_actors
 
-    def from_config(path):
+    def from_config(self):
         pass
 
     def __str__(self):
@@ -53,7 +53,7 @@ class Scenario:
         # save power network
         dirpath.joinpath('network.cfg').write_text(
             json.dumps(
-                { self.power_network.name: self.power_network.to_dict() },
+                {self.power_network.name: self.power_network.to_dict()},
                 indent=2,
             )
         )
@@ -62,14 +62,14 @@ class Scenario:
         if data_format == "csv":
             # Save data in separate csv file and all actors in one config file
             a_dict = {}
-            for actor in self.actors:
-                a_dict[actor.id] = actor.to_dict(external_data=True)
+            for actor_variable in self.actors:
+                a_dict[actor_variable.id] = actor_variable.to_dict(external_data=True)
                 actor.save_csv(dirpath)
-            dirpath.joinpath(f'actors.cfg').write_text(json.dumps(a_dict, indent=2))
+            dirpath.joinpath('actors.cfg').write_text(json.dumps(a_dict, indent=2))
         else:
             # Save config and data per actor in a single file
-            for actor in self.actors:
-                dirpath.joinpath(f'actor_{actor.id}.cfg').write_text(
+            for actor_variable in self.actors:
+                dirpath.joinpath(f'actor_{actor_variable.id}.cfg').write_text(
                     json.dumps(actor.to_dict(external_data=False), indent=2)
                 )
 
@@ -81,8 +81,8 @@ def from_dict(scenario_dict):
     pn_name, pn_dict = scenario_dict["power_network"].popitem()
     assert len(scenario_dict["power_network"]) == 0, "Multiple power networks in scenario"
     network = json_graph.node_link_graph(pn_dict,
-        directed = pn_dict.get("directed", False),
-        multigraph = pn_dict.get("multigraph", False))
+                                         directed=pn_dict.get("directed", False),
+                                         multigraph=pn_dict.get("multigraph", False))
     pn = power_network.PowerNetwork(pn_name, network)
 
     actors = [
@@ -110,8 +110,8 @@ def load(dirpath, data_format):
     network_name = list(network_json.keys())[0]
     network_json = list(network_json.values())[0]
     network = json_graph.node_link_graph(network_json,
-        directed = network_json.get("directed", False),
-        multigraph = network_json.get("multigraph", False))
+                                         directed=network_json.get("directed", False),
+                                         multigraph=network_json.get("multigraph", False))
     pn = power_network.PowerNetwork(network_name, network)
 
     # read actors
@@ -129,7 +129,8 @@ def load(dirpath, data_format):
         at = actors_file.read_text()
         actors_j = json.loads(at)
         for aj in actors_j.values():
-            ai = [aj["id"], pd.read_csv(dirpath / aj["csv"]), aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
+            ai = [aj["id"], pd.read_csv(dirpath / aj["csv"]), aj["csv"], aj["ls"], aj["ps"],
+                  aj["pm"]]
             actors.append(actor.Actor(*ai))
     else:
         raise ValueError
