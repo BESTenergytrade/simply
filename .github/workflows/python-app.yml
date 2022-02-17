@@ -33,4 +33,4 @@ jobs:
         pytest tests/
     - name: Run main.py
       run: |
-        main.py
+        python main.py
