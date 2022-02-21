@@ -70,7 +70,7 @@ class Scenario:
             # Save config and data per actor in a single file
             for actor_variable in self.actors:
                 dirpath.joinpath(f'actor_{actor_variable.id}.cfg').write_text(
-                    json.dumps(actor.to_dict(external_data=False), indent=2)
+                    json.dumps(actor_variable.to_dict(external_data=False), indent=2)
                 )
 
         # save map_actors

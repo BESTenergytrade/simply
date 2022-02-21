@@ -3,6 +3,5 @@
 /venv
 /scenarios
 /simply.egg-info/
-.idea/.name
-.idea/workspace.xml
+.idea/*
 .DS_Store
