@@ -51,7 +51,7 @@ class Scenario:
         dirpath.joinpath('_meta.inf').write_text(json.dumps({"rng_seed": self.rng_seed}, indent=2))
 
         # save power network
-        dirpath.joinpath('network.cfg').write_text(
+        dirpath.joinpath('network.json').write_text(
             json.dumps(
                 {self.power_network.name: self.power_network.to_dict()},
                 indent=2,
@@ -65,16 +65,16 @@ class Scenario:
             for actor_variable in self.actors:
                 a_dict[actor_variable.id] = actor_variable.to_dict(external_data=True)
                 actor.save_csv(dirpath)
-            dirpath.joinpath('actors.cfg').write_text(json.dumps(a_dict, indent=2))
+            dirpath.joinpath('actors.json').write_text(json.dumps(a_dict, indent=2))
         else:
             # Save config and data per actor in a single file
             for actor_variable in self.actors:
-                dirpath.joinpath(f'actor_{actor_variable.id}.cfg').write_text(
+                dirpath.joinpath(f'actor_{actor_variable.id}.{data_format}').write_text(
                     json.dumps(actor_variable.to_dict(external_data=False), indent=2)
                 )
 
         # save map_actors
-        dirpath.joinpath('map_actors.cfg').write_text(json.dumps(self.map_actors, indent=2))
+        dirpath.joinpath('map_actors.json').write_text(json.dumps(self.map_actors, indent=2))
 
 
 def from_dict(scenario_dict):
@@ -105,7 +105,7 @@ def load(dirpath, data_format):
     rng_seed = meta.get("rng_seed", None)
 
     # read power network
-    network_text = dirpath.joinpath('network.cfg').read_text()
+    network_text = next(dirpath.glob('network.*')).read_text()
     network_json = json.loads(network_text)
     network_name = list(network_json.keys())[0]
     network_json = list(network_json.values())[0]
@@ -117,15 +117,8 @@ def load(dirpath, data_format):
     # read actors
 
     actors = []
-    if data_format == "cfg":
-        actor_files = dirpath.glob("actor_*.cfg")
-        for f in sorted(actor_files):
-            at = f.read_text()
-            aj = json.loads(at)
-            ai = [aj["id"], pd.read_json(aj["df"]), aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
-            actors.append(actor.Actor(*ai))
-    elif data_format == "csv":
-        actors_file = dirpath / "actors.cfg"
+    if data_format == "csv":
+        actors_file = dirpath.glob("actors.*")
         at = actors_file.read_text()
         actors_j = json.loads(at)
         for aj in actors_j.values():
@@ -133,10 +126,15 @@ def load(dirpath, data_format):
                   aj["pm"]]
             actors.append(actor.Actor(*ai))
     else:
-        raise ValueError
+        actor_files = dirpath.glob(f"actor_*.{data_format}")
+        for f in sorted(actor_files):
+            at = f.read_text()
+            aj = json.loads(at)
+            ai = [aj["id"], pd.read_json(aj["df"]), aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
+            actors.append(actor.Actor(*ai))
 
     # read map_actors
-    map_actor_text = dirpath.joinpath('map_actors.cfg').read_text()
+    map_actor_text = next(dirpath.glob('map_actors.*')).read_text()
     map_actors = json.loads(map_actor_text)
 
     return Scenario(pn, actors, map_actors, rng_seed)

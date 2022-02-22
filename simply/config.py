@@ -67,7 +67,7 @@ class Config:
         # path of scenario file to load and/or store
         self.path = parser.get("default", "path", fallback="./scenarios/default")
         self.path = Path(self.path)
-        self.data_format = parser.get("default", "data_format", fallback="cfg")
+        self.data_format = parser.get("default", "data_format", fallback="json")
         # reset market after each interval (discard unmatched orders)
         self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
         # always create new scenario in given path
