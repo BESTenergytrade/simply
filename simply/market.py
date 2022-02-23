@@ -169,16 +169,16 @@ class Market:
         if show:
             print(matches)
 
+        if cfg.parser.getboolean("default", "save_csv", fallback=True):
+            self.save_matches(matches, Path(cfg.parser.get("default", "path",
+                                                           fallback="./scenarios/default")) /
+                              'matches.csv')
         return matches
 
-    def save_matches(self, filename='matches.csv'):
-        # save all matches in market as dataframe to file
-        matches_df = pd.concat(
-            [pd.DataFrame.from_dict(self.matches[i]) for i in range(len(self.matches))]
-        ).reset_index()
-        matches_df.to_csv(filename)
-
-        return matches_df
+    def save_matches(self, matches, filename='matches.csv'):
+        for match in matches:
+            new_order = pd.DataFrame([match], dtype=object)
+            new_order.to_csv(filename, mode='a', index=False, header=False)
 
     def save_order(self, order, filename='orders.csv'):
         new_order = pd.DataFrame([order], dtype=object)
