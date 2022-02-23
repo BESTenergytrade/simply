@@ -92,7 +92,7 @@ class Market:
             self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
 
-        if cfg.parser.getboolean("default", "save_csv", fallback=True):
+        if cfg.parser.getboolean("default", "save_csv", fallback=False):
             self.save_order(order, Path(cfg.parser.get("default", "path",
                                                        fallback="./scenarios/default")) /
                             'orders.csv')
@@ -169,7 +169,7 @@ class Market:
         if show:
             print(matches)
 
-        if cfg.parser.getboolean("default", "save_csv", fallback=True):
+        if cfg.parser.getboolean("default", "save_csv", fallback=False):
             self.save_matches(matches, Path(cfg.parser.get("default", "path",
                                                            fallback="./scenarios/default")) /
                               'matches.csv')
