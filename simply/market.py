@@ -1,4 +1,5 @@
 import pandas as pd
+from pathlib import Path
 
 import simply.config as cfg
 from simply.actor import Order
@@ -91,6 +92,11 @@ class Market:
             self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
 
+        if cfg.parser.getboolean("default", "save_csv", fallback=True):
+            self.save_order(order, Path(cfg.parser.get("default", "path",
+                                                       fallback="./scenarios/default")) /
+                            'orders.csv')
+
     def clear(self, reset=True):
         """
         Clear market. Match orders, call callbacks of matched orders, reset/tidy up dataframes.
@@ -173,3 +179,7 @@ class Market:
         matches_df.to_csv(filename)
 
         return matches_df
+
+    def save_order(self, order, filename='orders.csv'):
+        new_order = pd.DataFrame([order], dtype=object)
+        new_order.to_csv(filename, mode='a', index=False, header=False)

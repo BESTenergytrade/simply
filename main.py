@@ -78,5 +78,4 @@ if __name__ == "__main__":
         print(summerize_actor_trading(sc))
 
     if cfg.save_csv:
-        m.orders.to_csv(cfg.path / 'orders.csv')
         matches_df = m.save_matches(cfg.path / 'matches.csv')
