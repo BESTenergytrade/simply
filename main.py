@@ -76,3 +76,4 @@ if __name__ == "__main__":
     if cfg.show_prints:
         print("\nTraded energy volume and price at actor level")
         print(summerize_actor_trading(sc))
+
