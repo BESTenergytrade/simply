@@ -26,7 +26,7 @@ class PowerNetwork:
 
         self.name = name
         # all leaf nodes are potential connection points for actors
-        self.leaf_nodes = sorted(n for n, d in network.degree() if d == 1)
+        self.leaf_nodes = [n for n, d in network.degree() if d == 1]
 
         # holds shortest paths from each node to each other node
         self.short_paths = None

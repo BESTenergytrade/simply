@@ -118,7 +118,7 @@ def load(dirpath, data_format):
 
     actors = []
     if data_format == "csv":
-        actors_file = dirpath.glob("actors.*")
+        actors_file = next(dirpath.glob("actors.*"))
         at = actors_file.read_text()
         actors_j = json.loads(at)
         for aj in actors_j.values():
