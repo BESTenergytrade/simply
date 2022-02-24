@@ -1,9 +1,6 @@
 import pandas as pd
-from pathlib import Path
 
 from simply.market import Market
-import simply.config as cfg
-
 
 LARGE_ORDER_THRESHOLD = 2**32
 MARKET_MAKER_THRESHOLD = 2**63-1
@@ -232,7 +229,5 @@ class BestMarket(Market):
         if show:
             print(matches)
 
-        self.save_matches(matches, Path(cfg.parser.get("default", "path",
-                                                       fallback="./scenarios/default")) /
-                          'matches.csv')
+        self.write_csv(matches, '/matches.csv')
         return matches

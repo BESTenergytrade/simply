@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
-import simply.config as cfg
 
-from pathlib import Path
 from simply.market import Market
 
 
@@ -75,7 +73,5 @@ class TwoSidedPayAsClear(Market):
             plt.ylabel("price")
             plt.show()
 
-        self.save_matches(matches, Path(cfg.parser.get("default", "path",
-                                                       fallback="./scenarios/default")) /
-                          'matches.csv')
+        self.write_csv(matches, '/matches.csv')
         return matches

@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+import csv
 
 import simply.config as cfg
 from simply.actor import Order
@@ -21,11 +22,17 @@ class Market:
         self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
         self.actor_callback = {}
         self.network = network
+        self.save_csv = cfg.parser.getboolean("default", "save_csv", fallback=False)
+        self.csv_path = Path(cfg.parser.get("default", "path", fallback="./scenarios/default"))
         if grid_fee_matrix is not None:
             self.grid_fee_matrix = grid_fee_matrix
         elif network is not None:
             self.grid_fee_matrix = network.grid_fee_matrix
         self.EPS = 1e-10
+        if self.save_csv:
+            match_header = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "energy", "price")
+            self.open_csv('matches.csv', match_header)
+            self.open_csv('orders.csv', Order._fields)
 
     def get_bids(self):
         # Get all open bids in market. Returns dataframe.
@@ -91,10 +98,7 @@ class Market:
             new_order = pd.DataFrame([order], dtype=object, index=[order_id])
             self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
-
-        self.save_order(order, Path(cfg.parser.get("default", "path",
-                                                   fallback="./scenarios/default")) /
-                        'orders.csv')
+        self.write_csv([order], 'orders.csv')
 
     def clear(self, reset=True):
         """
@@ -168,26 +172,15 @@ class Market:
         if show:
             print(matches)
 
-        self.save_matches(matches, Path(cfg.parser.get("default", "path",
-                                                       fallback="./scenarios/default")) /
-                          'matches.csv')
+        self.write_csv(matches, 'matches.csv')
         return matches
 
-    def save_matches(self, matches, filename='matches.csv'):
-        if cfg.parser.getboolean("default", "save_csv", fallback=False):
-            for match in matches:
-                new_order = pd.DataFrame([match], dtype=object)
-                new_order.to_csv(filename, mode='a', index=False, header=False)
-            # Add header
-            file = pd.read_csv(filename)
-            headers = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "energy", "price")
-            file.to_csv(filename, header=headers, index=False)
+    def write_csv(self, data, filename):
+        if self.save_csv:
+            saved_data = pd.DataFrame(data, dtype=object)
+            saved_data.to_csv(self.csv_path / filename, mode='a', index=False, header=False)
 
-    def save_order(self, order, filename='orders.csv'):
-        if cfg.parser.getboolean("default", "save_csv", fallback=False):
-            new_order = pd.DataFrame([order], dtype=object)
-            new_order.to_csv(filename, mode='a', index=False, header=False)
-            # Add header
-            file = pd.read_csv(filename)
-            headers = ("type", "time", "actor_id", "cluster", "energy", "price")
-            file.to_csv(filename, header=headers, index=False)
+    def open_csv(self, filename, headers):
+        with open(self.csv_path / filename, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(headers)
