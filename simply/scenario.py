@@ -64,7 +64,7 @@ class Scenario:
             a_dict = {}
             for actor_variable in self.actors:
                 a_dict[actor_variable.id] = actor_variable.to_dict(external_data=True)
-                actor.save_csv(dirpath)
+                actor_variable.save_csv(dirpath)
             dirpath.joinpath('actors.json').write_text(json.dumps(a_dict, indent=2))
         else:
             # Save config and data per actor in a single file
