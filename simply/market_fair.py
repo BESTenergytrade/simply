@@ -229,5 +229,5 @@ class BestMarket(Market):
         if show:
             print(matches)
 
-        self.write_csv(matches, 'matches.csv')
+        self.append_to_csv(matches, 'matches.csv')
         return matches

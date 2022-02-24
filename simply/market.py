@@ -31,8 +31,8 @@ class Market:
         self.EPS = 1e-10
         if self.save_csv:
             match_header = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "energy", "price")
-            self.open_csv('matches.csv', match_header)
-            self.open_csv('orders.csv', Order._fields)
+            self.create_csv('matches.csv', match_header)
+            self.create_csv('orders.csv', Order._fields)
 
     def get_bids(self):
         # Get all open bids in market. Returns dataframe.
@@ -98,7 +98,7 @@ class Market:
             new_order = pd.DataFrame([order], dtype=object, index=[order_id])
             self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
-        self.write_csv([order], 'orders.csv')
+        self.append_to_csv([order], 'orders.csv')
 
     def clear(self, reset=True):
         """
@@ -172,15 +172,15 @@ class Market:
         if show:
             print(matches)
 
-        self.write_csv(matches, 'matches.csv')
+        self.append_to_csv(matches, 'matches.csv')
         return matches
 
-    def write_csv(self, data, filename):
+    def append_to_csv(self, data, filename):
         if self.save_csv:
             saved_data = pd.DataFrame(data, dtype=object)
             saved_data.to_csv(self.csv_path / filename, mode='a', index=False, header=False)
 
-    def open_csv(self, filename, headers):
+    def create_csv(self, filename, headers):
         with open(self.csv_path / filename, 'w') as f:
             writer = csv.writer(f)
             writer.writerow(headers)
