@@ -73,4 +73,5 @@ class TwoSidedPayAsClear(Market):
             plt.ylabel("price")
             plt.show()
 
+        self.append_to_csv(matches, 'matches.csv')
         return matches

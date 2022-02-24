@@ -2,7 +2,6 @@ import pandas as pd
 
 from simply.market import Market
 
-
 LARGE_ORDER_THRESHOLD = 2**32
 MARKET_MAKER_THRESHOLD = 2**63-1
 
@@ -230,4 +229,5 @@ class BestMarket(Market):
         if show:
             print(matches)
 
+        self.append_to_csv(matches, 'matches.csv')
         return matches

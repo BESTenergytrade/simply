@@ -1,4 +1,6 @@
 import pandas as pd
+from pathlib import Path
+import csv
 
 import simply.config as cfg
 from simply.actor import Order
@@ -20,11 +22,17 @@ class Market:
         self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
         self.actor_callback = {}
         self.network = network
+        self.save_csv = cfg.parser.getboolean("default", "save_csv", fallback=False)
+        self.csv_path = Path(cfg.parser.get("default", "path", fallback="./scenarios/default"))
         if grid_fee_matrix is not None:
             self.grid_fee_matrix = grid_fee_matrix
         elif network is not None:
             self.grid_fee_matrix = network.grid_fee_matrix
         self.EPS = 1e-10
+        if self.save_csv:
+            match_header = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "energy", "price")
+            self.create_csv('matches.csv', match_header)
+            self.create_csv('orders.csv', Order._fields)
 
     def get_bids(self):
         # Get all open bids in market. Returns dataframe.
@@ -90,6 +98,7 @@ class Market:
             new_order = pd.DataFrame([order], dtype=object, index=[order_id])
             self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
+        self.append_to_csv([order], 'orders.csv')
 
     def clear(self, reset=True):
         """
@@ -163,13 +172,15 @@ class Market:
         if show:
             print(matches)
 
+        self.append_to_csv(matches, 'matches.csv')
         return matches
 
-    def save_matches(self, filename='matches.csv'):
-        # save all matches in market as dataframe to file
-        matches_df = pd.concat(
-            [pd.DataFrame.from_dict(self.matches[i]) for i in range(len(self.matches))]
-        ).reset_index()
-        matches_df.to_csv(filename)
+    def append_to_csv(self, data, filename):
+        if self.save_csv:
+            saved_data = pd.DataFrame(data, dtype=object)
+            saved_data.to_csv(self.csv_path / filename, mode='a', index=False, header=False)
 
-        return matches_df
+    def create_csv(self, filename, headers):
+        with open(self.csv_path / filename, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(headers)
