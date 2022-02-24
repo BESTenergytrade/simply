@@ -92,10 +92,9 @@ class Market:
             self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
 
-        if cfg.parser.getboolean("default", "save_csv", fallback=False):
-            self.save_order(order, Path(cfg.parser.get("default", "path",
-                                                       fallback="./scenarios/default")) /
-                            'orders.csv')
+        self.save_order(order, Path(cfg.parser.get("default", "path",
+                                                   fallback="./scenarios/default")) /
+                        'orders.csv')
 
     def clear(self, reset=True):
         """
@@ -169,17 +168,26 @@ class Market:
         if show:
             print(matches)
 
-        if cfg.parser.getboolean("default", "save_csv", fallback=False):
-            self.save_matches(matches, Path(cfg.parser.get("default", "path",
-                                                           fallback="./scenarios/default")) /
-                              'matches.csv')
+        self.save_matches(matches, Path(cfg.parser.get("default", "path",
+                                                       fallback="./scenarios/default")) /
+                          'matches.csv')
         return matches
 
     def save_matches(self, matches, filename='matches.csv'):
-        for match in matches:
-            new_order = pd.DataFrame([match], dtype=object)
-            new_order.to_csv(filename, mode='a', index=False, header=False)
+        if cfg.parser.getboolean("default", "save_csv", fallback=False):
+            for match in matches:
+                new_order = pd.DataFrame([match], dtype=object)
+                new_order.to_csv(filename, mode='a', index=False, header=False)
+            # Add header
+            file = pd.read_csv(filename)
+            headers = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "energy", "price")
+            file.to_csv(filename, header=headers, index=False)
 
     def save_order(self, order, filename='orders.csv'):
-        new_order = pd.DataFrame([order], dtype=object)
-        new_order.to_csv(filename, mode='a', index=False, header=False)
+        if cfg.parser.getboolean("default", "save_csv", fallback=False):
+            new_order = pd.DataFrame([order], dtype=object)
+            new_order.to_csv(filename, mode='a', index=False, header=False)
+            # Add header
+            file = pd.read_csv(filename)
+            headers = ("type", "time", "actor_id", "cluster", "energy", "price")
+            file.to_csv(filename, header=headers, index=False)

@@ -1,6 +1,8 @@
 import pandas as pd
+from pathlib import Path
 
 from simply.market import Market
+import simply.config as cfg
 
 
 LARGE_ORDER_THRESHOLD = 2**32
@@ -230,4 +232,7 @@ class BestMarket(Market):
         if show:
             print(matches)
 
+        self.save_matches(matches, Path(cfg.parser.get("default", "path",
+                                                       fallback="./scenarios/default")) /
+                          'matches.csv')
         return matches
