@@ -147,6 +147,11 @@ def create_random(num_nodes, num_actors):
     # Add actor nodes at random position (leaf node) in the network
     # One network node can contain several actors (using random.choices method)
     map_actors = pn.add_actors_random(actors)
+    network = pn.to_dict()
+    network = json_graph.node_link_graph(pn.to_dict(),
+                                         directed=network.get("directed", False),
+                                         multigraph=network.get("multigraph", False))
+    pn = power_network.PowerNetwork(pn.name, network)
 
     return Scenario(pn, actors, map_actors)
 
