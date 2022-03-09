@@ -20,12 +20,14 @@ def accept_orders(market, time, orders):
     for bid in orders["bids"]:
         energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2 ** 63 - 1)
         cluster = (bid.get("attributes") or {}).get("cluster")
-        order = Order(-1, time, bid["buyer"], cluster, energy, bid["energy_rate"])
+        energy_rate = bid.get("energy_rate") or bid.get("price") / bid["energy"]
+        order = Order(-1, time, bid["buyer"], cluster, energy, energy_rate)
         market.accept_order(order, order_id=bid["id"])
     for ask in orders["offers"]:
         energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2 ** 63 - 1)
         cluster = (ask.get("attributes") or {}).get("cluster")
-        order = Order(1, time, ask["seller"], cluster, energy, ask["energy_rate"])
+        energy_rate = ask.get("energy_rate") or ask.get("price") / ask["energy"]
+        order = Order(1, time, ask["seller"], cluster, energy, energy_rate)
         market.accept_order(order, order_id=ask["id"])
 
 
