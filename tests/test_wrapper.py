@@ -36,6 +36,34 @@ class TestPayAsBidMatchingAlgorithm:
         assert recommendations == expected_recommendations
 
     @staticmethod
+    def test_perform_simple_pay_as_bid_match_price():
+        """
+        Test whether the matches from a list of offers and bids are the expected ones.
+        Single bid and single offer with floating point tolerance
+        """
+        data = {
+            "market1": {
+                "2021-10-06T12:00": {
+                    "bids": [
+                        {"id": 3, "buyer": "C", "price": 20 * 3, "energy": 20}
+                    ],
+                    "offers": [
+                        {"id": 4, "seller": "A", "price": 25 * 1, "energy": 25}
+                    ],
+                }
+            }
+        }
+        recommendations = PayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        expected_recommendations = [
+            {"market_id": "market1",
+             "time_slot": "2021-10-06T12:00",
+             "bid": {"id": 3, "buyer": "C", "price": 20 * 3, "energy": 20},
+             "offer": {"id": 4, "seller": "A", "price": 25 * 1, "energy": 25},
+             "selected_energy": 20, "trade_rate": 3, "matching_requirements": None},
+        ]
+        assert recommendations == expected_recommendations
+
+    @staticmethod
     def test_buyer_seller_same_no_pay_as_bid_match():
         """
         Test whether the matches from a list of offers and bids are the expected ones.
