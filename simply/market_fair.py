@@ -1,5 +1,4 @@
 import pandas as pd
-from copy import deepcopy
 
 from simply.market import Market
 
@@ -230,10 +229,6 @@ class BestMarket(Market):
         if show:
             print(matches)
 
-        csv_data = deepcopy(matches)
-        for match in csv_data:
-            if 'cluster' in match:
-                match.pop('cluster')
-        self.append_to_csv(csv_data, 'matches.csv')
+        self.append_to_csv(matches, 'matches.csv')
 
         return matches

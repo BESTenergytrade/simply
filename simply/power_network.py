@@ -55,6 +55,11 @@ class PowerNetwork:
     def generate_grid_fee_matrix(self, weight_factor=1):
         # clustering of nodes by weight. Within cluster, edges have weight 0
 
+        # Reset cluster list, lookup and fee matrix
+        self.clusters = []
+        self.node_to_cluster = {}
+        self.grid_fee_matrix = []
+
         # BFS: start with any node
         nodes = [list(self.network.nodes)[0]]
         while nodes:
