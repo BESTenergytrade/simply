@@ -39,7 +39,8 @@ class TestPayAsBidMatchingAlgorithm:
     def test_perform_simple_pay_as_bid_match_price():
         """
         Test whether the matches from a list of offers and bids are the expected ones.
-        Single bid and single offer with floating point tolerance
+        Single bid and single offer with order price information instead of energy rate per
+        energy unit.
         """
         data = {
             "market1": {
