@@ -23,7 +23,7 @@ class TestScenario:
 
     def test_random(self):
         # num nodes, num actors
-        s = create_random(3, 2)
+        s = create_random(3, 2, 1)
         assert len(s.actors) == 2
         assert len(s.map_actors) == 2
         assert len(s.power_network.network.nodes) == 3 + 2
