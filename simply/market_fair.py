@@ -105,13 +105,13 @@ class BestMarket(Market):
                         # bid and ask match: append to local solution
                         _matches.append({
                             "time": self.t,
+                            "bid_id": bid_id,
+                            "ask_id": ask_id,
                             "bid_actor": bid.actor_id,
                             "ask_actor": ask.actor_id,
                             "energy": self.energy_unit,
                             "price": ask.adjusted_price,
                             # only for removing doubles later
-                            "ask_id": ask_id,
-                            "bid_id": bid_id,
                             "cluster": cluster_idx,
                         })
                     # get next bid
@@ -230,4 +230,5 @@ class BestMarket(Market):
             print(matches)
 
         self.append_to_csv(matches, 'matches.csv')
+
         return matches
