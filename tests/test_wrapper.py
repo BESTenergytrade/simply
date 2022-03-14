@@ -1,4 +1,4 @@
-from market_wrapper import (PayAsBidMatchingAlgorithm)
+from simply.market_wrapper import (PayAsBidMatchingAlgorithm)
 
 FLOATING_POINT_TOLERANCE = 0.00001
 
