@@ -38,7 +38,7 @@ if __name__ == "__main__":
         # TODO Use config file for scenario generation
         nb_actors = 5
         nb_nodes = 3
-        sc = scenario.create_random(nb_nodes, nb_actors)
+        sc = scenario.create_random(nb_nodes, nb_actors, cfg.weight_factor)
         sc.save(cfg.path, cfg.data_format)
     # TODO output folder: add plots files
 
