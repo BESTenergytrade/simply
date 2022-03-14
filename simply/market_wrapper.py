@@ -1,12 +1,12 @@
-from simply import market, market_2pac, market_fair
-from simply.actor import Order
-from simply import power_network
+from . import market, market_2pac, market_fair
+from .actor import Order
+from . import power_network
 
 from argparse import ArgumentParser
 import json
 from abc import ABC, abstractmethod
 
-from simply.config import Config
+from .config import Config
 
 # default config
 Config('')
