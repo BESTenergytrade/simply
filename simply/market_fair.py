@@ -109,10 +109,10 @@ class BestMarket(Market):
                             "ask_id": ask_id,
                             "bid_actor": bid.actor_id,
                             "ask_actor": ask.actor_id,
+                            "bid_cluster": bid.cluster,
+                            "ask_cluster": ask.cluster,
                             "energy": self.energy_unit,
-                            "price": ask.adjusted_price,
-                            # only for removing doubles later
-                            "cluster": cluster_idx,
+                            "price": ask.adjusted_price
                         })
                     # get next bid
                     try:
@@ -122,7 +122,7 @@ class BestMarket(Market):
                 # get next ask
 
             # remove old matches from same cluster
-            matches = [m for m in matches if m["cluster"] != cluster_idx]
+            matches = [m for m in matches if m["bid_cluster"] != cluster_idx]
 
             for _match in _matches:
                 # adjust price to local market clearing price (highest asking price)
@@ -137,11 +137,11 @@ class BestMarket(Market):
                         if _match["price"] > match["price"]:
                             # new match is better:
                             # exclude old match
-                            exclude[match["cluster"]].add(match["ask_id"])
+                            exclude[match["bid_cluster"]].add(match["ask_id"])
                             # replace old match
                             matches[match_idx] = _match
                             # redo other cluster
-                            clusters_to_match.add(match["cluster"])
+                            clusters_to_match.add(match["bid_cluster"])
                         else:
                             # old match is better: exclude new match
                             exclude[cluster_idx].add(_match["ask_id"])
@@ -203,8 +203,10 @@ class BestMarket(Market):
                     "ask_id": ask_id,
                     "bid_actor": bid_mm.actor_id,
                     "ask_actor": ask.actor_id,
+                    "bid_cluster": bid_mm.cluster,
+                    "ask_cluster": ask.cluster,
                     "energy": ask.energy,
-                    "price": bid_mm.price,
+                    "price": bid_mm.price
                 })
 
         # match bids only with ask market maker with lowest price
@@ -222,8 +224,10 @@ class BestMarket(Market):
                     "ask_id": ask_mm_id,
                     "bid_actor": bid.actor_id,
                     "ask_actor": ask_mm.actor_id,
+                    "bid_cluster": bid.cluster,
+                    "ask_cluster": ask_mm.cluster,
                     "energy": bid.energy,
-                    "price": ask_mm.price,
+                    "price": ask_mm.price
                 })
 
         if show:

@@ -38,6 +38,8 @@ class TwoSidedPayAsClear(Market):
                     "ask_id": ask_id,
                     "bid_actor": bid.actor_id,
                     "ask_actor": ask.actor_id,
+                    "bid_cluster": bid.cluster,
+                    "ask_cluster": ask.cluster,
                     "energy": energy,
                     "price": ask.price
                 })

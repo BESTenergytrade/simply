@@ -246,7 +246,8 @@ class TestBestMarket:
         m.accept_order(Order(1, 0, 4, None, 1, 3))
         matches = m.match()
         # match cluster must be closest to bid cluster
-        assert matches[0]['cluster'] == 1
+        assert matches[0]['bid_cluster'] == 1
+        assert matches[0]['ask_cluster'] == 1
 
         # test across multiple clusters
         lnw = nx.Graph()
@@ -259,7 +260,8 @@ class TestBestMarket:
         m.accept_order(Order(1, 0, 4, None, 1, 3))
         matches = m.match()
         # match cluster must be closest to bid cluster
-        assert matches[0]['cluster'] == 2
+        assert matches[0]['bid_cluster'] == 2
+        assert matches[0]['ask_cluster'] == 1
 
         # test that match doesn't prioritise local with price differential
         m = BestMarket(0, lpn)
