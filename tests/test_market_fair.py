@@ -192,24 +192,26 @@ class TestBestMarket:
         m = BestMarket(0, self.pn)
         # Test asking market maker with order ID
         m.accept_order(Order(-1, 0, 2, None, .3, 1), "ID1")
-        m.accept_order(Order(1, 0, 3, None, MARKET_MAKER_THRESHOLD, 1), "ID2")
+        m.accept_order(Order(1, 0, 5, None, MARKET_MAKER_THRESHOLD, 1), "ID2")
         matches = m.match()
         print(matches)
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
         assert matches[0]["bid_id"] == "ID1"
         assert matches[0]["ask_id"] == "ID2"
+        assert matches[0]['ask_cluster'] is None
 
         # Reset orders
         m.orders = m.orders[:0]
         # Test bidding market maker with order ID
-        m.accept_order(Order(-1, 0, 2, None, MARKET_MAKER_THRESHOLD, 1), "ID3")
+        m.accept_order(Order(-1, 0, 5, None, MARKET_MAKER_THRESHOLD, 1), "ID3")
         m.accept_order(Order(1, 0, 3, None, .3, 1), "ID4")
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
         assert matches[0]["bid_id"] == "ID3"
         assert matches[0]["ask_id"] == "ID4"
+        assert matches[0]['bid_cluster'] is None
 
     def test_multiple(self):
         """Tests that matches can be made which require multiple asks to satisfy one bid or multiple bids to
