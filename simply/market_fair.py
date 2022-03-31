@@ -2,9 +2,6 @@ import pandas as pd
 
 from simply.market import Market
 
-LARGE_ORDER_THRESHOLD = 2**32
-MARKET_MAKER_THRESHOLD = 2**63-1
-
 
 class BestMarket(Market):
     """
@@ -20,26 +17,10 @@ class BestMarket(Market):
     """
 
     def match(self, show=False):
-        asks = self.get_asks()
-        bids = self.get_bids()
-
-        # filter out market makers (infinite bus) and really large orders
-        large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
-        large_asks = asks[large_asks_mask]
-        asks_mm = large_asks[large_asks.energy >= MARKET_MAKER_THRESHOLD]
-        asks = asks[~large_asks_mask]
-        if len(large_asks) > len(asks_mm):
-            print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
-        large_bids_mask = bids.energy >= LARGE_ORDER_THRESHOLD
-        large_bids = bids[large_bids_mask]
-        bids_mm = large_bids[large_bids.energy >= MARKET_MAKER_THRESHOLD]
-        bids = bids[~large_bids_mask]
-        if len(large_bids) > len(bids_mm):
-            print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
-
-        if (asks.empty and bids.empty)\
-                or (asks.empty and asks_mm.empty)\
-                or (bids.empty and bids_mm.empty):
+        asks, bids = self.filter_market_makers()
+        if (asks.empty and bids.empty) \
+                or (asks.empty and self.asks_mm.empty) \
+                or (bids.empty and self.bids_mm.empty):
             # no asks or bids at all: no matches
             return []
 
@@ -51,12 +32,12 @@ class BestMarket(Market):
         asks = pd.DataFrame(asks)
         asks["order_id"] = asks.index
         asks = pd.DataFrame(asks.values.repeat(
-            asks.energy * (1/self.energy_unit), axis=0), columns=asks.columns)
+            asks.energy * (1 / self.energy_unit), axis=0), columns=asks.columns)
         asks.energy = self.energy_unit
         bids = pd.DataFrame(bids)
         bids["order_id"] = bids.index
         bids = pd.DataFrame(bids.values.repeat(
-            bids.energy * (1/self.energy_unit), axis=0), columns=bids.columns)
+            bids.energy * (1 / self.energy_unit), axis=0), columns=bids.columns)
         bids.energy = self.energy_unit
 
         # keep track which clusters have to be (re)matched
@@ -183,52 +164,7 @@ class BestMarket(Market):
         # retrieve matches from nested dict
         matches = [m for ask_matches in _matches.values() for m in ask_matches.values()]
 
-        # match with market maker
-        # find unmatched orders
-        orders = self.orders[(self.orders["energy"] + self.EPS) > self.energy_unit]
-        # ignore large orders
-        orders = orders[~orders.index.isin(large_asks.index)]
-        orders = orders[~orders.index.isin(large_bids.index)]
-        # match asks only with bid market maker with highest price
-        asks = orders[orders.type == 1]
-        if not bids_mm.empty:
-            # select bidding market maker by order ID, that has highest price
-            bid_mm_id = bids_mm['price'].astype(float).idxmax()
-            bid_mm = bids_mm.loc[bid_mm_id]
-            asks = asks[asks["price"] <= bid_mm.price]
-            for ask_id, ask in asks.iterrows():
-                matches.append({
-                    "time": self.t,
-                    "bid_id": bid_mm_id,
-                    "ask_id": ask_id,
-                    "bid_actor": bid_mm.actor_id,
-                    "ask_actor": ask.actor_id,
-                    "bid_cluster": bid_mm.cluster,
-                    "ask_cluster": ask.cluster,
-                    "energy": ask.energy,
-                    "price": bid_mm.price
-                })
-
-        # match bids only with ask market maker with lowest price
-        bids = orders[orders.type == -1]
-        if not asks_mm.empty:
-            # select asking market maker by order ID, that has lowest price
-            ask_mm_id = asks_mm['price'].astype(float).idxmin()
-            ask_mm = asks_mm.loc[ask_mm_id]
-            # indices of matched bids equal order IDs respectively
-            bids = bids[bids["price"] >= ask_mm.price]
-            for bid_id, bid in bids.iterrows():
-                matches.append({
-                    "time": self.t,
-                    "bid_id": bid_id,
-                    "ask_id": ask_mm_id,
-                    "bid_actor": bid.actor_id,
-                    "ask_actor": ask_mm.actor_id,
-                    "bid_cluster": bid.cluster,
-                    "ask_cluster": ask_mm.cluster,
-                    "energy": bid.energy,
-                    "price": ask_mm.price
-                })
+        matches = self.match_market_maker(matches)
 
         if show:
             print(matches)

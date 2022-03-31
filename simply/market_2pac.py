@@ -12,17 +12,15 @@ class TwoSidedPayAsClear(Market):
     """
 
     def match(self, show=False):
+        asks, bids = self.filter_market_makers()
         # order orders by price
-        bids = self.get_bids().sort_values(["price", "energy"], ascending=False)
-        asks = self.get_asks().sort_values(["price", "energy"], ascending=True)
-
-        if len(bids) == 0 or len(asks) == 0:
-            # no bids or no asks: no match
-            return {}
-
-        # match!
+        bids = bids.sort_values(["price", "energy"], ascending=False)
+        asks = asks.sort_values(["price", "energy"], ascending=True)
         bid_iter = bids.iterrows()
-        bid_id, bid = next(bid_iter)
+        try:
+            bid_id, bid = next(bid_iter)
+        except StopIteration:
+            bid = None
         matches = []
         for ask_id, ask in asks.iterrows():
             while bid is not None and ask.price <= bid.price:
@@ -57,10 +55,11 @@ class TwoSidedPayAsClear(Market):
         for match in matches:
             match["price"] = matches[-1]["price"]
 
+        matches = self.match_market_maker(matches)
         if show:
             print(matches)
 
-            # value asignment in iterrows does not change dataframe -> original shown
+            # value assignment in iterrows does not change dataframe -> original shown
             bid_x, bid_y = bids["energy"].to_list(), bids["price"].to_list()
             bid_y = [bid_y[0]] + bid_y
             bid_x_sum = [0] + [sum(bid_x[:(i + 1)]) for i, _ in enumerate(bid_x)]

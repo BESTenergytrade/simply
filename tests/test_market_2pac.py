@@ -1,5 +1,6 @@
 from simply.actor import Order
 from simply.market_2pac import TwoSidedPayAsClear
+from simply.market import MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD
 
 import pytest
 
@@ -123,3 +124,23 @@ class TestTwoSidedPayAsClear:
         assert matches[1]["energy"] == 20
         assert matches[2]["energy"] == 30
         assert matches[3]["energy"] == 40  # only 100 in bid
+
+    def test_filter_large_orders(self):
+        """Test to check that very large orders are ignored."""
+        m = TwoSidedPayAsClear(0)
+        m.accept_order(Order(-1, 0, 2, None, 1, 4))
+        m.accept_order(Order(1, 0, 3, None, LARGE_ORDER_THRESHOLD + 1, 4))
+        matches = m.match()
+        # large ask is discarded, no match possible
+        assert len(matches) == 0
+
+    def test_market_maker_orders(self):
+        """Test to check that market maker orders are not being ignored."""
+        m = TwoSidedPayAsClear(0)
+        m.accept_order(Order(-1, 0, 2, None, 1, 4))
+        m.accept_order(Order(1, 0, 3, None, MARKET_MAKER_THRESHOLD, 4))
+        matches = m.match()
+        # matched with market maker
+        assert len(matches) == 1
+        assert matches[0]['energy'] == pytest.approx(1)
+        assert matches[0]['price'] == pytest.approx(4)
