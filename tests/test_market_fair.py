@@ -1,5 +1,6 @@
 from simply.actor import Order
-from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD
+from simply.market_fair import BestMarket
+from simply.market import MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD
 from simply.power_network import PowerNetwork
 import networkx as nx
 import pytest
@@ -193,7 +194,7 @@ class TestBestMarket:
         # Test asking market maker with order ID
         m.accept_order(Order(-1, 0, 2, None, .3, 1), "ID1")
         m.accept_order(Order(1, 0, 5, None, MARKET_MAKER_THRESHOLD, 1), "ID2")
-        matches = m.match()
+        matches = m.match_market_maker()
         print(matches)
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
@@ -206,7 +207,7 @@ class TestBestMarket:
         # Test bidding market maker with order ID
         m.accept_order(Order(-1, 0, 5, None, MARKET_MAKER_THRESHOLD, 1), "ID3")
         m.accept_order(Order(1, 0, 3, None, .3, 1), "ID4")
-        matches = m.match()
+        matches = m.match_market_maker()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
         assert matches[0]["bid_id"] == "ID3"
@@ -288,8 +289,8 @@ class TestBestMarket:
         m = BestMarket(0, self.pn)
         m.accept_order(Order(-1, 0, 2, None, 1, 4))
         m.accept_order(Order(1, 0, 3, None, MARKET_MAKER_THRESHOLD, 4))
-        matches = m.match()
+        m.clear()
         # matched with market maker
-        assert len(matches) == 1
-        assert matches[0]['energy'] == pytest.approx(1)
-        assert matches[0]['price'] == pytest.approx(4)
+        assert len(m.matches) == 1
+        assert m.matches[0]['energy'] == pytest.approx(1)
+        assert m.matches[0]['price'] == pytest.approx(4)

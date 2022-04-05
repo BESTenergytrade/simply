@@ -119,17 +119,13 @@ class TestMarket:
         m.accept_order(Order(-1, 0, 0, None, 1, 1))
         # no match possible (only one order)
         m.clear(reset=False)
-        # new list of matches saved
-        assert len(m.matches) == 1
-        # no matches in list
-        assert len(m.matches[0]) == 0
+        # no matches
+        assert len(m.matches) == 0
         # order must still be in market
         assert m.orders.shape[0] == 1
         m.clear(reset=True)
-        # another list of matches saved
-        assert len(m.matches) == 2
         # still no match
-        assert len(m.matches[1]) == 0
+        assert len(m.matches) == 0
         # orders are reset
         assert m.orders.shape[0] == 0
 
@@ -245,8 +241,8 @@ class TestPayAsBid:
         m = Market(0)
         m.accept_order(Order(-1, 0, 2, None, 1, 4))
         m.accept_order(Order(1, 0, 3, None, MARKET_MAKER_THRESHOLD, 4))
-        matches = m.match()
+        m.clear()
         # matched with market maker
-        assert len(matches) == 1
-        assert matches[0]['energy'] == pytest.approx(1)
-        assert matches[0]['price'] == pytest.approx(4)
+        assert len(m.matches) == 1
+        assert m.matches[0]['energy'] == pytest.approx(1)
+        assert m.matches[0]['price'] == pytest.approx(4)

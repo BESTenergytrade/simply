@@ -12,7 +12,7 @@ class TwoSidedPayAsClear(Market):
     """
 
     def match(self, show=False):
-        asks, bids = self.filter_market_makers()
+        asks, bids = self.get_asks(), self.get_bids()
         # order orders by price
         bids = bids.sort_values(["price", "energy"], ascending=False)
         asks = asks.sort_values(["price", "energy"], ascending=True)
@@ -55,7 +55,6 @@ class TwoSidedPayAsClear(Market):
         for match in matches:
             match["price"] = matches[-1]["price"]
 
-        matches = self.match_market_maker(matches)
         if show:
             print(matches)
 

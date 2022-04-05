@@ -19,10 +19,10 @@ class Market:
 
     def __init__(self, time, network=None, grid_fee_matrix=None):
         self.orders = pd.DataFrame(columns=Order._fields)
-        self.large_bids = None
-        self.large_asks = None
-        self.bids_mm = None
-        self.asks_mm = None
+        self.large_bids = pd.DataFrame(columns=Order._fields)
+        self.large_asks = pd.DataFrame(columns=Order._fields)
+        self.bids_mm = pd.DataFrame(columns=Order._fields)
+        self.asks_mm = pd.DataFrame(columns=Order._fields)
         self.t = time
         self.trades = None
         self.matches = []
@@ -42,76 +42,6 @@ class Market:
             self.create_csv('matches.csv', match_header)
             self.create_csv('orders.csv', Order._fields)
 
-    def filter_market_makers(self):
-        # filter out market makers (infinite bus) and really large orders
-        asks = self.get_asks()
-        bids = self.get_bids()
-
-        large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
-        self.large_asks = asks[large_asks_mask]
-        self.asks_mm = self.large_asks[self.large_asks.energy >= MARKET_MAKER_THRESHOLD]
-        asks = asks[~large_asks_mask]
-        if len(self.large_asks) > len(self.asks_mm):
-            print("WARNING! {} large asks filtered".format(len(self.large_asks) - len(
-                self.asks_mm)))
-        large_bids_mask = bids.energy >= LARGE_ORDER_THRESHOLD
-        self.large_bids = bids[large_bids_mask]
-        self.bids_mm = self.large_bids[self.large_bids.energy >= MARKET_MAKER_THRESHOLD]
-        bids = bids[~large_bids_mask]
-        if len(self.large_bids) > len(self.bids_mm):
-            print("WARNING! {} large bids filtered".format(len(self.large_bids) - len(
-                self.bids_mm)))
-        return asks, bids
-
-    def match_market_maker(self, matches):
-        # match with market maker
-        # find unmatched orders
-        orders = self.orders[(self.orders["energy"] + self.EPS) > self.energy_unit]
-        # ignore large orders
-        orders = orders[~orders.index.isin(self.large_asks.index)]
-        orders = orders[~orders.index.isin(self.large_bids.index)]
-        # match asks only with bid market maker with highest price
-        asks = orders[orders.type == 1]
-        if not self.bids_mm.empty:
-            # select bidding market maker by order ID, that has highest price
-            bid_mm_id = self.bids_mm['price'].astype(float).idxmax()
-            bid_mm = self.bids_mm.loc[bid_mm_id]
-            asks = asks[asks["price"] <= bid_mm.price]
-            for ask_id, ask in asks.iterrows():
-                matches.append({
-                    "time": self.t,
-                    "bid_id": bid_mm_id,
-                    "ask_id": ask_id,
-                    "bid_actor": bid_mm.actor_id,
-                    "ask_actor": ask.actor_id,
-                    "bid_cluster": bid_mm.cluster,
-                    "ask_cluster": ask.cluster,
-                    "energy": ask.energy,
-                    "price": bid_mm.price
-                })
-
-        # match bids only with ask market maker with lowest price
-        bids = orders[orders.type == -1]
-        if not self.asks_mm.empty:
-            # select asking market maker by order ID, that has lowest price
-            ask_mm_id = self.asks_mm['price'].astype(float).idxmin()
-            ask_mm = self.asks_mm.loc[ask_mm_id]
-            # indices of matched bids equal order IDs respectively
-            bids = bids[bids["price"] >= ask_mm.price]
-            for bid_id, bid in bids.iterrows():
-                matches.append({
-                    "time": self.t,
-                    "bid_id": bid_id,
-                    "ask_id": ask_mm_id,
-                    "bid_actor": bid.actor_id,
-                    "ask_actor": ask_mm.actor_id,
-                    "bid_cluster": bid.cluster,
-                    "ask_cluster": ask_mm.cluster,
-                    "energy": bid.energy,
-                    "price": ask_mm.price
-                })
-        return matches
-
     def get_bids(self):
         # Get all open bids in market. Returns dataframe.
         return self.orders[self.orders["type"] == -1]
@@ -124,6 +54,28 @@ class Market:
         # Debug: print bids and asks to terminal.
         print(self.get_bids())
         print(self.get_asks())
+
+    def filter_market_maker(self, order, ignore_index=True, index=None):
+        # filter out market makers (infinite bus) and really large orders
+        if order.energy >= MARKET_MAKER_THRESHOLD:
+            if order.type == 1:
+                self.asks_mm = pd.concat(
+                    [self.asks_mm, pd.DataFrame([order], dtype=object, index=index)],
+                    ignore_index=ignore_index)
+            elif order.type == -1:
+                self.bids_mm = pd.concat(
+                    [self.bids_mm, pd.DataFrame([order], dtype=object, index=index)],
+                    ignore_index=ignore_index)
+        else:
+            print("WARNING! large order filtered")
+            if order.type == 1:
+                self.large_asks = pd.concat(
+                    [self.large_asks, pd.DataFrame([order], dtype=object, index=index)],
+                    ignore_index=ignore_index)
+            elif order.type == -1:
+                self.large_bids = pd.concat(
+                    [self.large_bids, pd.DataFrame([order], dtype=object, index=index)],
+                    ignore_index=ignore_index)
 
     def accept_order(self, order, order_id=None, callback=None):
         """
@@ -166,15 +118,20 @@ class Market:
             if len(self.orders) != 0 and len(self.orders) - 1 != self.orders.index.max():
                 raise IndexError("Previous order IDs were defined externally and reset when "
                                  "inserting orders without predefined order_id.")
-            self.orders = pd.concat(
-                [self.orders, pd.DataFrame([order], dtype=object)],
-                ignore_index=True
-            )
+            if order.energy >= LARGE_ORDER_THRESHOLD:
+                self.filter_market_maker(order, ignore_index=True)
+            else:
+                self.orders = pd.concat(
+                    [self.orders, pd.DataFrame([order], dtype=object)],
+                    ignore_index=True)
         else:
+            new_order = pd.DataFrame([order], dtype=object, index=[order_id])
             if order_id in self.orders.index:
                 raise ValueError("Order ID ({}) already exists".format(order_id))
-            new_order = pd.DataFrame([order], dtype=object, index=[order_id])
-            self.orders = pd.concat([self.orders, new_order], ignore_index=False)
+            if order.energy >= LARGE_ORDER_THRESHOLD:
+                self.filter_market_maker(order, ignore_index=False, index=[order_id])
+            else:
+                self.orders = pd.concat([self.orders, new_order], ignore_index=False)
         self.actor_callback[order.actor_id] = callback
         self.append_to_csv([order], 'orders.csv')
 
@@ -184,9 +141,10 @@ class Market:
         """
         # TODO match bids
         matches = self.match(show=cfg.config.show_plots)
-        self.matches.append(matches)
+        mm_matches = self.match_market_maker()
+        self.matches = self.matches + matches + mm_matches
 
-        for match in matches:
+        for match in self.matches:
             bid_actor_callback = self.actor_callback[match["bid_actor"]]
             ask_actor_callback = self.actor_callback[match["ask_actor"]]
             energy = match["energy"]
@@ -222,7 +180,7 @@ class Market:
         :param show: show or print plots (mainly for debugging)
         :return: list of dictionaries with matches
         """
-        asks, bids = self.filter_market_makers()
+        asks, bids = self.get_asks(), self.get_bids()
         # order by price (while previously original ordering is reversed for equal prices)
         # i.e. higher probability of matching for higher ask prices or lower bid prices
         bids = bids.iloc[::-1].sort_values(["price"], ascending=False)
@@ -252,10 +210,57 @@ class Market:
                         "price": bid.price
                     })
 
-        matches = self.match_market_maker(matches)
         if show:
             print(matches)
 
+        self.append_to_csv(matches, 'matches.csv')
+        return matches
+
+    def match_market_maker(self):
+        # match with market maker
+        # find unmatched orders
+        matches = []
+        orders = self.orders[(self.orders["energy"] + self.EPS) > self.energy_unit]
+        # match asks only with bid market maker with highest price
+        asks = orders[orders.type == 1]
+        if not self.bids_mm.empty:
+            # select bidding market maker by order ID, that has highest price
+            bid_mm_id = self.bids_mm['price'].astype(float).idxmax()
+            bid_mm = self.bids_mm.loc[bid_mm_id]
+            asks = asks[asks["price"] <= bid_mm.price]
+            for ask_id, ask in asks.iterrows():
+                matches.append({
+                    "time": self.t,
+                    "bid_id": bid_mm_id,
+                    "ask_id": ask_id,
+                    "bid_actor": bid_mm.actor_id,
+                    "ask_actor": ask.actor_id,
+                    "bid_cluster": bid_mm.cluster,
+                    "ask_cluster": ask.cluster,
+                    "energy": ask.energy,
+                    "price": bid_mm.price
+                })
+
+        # match bids only with ask market maker with lowest price
+        bids = orders[orders.type == -1]
+        if not self.asks_mm.empty:
+            # select asking market maker by order ID, that has lowest price
+            ask_mm_id = self.asks_mm['price'].astype(float).idxmin()
+            ask_mm = self.asks_mm.loc[ask_mm_id]
+            # indices of matched bids equal order IDs respectively
+            bids = bids[bids["price"] >= ask_mm.price]
+            for bid_id, bid in bids.iterrows():
+                matches.append({
+                    "time": self.t,
+                    "bid_id": bid_id,
+                    "ask_id": ask_mm_id,
+                    "bid_actor": bid.actor_id,
+                    "ask_actor": ask_mm.actor_id,
+                    "bid_cluster": bid.cluster,
+                    "ask_cluster": ask_mm.cluster,
+                    "energy": bid.energy,
+                    "price": ask_mm.price
+                })
         self.append_to_csv(matches, 'matches.csv')
         return matches
 

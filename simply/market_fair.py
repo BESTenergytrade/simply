@@ -17,7 +17,7 @@ class BestMarket(Market):
     """
 
     def match(self, show=False):
-        asks, bids = self.filter_market_makers()
+        asks, bids = self.get_asks(), self.get_bids()
         if (asks.empty and bids.empty) \
                 or (asks.empty and self.asks_mm.empty) \
                 or (bids.empty and self.bids_mm.empty):
@@ -164,11 +164,8 @@ class BestMarket(Market):
         # retrieve matches from nested dict
         matches = [m for ask_matches in _matches.values() for m in ask_matches.values()]
 
-        matches = self.match_market_maker(matches)
-
         if show:
             print(matches)
 
         self.append_to_csv(matches, 'matches.csv')
-
         return matches

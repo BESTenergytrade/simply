@@ -139,8 +139,8 @@ class TestTwoSidedPayAsClear:
         m = TwoSidedPayAsClear(0)
         m.accept_order(Order(-1, 0, 2, None, 1, 4))
         m.accept_order(Order(1, 0, 3, None, MARKET_MAKER_THRESHOLD, 4))
-        matches = m.match()
+        m.clear()
         # matched with market maker
-        assert len(matches) == 1
-        assert matches[0]['energy'] == pytest.approx(1)
-        assert matches[0]['price'] == pytest.approx(4)
+        assert len(m.matches) == 1
+        assert m.matches[0]['energy'] == pytest.approx(1)
+        assert m.matches[0]['price'] == pytest.approx(4)

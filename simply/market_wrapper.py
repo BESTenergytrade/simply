@@ -68,8 +68,10 @@ class MatchingAlgorithm(ABC):
 
                 accept_orders(m, time, orders)
                 matches = m.match()
+                mm_matches = m.match_market_maker()
+                m.matches = m.matches + matches + mm_matches
 
-                recommendations += generate_recommendations(market_id, time, bids, asks, matches)
+                recommendations += generate_recommendations(market_id, time, bids, asks, m.matches)
 
         return recommendations
 
