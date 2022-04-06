@@ -228,21 +228,64 @@ class TestPayAsBid:
         assert matches[3]["energy"] == 40  # only 100 in bid
 
     def test_filter_large_orders(self):
-        """Test to check that very large orders are ignored."""
+        """Test to check that large orders are stored separately from normal orders and
+        market maker orders."""
         m = Market(0)
         m.accept_order(Order(-1, 0, 2, None, 1, 4))
         m.accept_order(Order(1, 0, 3, None, LARGE_ORDER_THRESHOLD + 1, 4))
-        matches = m.match()
-        # large ask is discarded, no match possible
-        assert len(matches) == 0
+        m.accept_order(Order(-1, 0, 3, None, LARGE_ORDER_THRESHOLD + 1, 4))
+        # matched with market maker
+        assert len(m.orders) == 1
+        assert len(m.large_asks) == 1
+        assert len(m.large_bids) == 1
+        assert len(m.asks_mm) == 0
+        assert len(m.bids_mm) == 0
 
-    def test_market_maker_orders(self):
-        """Test to check that market maker orders are not being ignored."""
+    def test_filter_market_maker_orders(self):
+        """Test to check that market maker orders are stored separately from normal orders and
+        large orders."""
         m = Market(0)
         m.accept_order(Order(-1, 0, 2, None, 1, 4))
         m.accept_order(Order(1, 0, 3, None, MARKET_MAKER_THRESHOLD, 4))
-        m.clear()
+        m.accept_order(Order(-1, 0, 3, None, MARKET_MAKER_THRESHOLD, 4))
         # matched with market maker
-        assert len(m.matches) == 1
-        assert m.matches[0]['energy'] == pytest.approx(1)
-        assert m.matches[0]['price'] == pytest.approx(4)
+        assert len(m.orders) == 1
+        assert len(m.large_asks) == 0
+        assert len(m.large_bids) == 0
+        assert len(m.asks_mm) == 1
+        assert len(m.bids_mm) == 1
+
+    def test_marker_maker_matches(self):
+        m = Market(0)
+        m.accept_order(Order(-1, 0, 2, None, 1, 4))
+        m.accept_order(Order(1, 0, 3, None, MARKET_MAKER_THRESHOLD, 4))
+        matches = m.match_market_maker()
+        # matched with ask market maker
+        assert matches[0]['energy'] == pytest.approx(1)
+        assert matches[0]['price'] == pytest.approx(4)
+
+        # reset market
+        m = Market(0)
+        m.accept_order(Order(-1, 0, 2, None, MARKET_MAKER_THRESHOLD, 4))
+        m.accept_order(Order(1, 0, 3, None, 1, 4))
+        matches = m.match_market_maker()
+        # matched with bid market maker
+        assert len(matches) == 1
+        assert matches[0]['energy'] == pytest.approx(1)
+        assert matches[0]['price'] == pytest.approx(4)
+
+        # reset market
+        m = Market(0)
+        m.accept_order(Order(-1, 0, 2, None, MARKET_MAKER_THRESHOLD, 4))
+        m.accept_order(Order(1, 0, 3, None, 1, 4))
+        matches = m.match()
+        # unmatched since not using market maker matching function
+        assert len(matches) == 0
+
+        # reset market
+        m = Market(0)
+        m.accept_order(Order(-1, 0, 2, None, 1, 4))
+        m.accept_order(Order(1, 0, 3, None, 1, 4))
+        matches = m.match_market_maker()
+        # unmatched since no market maker order
+        assert len(matches) == 0
