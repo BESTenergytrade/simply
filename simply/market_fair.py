@@ -19,6 +19,13 @@ class BestMarket(Market):
     This converges to an optimal solution.
     """
 
+    def __init__(self, time, network=None, grid_fee_matrix=None):
+        super().__init__(time, network, grid_fee_matrix)
+        if self.save_csv:
+            match_header = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
+                            "ask_cluster", "energy", "price", 'grid_fee')
+            self.create_csv('matches.csv', match_header)
+
     def match(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
@@ -112,7 +119,8 @@ class BestMarket(Market):
                             "bid_cluster": bid.cluster,
                             "ask_cluster": ask.cluster,
                             "energy": self.energy_unit,
-                            "price": ask.adjusted_price
+                            "price": ask.adjusted_price,
+                            "grid_fee": ask.adjusted_price - ask.price
                         })
                     # get next bid
                     try:
