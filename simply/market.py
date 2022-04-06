@@ -156,7 +156,11 @@ class Market:
 
         if reset:
             # don't retain orders for next cycle
-            self.orders = pd.DataFrame()
+            self.orders = pd.DataFrame(columns=Order._fields)
+            self.large_bids = pd.DataFrame(columns=Order._fields)
+            self.large_asks = pd.DataFrame(columns=Order._fields)
+            self.bids_mm = pd.DataFrame(columns=Order._fields)
+            self.asks_mm = pd.DataFrame(columns=Order._fields)
         else:
             # remove fully matched orders
             self.orders = self.orders[self.orders.energy >= self.energy_unit]
