@@ -1,4 +1,4 @@
-from simply.market_wrapper import (PayAsBidMatchingAlgorithm)
+from simply.market_wrapper import (BestPayAsBidMatchingAlgorithm)
 
 FLOATING_POINT_TOLERANCE = 0.00001
 
@@ -25,7 +25,7 @@ class TestPayAsBidMatchingAlgorithm:
                 }
             }
         }
-        recommendations = PayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        recommendations = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(data)
         expected_recommendations = [
             {"market_id": "market1",
              "time_slot": "2021-10-06T12:00",
@@ -53,7 +53,7 @@ class TestPayAsBidMatchingAlgorithm:
                 }
             }
         }
-        recommendations = PayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        recommendations = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(data)
         expected_recommendations = []
         assert recommendations == expected_recommendations
 
@@ -84,7 +84,7 @@ class TestPayAsBidMatchingAlgorithm:
 
             }
         }
-        recommendations = PayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        recommendations = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(data)
         expected_recommendations = [
             {"market_id": "market1",
              "time_slot": "2021-10-06T12:00",
@@ -147,7 +147,7 @@ class TestPayAsBidMatchingAlgorithm:
                 }
             }
         }
-        recommendations = PayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        recommendations = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(data)
         expected_recommendations = [
             {"market_id": "market1",
              "time_slot": "2021-10-06T12:00",
@@ -206,7 +206,7 @@ class TestPayAsBidMatchingAlgorithm:
                 }
             }
         }
-        recommendations = PayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        recommendations = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(data)
         expected_recommendations = [
             {"market_id": "market1",
              "time_slot": "2021-10-06T12:00",
@@ -229,11 +229,11 @@ class TestPayAsBidMatchingAlgorithm:
                 }
             },
         }
-        recommendations = PayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        recommendations = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(data)
         assert not recommendations
         # Adapting the offer energy rate to a value that can match with the bid
         data["market1"]["2021-10-06T12:00"]["offers"][0]["energy_rate"] = 1
-        recommendations = PayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        recommendations = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(data)
         expected_recommendations = [
             {"market_id": "market1",
              "time_slot": "2021-10-06T12:00",
@@ -260,7 +260,7 @@ class TestPayAsBidMatchingAlgorithm:
                 }
             },
         }
-        recommendations = PayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        recommendations = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(data)
         # The bid-id 3 will not match because it has the same buyer as the seller
         expected_recommendations = [
             {"market_id": "market1",
@@ -294,7 +294,7 @@ class TestPayAsBidMatchingAlgorithm:
                 }
             },
         }
-        recommendations = PayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        recommendations = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(data)
         # The offer-id 11 will not match because it has the same seller as the bid buyer
         expected_recommendations = [
             {"market_id": "market1",

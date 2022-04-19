@@ -78,7 +78,7 @@ class MatchingAlgorithm(ABC):
         pass
 
 
-class PayAsBidMatchingAlgorithm(MatchingAlgorithm):
+class BestPayAsBidMatchingAlgorithm(MatchingAlgorithm):
     """
     Wrapper class for the pay as bid matching algorithm
     """
@@ -88,7 +88,7 @@ class PayAsBidMatchingAlgorithm(MatchingAlgorithm):
         return super().get_market_matches(mycoDict, market.Market)
 
 
-class PayAsClearMatchingAlgorithm(MatchingAlgorithm):
+class BestPayAsClearMatchingAlgorithm(MatchingAlgorithm):
     """
     Wrapper class for the pay as clear matching algorithm
     """
@@ -98,7 +98,7 @@ class PayAsClearMatchingAlgorithm(MatchingAlgorithm):
         return super().get_market_matches(mycoDict, market_2pac.TwoSidedPayAsClear)
 
 
-class ClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
+class BestClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
     """
     Wrapper class of the cluster-based market fair matching algorithm
     """
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     with open(args.file, 'r') as f:
         mycoDict = json.load(f)
 
-    recommendation = PayAsBidMatchingAlgorithm.get_matches_recommendations(mycoDict)
-    # recommendation = PayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
-    # recommendation = ClusterPayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
+    recommendation = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(mycoDict)
+    # recommendation = BestPayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
+    # recommendation = BestClusterPayAsClearMatchingAlgorithm.get_matches_recommendations(mycoDict)
     print(json.dumps(recommendation, indent=2))
