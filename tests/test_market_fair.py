@@ -211,6 +211,7 @@ class TestBestMarket:
         assert matches[0]["energy"] == pytest.approx(0.3)
         assert matches[0]["bid_id"] == "ID3"
         assert matches[0]["ask_id"] == "ID4"
+        # maket maker does not have a cluster associated
         assert matches[0]['bid_cluster'] is None
 
     def test_multiple(self):
