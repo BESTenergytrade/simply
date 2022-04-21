@@ -30,7 +30,8 @@ class Market:
             self.grid_fee_matrix = network.grid_fee_matrix
         self.EPS = 1e-10
         if self.save_csv:
-            match_header = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "energy", "price")
+            match_header = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
+                            "ask_cluster", "energy", "price")
             self.create_csv('matches.csv', match_header)
             self.create_csv('orders.csv', Order._fields)
 
@@ -135,6 +136,8 @@ class Market:
             ask_id: ID of ask order
             bid_actor: ID of bidding actor
             ask_actor: ID of asking actor
+            bid_cluster: cluster of bidding actor
+            ask_cluster: cluster of asking actor
             energy: matched energy (multiple of market's energy unit)
             price: matching price
 
@@ -165,6 +168,8 @@ class Market:
                         "ask_id": ask_id,
                         "bid_actor": bid.actor_id,
                         "ask_actor": ask.actor_id,
+                        "bid_cluster": bid.cluster,
+                        "ask_cluster": ask.cluster,
                         "energy": energy,
                         "price": bid.price
                     })
