@@ -53,8 +53,7 @@ class MatchingAlgorithm(ABC):
         Unpacks order dictionary per market and time slot
         and match the orders using the given market.
 
-        :param mycoDict: hierarchical dictionary with market name and time slot each containing
-        a dict with bids and offers in lists {'bids': []], 'offers': []}
+        :param mycoDict: hierarchical dictionary with market name and time slot each containing a dict with bids and offers in lists {'bids': [], 'offers': []}
         :param market: Market object that implements the matching algorithm
         :return: list of dictionaries with matches in all given markets and time slots
         """
