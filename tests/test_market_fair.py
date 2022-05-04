@@ -307,4 +307,4 @@ class TestBestMarket:
         m.accept_order(Order(1, 0, 3, 1, 0.1, 6))
         m.accept_order(Order(1, 0, 3, 1, 0.1, 4))
         matches = m.match()
-        assert len(matches) == 1
+        assert len(matches) == 2
