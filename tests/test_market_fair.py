@@ -215,8 +215,8 @@ class TestBestMarket:
         assert matches[0]['bid_cluster'] is None
 
     def test_multiple(self):
-        """Tests that matches can be made which require multiple asks to satisfy one bid or multiple bids to
-            satisfy one ask."""
+        """Tests that matches can be made which require multiple asks to satisfy one bid or multiple
+        bids to satisfy one ask."""
         # multiple bids to satisfy one ask
         m = BestMarket(0, self.pn)
         m.accept_order(Order(-1, 0, 2, None, .1, 4))
@@ -294,3 +294,17 @@ class TestBestMarket:
         assert len(matches) == 1
         assert matches[0]['energy'] == pytest.approx(1)
         assert matches[0]['price'] == pytest.approx(4)
+
+    def test_update_clearing_cluster(self):
+        """Test the update of a cluster clearing price is correctly done when a better match with
+        another cluster is found."""
+        m = BestMarket(0, self.pn)
+        # add bids
+        m.accept_order(Order(-1, 0, 1, 1, 0.1, 10))
+        m.accept_order(Order(-1, 0, 1, 1, 0.1, 7))
+        m.accept_order(Order(-1, 0, 0, 0, 0.1, 10))
+        # add asks
+        m.accept_order(Order(1, 0, 3, 1, 0.1, 6))
+        m.accept_order(Order(1, 0, 3, 1, 0.1, 4))
+        matches = m.match()
+        assert len(matches) == 2

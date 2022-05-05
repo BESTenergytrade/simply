@@ -145,11 +145,11 @@ class BestMarket(Market):
                         if _match["price"] > match["price"]:
                             # new match is better:
                             # exclude old match
-                            exclude[match["ask_cluster"]].add(match["ask_id"])
+                            exclude[match["bid_cluster"]].add(match["ask_id"])
                             # replace old match
                             matches[match_idx] = _match
                             # redo other cluster
-                            clusters_to_match.add(match["ask_cluster"])
+                            clusters_to_match.add(match["bid_cluster"])
                         else:
                             # old match is better: exclude new match
                             exclude[cluster_idx].add(_match["ask_id"])
