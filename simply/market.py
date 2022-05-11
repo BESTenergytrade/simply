@@ -192,5 +192,5 @@ class Market:
             writer.writerow(headers)
 
     def apply_grid_fees(self, ask, bid):
-            weight = self.grid_fee_matrix[bid.cluster][ask.cluster]
-            ask.price += weight
+        weight = self.grid_fee_matrix[bid.cluster][ask.cluster]
+        ask.price += weight
