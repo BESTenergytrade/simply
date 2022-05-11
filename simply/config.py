@@ -14,6 +14,8 @@ class Config:
     [default]
     start - initial timestep [8]
     nb_ts - number of timesteps to simulate [3]
+    nb_actors - number of actors in network [5]
+    nb_nodes - number of nodes in network [4]
     step_size - length of timestep in hours [1]
     list_ts - list of timesteps in simulation [generated, can't be overridden]
     show_plots - show various plots [False]
@@ -51,6 +53,10 @@ class Config:
         self.start = parser.getint("default", "start", fallback=8)
         # number of timesteps in simulation
         self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
+        # number actors in simulation
+        self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
+        # number of nodes in simulation
+        self.nb_nodes = parser.getint('default', 'nb_nodes', fallback=4)
         # interval between simulation timesteps
         self.step_size = parser.getint("default", "step_size", fallback=1)
         # list of timesteps in simulation
