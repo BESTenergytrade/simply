@@ -11,6 +11,7 @@ Welcome to simply's documentation!
    :caption: Contents:
 
    getting_started
+   matching_strategies
    modules
 
 Indices and tables
