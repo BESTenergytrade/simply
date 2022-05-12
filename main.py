@@ -35,10 +35,7 @@ if __name__ == "__main__":
                             ' already exists with another file structure.'
                             'Please remove or rename folder to avoid confusion and restart '
                             'simulation.')
-        # TODO Use config file for scenario generation
-        nb_actors = 5
-        nb_nodes = 4
-        sc = scenario.create_random(nb_nodes, nb_actors, cfg.weight_factor)
+        sc = scenario.create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.path, cfg.data_format)
     # TODO output folder: add plots files
 
