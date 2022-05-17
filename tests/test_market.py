@@ -1,5 +1,7 @@
 from simply.actor import Order
 from simply.market import Market
+from simply.power_network import PowerNetwork
+import networkx as nx
 
 import pytest
 
@@ -236,8 +238,21 @@ class TestPayAsBid:
         # example: cost 1 for trade between clusters
         m = Market(0, grid_fee_matrix=[[0, 1], [1, 0]])
 
-        # weight between nodes too high
+        # grid-fees between nodes only allow for partial matching
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
-        m.accept_order(Order(1, 0, 4, 1, 1, 3))
+        m.accept_order(Order(1, 0, 4, 1, 0.9, 3))
+        m.accept_order(Order(1, 0, 0, 1, 0.1, 2))
         matches = m.match()
-        assert len(matches) == 0
+        assert len(matches) == 1
+        assert matches[0]["energy"] == 0.1
+
+        # grid_fee_matrix variable favours explicit grid_fee_matrix over network.grid_fee_matrix
+        nw = nx.Graph()
+        nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
+        pn = PowerNetwork("", nw, weight_factor=2)
+        grid_fee_matrix = [[0, 1], [1, 0]]
+        m = Market(0, network=pn, grid_fee_matrix=grid_fee_matrix)
+        m.accept_order(Order(-1, 0, 2, 0, 1, 3))
+        m.accept_order(Order(1, 0, 0, 1, 1, 2))
+        matches = m.match()
+        assert len(matches) == 1

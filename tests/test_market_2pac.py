@@ -129,8 +129,10 @@ class TestTwoSidedPayAsClear:
         # example: cost 1 for trade between clusters
         m = TwoSidedPayAsClear(0, grid_fee_matrix=[[0, 1], [1, 0]])
 
-        # weight between nodes too high
+        # grid-fees between nodes only allow for partial matching
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
-        m.accept_order(Order(1, 0, 4, 1, 1, 3))
+        m.accept_order(Order(1, 0, 4, 1, 0.9, 3))
+        m.accept_order(Order(1, 0, 0, 1, 0.1, 2))
         matches = m.match()
-        assert len(matches) == 0
+        assert len(matches) == 1
+        assert matches[0]["energy"] == 0.1
