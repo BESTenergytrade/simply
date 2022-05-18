@@ -11,6 +11,9 @@ class Market:
     Representation of a market. Collects orders, implements a matching strategy for clearing,
     finalizes post-matching.
 
+    If a network and a grid_fee_matrix parameter are both supplied, Market will favour
+    grid_fee_matrix.
+
     This class provides a basic matching strategy which may be overridden.
     """
 
@@ -24,9 +27,8 @@ class Market:
         self.network = network
         self.save_csv = cfg.parser.getboolean("default", "save_csv", fallback=False)
         self.csv_path = Path(cfg.parser.get("default", "path", fallback="./scenarios/default"))
-        if grid_fee_matrix is not None:
-            self.grid_fee_matrix = grid_fee_matrix
-        elif network is not None:
+        self.grid_fee_matrix = grid_fee_matrix
+        if network is not None and grid_fee_matrix is None:
             self.grid_fee_matrix = network.grid_fee_matrix
         self.EPS = 1e-10
         if self.save_csv:
@@ -154,6 +156,8 @@ class Market:
             for bid_id, bid in bids.iterrows():
                 if ask.actor_id == bid.actor_id:
                     continue
+                if self.grid_fee_matrix:
+                    self.apply_grid_fee(ask, bid)
                 if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit \
                         and ask.price <= bid.price:
                     # match ask and bid
@@ -189,3 +193,6 @@ class Market:
         with open(self.csv_path / filename, 'w') as f:
             writer = csv.writer(f)
             writer.writerow(headers)
+
+    def apply_grid_fee(self, ask, bid):
+        ask.price += self.grid_fee_matrix[bid.cluster][ask.cluster]

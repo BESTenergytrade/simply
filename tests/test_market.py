@@ -1,5 +1,7 @@
 from simply.actor import Order
 from simply.market import Market
+from simply.power_network import PowerNetwork
+import networkx as nx
 
 import pytest
 
@@ -230,3 +232,28 @@ class TestPayAsBid:
         assert matches[1]["energy"] == 20
         assert matches[2]["energy"] == 30
         assert matches[3]["energy"] == 40  # only 100 in bid
+
+    def test_prices_matrix(self):
+        # test prices with a given grid fee matrix
+        # example: cost 1 for trade between clusters
+        m = Market(0, grid_fee_matrix=[[0, 1], [1, 0]])
+
+        # grid-fees between nodes only allow for partial matching
+        m.accept_order(Order(-1, 0, 2, 0, 1, 3))
+        m.accept_order(Order(1, 0, 4, 1, 0.9, 3))
+        m.accept_order(Order(1, 0, 0, 1, 0.1, 2))
+        matches = m.match()
+        assert len(matches) == 1
+        assert matches[0]["energy"] == 0.1
+        assert matches[0]["price"] == 3
+
+        # grid fee of 1 is used from grid_fee_matrix instead of grid fee of 2 from pn
+        nw = nx.Graph()
+        nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
+        pn = PowerNetwork("", nw, weight_factor=2)
+        grid_fee_matrix = [[0, 1], [1, 0]]
+        m = Market(0, network=pn, grid_fee_matrix=grid_fee_matrix)
+        m.accept_order(Order(-1, 0, 2, 0, 1, 3))
+        m.accept_order(Order(1, 0, 0, 1, 1, 2))
+        matches = m.match()
+        assert len(matches) == 1

@@ -25,7 +25,11 @@ class TwoSidedPayAsClear(Market):
         bid_id, bid = next(bid_iter)
         matches = []
         for ask_id, ask in asks.iterrows():
-            while bid is not None and ask.price <= bid.price:
+            while bid is not None:
+                if self.grid_fee_matrix:
+                    self.apply_grid_fee(ask, bid)
+                if ask.price > bid.price:
+                    break
                 # get common energy value
                 energy = min(ask.energy, bid.energy)
                 ask.energy -= energy
