@@ -245,8 +245,9 @@ class TestPayAsBid:
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == 0.1
+        assert matches[0]["price"] == 3
 
-        # grid_fee_matrix variable favours explicit grid_fee_matrix over network.grid_fee_matrix
+        # grid fee of 1 is used from grid_fee_matrix instead of grid fee of 2 from pn
         nw = nx.Graph()
         nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
         pn = PowerNetwork("", nw, weight_factor=2)

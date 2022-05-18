@@ -136,3 +136,4 @@ class TestTwoSidedPayAsClear:
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == 0.1
+        assert matches[0]["price"] == 3
