@@ -20,6 +20,7 @@ simply.config module
    :undoc-members:
    :show-inheritance:
 
+.. _market:
 
 simply.market module
 --------------------
@@ -29,6 +30,8 @@ simply.market module
    :undoc-members:
    :show-inheritance:
 
+.. _2pac:
+
 simply.market\_2pac module
 --------------------------
 
@@ -36,6 +39,8 @@ simply.market\_2pac module
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _best:
 
 simply.market\_fair module
 --------------------------
