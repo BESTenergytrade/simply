@@ -6,8 +6,18 @@ The core of Simply are the different matching algorithms. They decide which bids
 matched together and at what price. Currently, Simply has three matching algorithms: Pay-as-bid,
 Two-Sided Pay-as-clear and BEST matching.
 
+.. _example_scenario:
+
 Example Scenario
 ================
+
+The following example scenario is used to illustrate the functioning of the matching mechanisms
+using in the simply matching algorithms.
+
+The example scenario uses a basic network of 5 actors across 2 clusters with actors 0 and 4 in 
+
+Network
+-------
 .. figure:: network.png
    :scale: 35%
    :alt: Power Network
@@ -30,8 +40,16 @@ Order Input
     m.accept_order(Order(1, 0, 3, 1, 0.1, 6))
     m.accept_order(Order(1, 0, 3, 1, 0.1, 4))
 
-Pay-as-bid Algorithm
+Pay-as-Bid Algorithm
 ====================
+
+Using the Pay-as-Bid algorithm, buyers are able to place bids in the market, alongside the
+asks placed by sellers. At each timestamp, bids are sorted in descending order and asks
+are sorted in ascending order. Each offer is then compared with each bid, if the bid is greater
+than the ask, the ask and the bid are matched.
+
+The table below illustrates the matching of :ref:`example_scenario`
+
 
 **Final Matches (Output):**
 
@@ -45,8 +63,13 @@ Pay-as-bid Algorithm
 | actor 1, order_id 1, price 7   |                               |                |
 +--------------------------------+-------------------------------+----------------+
 
-Two-sided Pay-As-Clear Algorithm
+Two-sided Pay-as-Clear Algorithm
 ================================
+
+Similarly to Pay-as-Bid, at each timestamp, bids are sorted in descending order and asks
+are sorted in ascending order. After the matching has taken place at this timestep, the highest
+ask price to be matched, known as the *clearing price*, is then applied to all matches at this
+timestep.
 
 +--------------------------------+-------------------------------+----------------+
 | Bids                           | Asks                          | Matched Price  |
