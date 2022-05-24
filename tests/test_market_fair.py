@@ -118,20 +118,20 @@ class TestBestMarket:
         assert matches[0]["price"] == pytest.approx(2)
 
         m.orders = m.orders[:0]
-        # weight between nodes too high
+        # grid-fee between nodes too high
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
         m.accept_order(Order(1, 0, 4, 1, 1, 3))
         matches = m.match()
         assert len(matches) == 0
 
         m.orders = m.orders[:0]
-        # weight between nodes low enough
+        # grid-fee between nodes low enough
         m.accept_order(Order(-1, 0, 4, 0, 1, 3))
         m.accept_order(Order(1, 0, 2, 1, 1, 2))
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(1)
-        assert matches[0]["price"] == pytest.approx(3)  # 2 + weight(1)
+        assert matches[0]["price"] == pytest.approx(3)  # 2 + 1
 
         m.orders = m.orders[:0]
         # match different clusters, even though there are orders from same cluster
@@ -144,7 +144,7 @@ class TestBestMarket:
         assert matches[0]["ask_actor"] == 2
         assert matches[0]["bid_actor"] == 4
         assert matches[0]["energy"] == pytest.approx(1)
-        assert matches[0]["price"] == pytest.approx(3)  # 2 + weight(1)
+        assert matches[0]["price"] == pytest.approx(3)  # 2 + 1
 
         m.orders = m.orders[:0]
         # same price: favor local orders
