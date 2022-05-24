@@ -86,15 +86,15 @@ class BestMarket(Market):
 
             # get all asks that are not in exclude list for this cluster (copy asks, retain index)
             _asks = asks.drop(exclude[cluster_idx], axis=0, inplace=False)
-            # annotate asking price by weight:
+            # annotate asking price by grid-fee:
             # get cluster ID for all asks, preserve ordering
             ask_cluster_ids = list(_asks.cluster)
-            # get weights from any node in cluster to different ask actors
-            weights = self.grid_fee_matrix[cluster_idx]
-            # get weights in same order as ask node IDs
-            ask_weights = [weights[i] for i in ask_cluster_ids]
-            # set adjusted price with network weight
-            _asks["adjusted_price"] = pd.Series(_asks.price + ask_weights, index=_asks.index)
+            # get grid_fees from any node in cluster to different ask actors
+            grid_fees = self.grid_fee_matrix[cluster_idx]
+            # get grid_fees in same order as ask node IDs
+            ask_grid_fees = [grid_fees[i] for i in ask_cluster_ids]
+            # set adjusted price with network grid-fee
+            _asks["adjusted_price"] = pd.Series(_asks.price + ask_grid_fees, index=_asks.index)
 
             # order local bids and asks by price
             _bids = _bids.sort_values(["price"], ascending=False)
