@@ -2,7 +2,7 @@
 Matching Algorithms
 ~~~~~~~~~~~~~~~~~~~
 
-The core of simply are the different matching algorithms. They decide which bids and asks are
+The core of simply is the different matching algorithms. They decide which bids and asks are
 matched together and at what price. Currently, simply has three matching algorithms: Pay-as-bid,
 Two-Sided Pay-as-clear and BEST matching.
 
@@ -14,7 +14,7 @@ Example Scenario
 The following example scenario is used to illustrate the functioning of the matching mechanisms
 used across the simply matching algorithms. The scenario consists of a basic network of 5 actors
 across 2 clusters. Actors 0 and 4 are in Cluster 0 and Actors 1, 2, and 3 are in Cluster 1. There
-is a +1 grid-fee in-between the Cluster 0 and 1. Matches made between clusters therefore incur an
+is a +1 grid-fee in-between the Cluster 0 and 1. Matches made between clusters, therefore, incur an
 additional cost of +1.
 
 Network
@@ -23,36 +23,40 @@ Network
    :scale: 35%
    :alt: Power Network
 
-   Figure 1: basic network consisting of 5 actors across 2 clusters.
+   Figure 1: a basic network consisting of 5 actors across 2 clusters.
 
 Grid-Free Matrix
 ----------------
 
 Grid-fees are calculated for each order using the following grid fee matrix:
 
-.. math::
++-------------------------+---------------------+--------------------+
+|                         | Origin Cluster: 0   | Origin Cluster: 1  |
++=========================+=====================+====================+
+| Destination Cluster: 0  | 0                   | 1                  |
++-------------------------+---------------------+--------------------+
+| Destination Cluster: 1  | 1                   | 0                  |
++-------------------------+---------------------+--------------------+
 
-    \[\left[ {\begin{array}{cc} 0 & 1 \\ 1 & 0 \\ \end{array} } \right]\]
-
-Bids and offers
+Bids and Asks
 ---------------
 
-Bids are placed by actors looking to buy energy and offers are placed by actors looking to sell
+Bids are placed by actors looking to buy energy and asks are placed by actors looking to sell
 energy. For this example, using the network depicted above, 5 orders consisting of 3 bids and 2 asks are
 added into the market.
 
 **The Bids**
 
-Two bids, each for 0.1 energy have been placed by Actor 1 in Cluster 1, one bid is set at the price
-of 10 and another bid at the price of 7. The third bid is placed by Actor 0 in Cluster 0 and is
-for 0.1 energy at the price 10.
+Two bids, i.e. type=-1, each for 0.1 energy have been placed by Actor 1 in Cluster 1, of which one
+bid is set at the price of 10 and the other at the price of 7. The third bid is placed by Actor
+0 in Cluster 0 and is for 0.1 energy at price 10.
 
-**The Offers**
+**The Asks**
 
-Both offers added into the market are placed by Actor 3 in Cluster 1. Both are for 0.1 energy
-with one set at the price of 6 and another at the price of 4.
+Both asks, i.e. type=1, added into the market are placed by Actor 3 in Cluster 1. Both are for 0.1
+energy with one set at the price of 6 and the other at the price of 4.
 
-Below shows the syntax for inputting the bids and offers:
+The code below shows the syntax for inputting the bids and asks:
 
 .. code:: python
 
@@ -71,11 +75,10 @@ Pay-as-Bid Algorithm
 ====================
 
 Using the Pay-as-Bid algorithm (found here: :ref:`market`), buyers are able to place bids in the
-market, alongside
-the
-asks placed by sellers. At each timestamp, bids are sorted in descending order and asks
-are sorted in ascending order. Each offer is then compared with each bid, if the bid is greater
-than the ask, the ask and the bid are matched.
+market, alongside the asks placed by sellers. During each time slot, bids are sorted in descending
+order and asks are sorted in ascending order. Each offer is then compared with each bid, if the
+bid price is greater than the ask price, they are matched (partial matches of varying energy
+quantities are allowed).
 
 The table below illustrates the matching of the :ref:`example_scenario`:
 
@@ -95,10 +98,11 @@ The table below illustrates the matching of the :ref:`example_scenario`:
 Two-sided Pay-as-Clear Algorithm
 ================================
 
-Similarly to Pay-as-Bid, at each timestamp, Two-sided Pay-as-Clear (found here: :ref:`2pac`)
-sorts bids sorts bids in descending order and asks in ascending order. After the matching has
-taken place at this timestep, the highest ask price to be matched, known as the *clearing price*,
-is then applied to all matches at this timestep.
+Similarly to Pay-as-Bid, during each time slot, Two-sided Pay-as-Clear (found here: :ref:`2pac`)
+sorts bids in descending order and asks in ascending order. After the matching has taken place at
+this time slot, the highest matched ask price becomes the *clearing price* for all matched
+orders of
+this time slot.
 
 The table below illustrates the matching of the :ref:`example_scenario`:
 
@@ -117,10 +121,8 @@ BEST Matching Algorithm
 
 BEST Matching (found here: :ref:`best`)
 
-Below shows the internal steps when matching the orders from the example scenario using BEST
-matching.
-
-The tables below illustrates the matching of the :ref:`example_scenario`:
+The tables below illustrate the internal steps during the matching of the :ref:`example_scenario`
+using BEST matching:
 
 **Matching Cluster 0 (Initial Attempt):**
 
