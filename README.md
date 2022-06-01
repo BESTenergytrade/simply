@@ -14,6 +14,9 @@ pip install -e .
 
 **test**
 ```sh
+# install testing dependencies
+pip install -r tests/requirements.txt
+# run tests
 python -m pytest
 ```
 
