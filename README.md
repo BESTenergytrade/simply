@@ -33,8 +33,11 @@ Example run, while loading input from json file `orders.json` in gsy-e format:
 ```sh
 python market_wrapper.py orders.json
 ```
+Documentation
+=============
+- [Documentation Index](https://simply.readthedocs.io/en/latest/)
 
-glossary
+Glossary
 ========
 ## scenario
 Imaginable reality or future with respect to parameters beyond our control. E.g.
