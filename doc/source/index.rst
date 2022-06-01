@@ -13,6 +13,7 @@ Welcome to simply's documentation!
    getting_started
    matching_strategies
    modules
+   glossary
 
 Indices and tables
 ==================
