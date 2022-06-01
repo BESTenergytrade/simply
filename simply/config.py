@@ -12,27 +12,31 @@ class Config:
 
     Config attributes, grouped by section, with default in brackets:
     [default]
-    start - initial timestep [8]
-    nb_ts - number of timesteps to simulate [3]
-    nb_actors - number of actors in network [5]
-    nb_nodes - number of nodes in network [4]
-    step_size - length of timestep in hours [1]
-    list_ts - list of timesteps in simulation [generated, can't be overridden]
-    show_plots - show various plots [False]
-    show_prints - show debug info in terminal [False]
-    save_csv - save orders and mathced results to csv files [True]
-    path - path of scenario directory to load and/or store [./scenarios/default]
-    data_format - how to save actor data. "csv": save data in separate csv file and all actors
-    in one config file, otherwise save config and data per actor in a single file ["cfg"]
-    reset_market: if set, discard unmatched orders after each interval [True]
-    update_scenario: if set, always save scenario in given path (even if loaded) [False]
-    market_type: selects matching strategy. Supported:
-        [default]/pab/basic (pay-as-bid)
-        pac/2pac (two-sided pay-as-clear)
-        fair/merit (custom BEST market)
-    weight_factor: conversion factor from grid fees to power network node weight [0.1]
+        - start - initial timestep [8]\n
+        - nb_ts - number of timesteps to simulate [3]\n
+        - nb_actors - number of actors in network [5]\n
+        - nb_nodes - number of nodes in network [4]\n
+        - step_size - length of timestep in hours [1]\n
+        - list_ts - list of timesteps in simulation [generated, can't be overridden]\n
+        - show_plots - show various plots [False]\n
+        - show_prints - show debug info in terminal [False]\n
+        - save_csv - save orders and matched results to csv files [True]\n
+        - path - path of scenario directory to load and/or store [./scenarios/default]\n
+        - data_format - how to save actor data. Supported values\n
+            csv: save data in separate csv file and all actors in one config file,\n
+            [json]: save config and data per actor in a single file\n
+        - reset_market: if set, discard unmatched orders after each interval [True]\n
+        - update_scenario: if set, always save scenario in given path (even if loaded) [False]\n
+        - market_type: selects matching strategy. Supported values\n
+            [pab]/basic (pay-as-bid)\n
+            pac/2pac (two-sided pay-as-clear)\n
+            fair/merit (custom BEST market)\n
+        - weight_factor: conversion factor from grid fees to power network node weight [0.1]\n
     [actor]
-    horizon - number of timesteps to look ahead for prediction [24]
+        - horizon - number of timesteps to look ahead for prediction [24]
+    :param cfg_file: configuration file path with the attributes listed above.
+    :type cfg_file: str
+    :keyword cfg_file: start
     """
 
     def __init__(self, cfg_file):
