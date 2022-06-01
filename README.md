@@ -14,7 +14,7 @@ pip install -e .
 
 **test**
 ```sh
-pytest tests/
+python -m pytest
 ```
 
 **run**
