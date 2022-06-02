@@ -2,48 +2,45 @@ Glossary
 ========
 Scenario
 --------
-Imaginable reality or future with respect to parameters beyond our control. E.g. regarding:
+Reality or future to be regarded within the simulations. Especially defining what parameters will be considered or have an impact on other relevant parameters, e.g.:
 
-- Prosumer composition
+- Prosumer
 
-  - Power demand
-  - Energy demand
-- Flexibilities
+  - actor type (industry/household)
+  - community composition
+  - asset composition (e.g. Consumer, PV, PV+Bat, PV+EV)
+    - Peak power
+    - Power dynamic and volatility
+    - Energy demand
+    - Flexibility (e.g. Battery, EV-availability)
 - Policy regarding Network charges
 - Policy regarding change of supplier
-- Digitalisation
+- Digitization
 - Grid expansion
-
-Variant
--------
-Changing components of the BEST energy trading system. E.g. regarding:
-
-- Market mechanism
-- Network charges model
-- Conditions for the commercial energy supplier
 
 Model
 -----
-Abstraction/simplification of a scenario (variant).
-D3A together with a specific set up represents a model.
+The simulation framework models how individual actors, situated within a electricity network, can trade on a periodic market using specific matching algorithms.
 
 Setups
 ------
-Setups generate a model of the scenario variant under consideration from the simulation framework.
-A setup consists of a parameter set and a data set.
+A setup defines a specific scenario variant under given the simulation framework's model.
+A setup consists of a parameter configuration which might refer to a data set.
 
-**Parameter set**
+- Parameter set:
+  - Includes all parameters that define decisions about the sepcific scenario variant.
+  - These might include changing components of the BEST energy trading system. E.g. regarding:
 
-Includes all parameters that define decisions about the scenario variant.
+    - Market mechanism
+    - Network charges model
+    - Conditions for the commercial energy supplier
 
-**Data set**
-
-Includes all time series and other data files that are used in the model.
+- Data set:
+Includes all time series and other reference data files that are used in the simulation of a scenario variant.
 
 Schedule
 --------
-Time series of energy quantities that should be traded.
-It is generated taking all energy assets at the prosumer site, flexibilities and future market prices into account.
-It is the output of obs-d/bidding agent.
-It is not clear if such a thing will exist in final simulations since it might be that only bids and asks for the next market period will be
-calculated by OBS-d.
+Time series of energy quantities that is planed to be exchanged with the grid.
+- It should take all energy assets at the prosumer site, flexibilities and future market prices into account.
+- It currently is based on perfect-foresight but should reflect prediction uncertainty in the future
+- Bids and asks are only placed for each next market time slot, but prediction make sense in order to anticipate prices while managing asset flexibility (e.g. a battery)
