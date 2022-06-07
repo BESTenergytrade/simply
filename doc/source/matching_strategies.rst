@@ -1,3 +1,5 @@
+.. _matching_algorithms:
+
 ~~~~~~~~~~~~~~~~~~~
 Matching Algorithms
 ~~~~~~~~~~~~~~~~~~~
