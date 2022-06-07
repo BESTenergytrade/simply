@@ -34,8 +34,9 @@ The tool uses Python (>= 3.8) standard libraries as well as specific, but well k
 
 General concept
 ===============
-TODO
-
+Simply is an agent-based market simulation tool that assigns market agents to clusters and can
+perform different :ref:`matching_algorithms` with their bids and asks with some of the algorithms
+taking the various clusters into account.
 
 Run Simply
 ==========
