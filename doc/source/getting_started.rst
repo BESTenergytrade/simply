@@ -34,8 +34,12 @@ The tool uses Python (>= 3.8) standard libraries as well as specific, but well k
 
 General concept
 ===============
-TODO
-
+Simply is an agent-based market simulation tool with market actors sending bids and asks to a
+market, that can be cleared using different periodic :ref:`matching_algorithms`.
+The algorithms take grid fees into account, which can be based on clusters defined by the agent's
+location in the network.
+The matching algorithms can also be used individually via a wrapper using a json format for order
+definition.
 
 Run Simply
 ==========
