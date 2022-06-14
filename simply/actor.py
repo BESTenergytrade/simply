@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import pandas as pd
 from collections import namedtuple
@@ -148,9 +150,11 @@ def create_random(actor_id):
     day_ts = np.linspace(0, 24, 24)
     df["pv"] *= gaussian_pv(day_ts, 12, 3)
 
-    # Scale generation, load and price time series
-    ls = 0.7
-    ps = 1.5
+    # Random scale factor generation, load and price time series in boundaries
+    ls = random.uniform(0.5, 1.3)
+    ps = random.uniform(1, 7)
+    # Probability of an actor to possess a PV, here 30%
+    ps = random.choices([0, ps], [0.6, 0.4], k=1)
     df["schedule"] = ps * df["pv"] - ls * df["load"]
     max_price = 0.3
     df["prices"] *= max_price
