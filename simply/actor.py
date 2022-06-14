@@ -5,7 +5,7 @@ import pandas as pd
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
-from simply.util import gaussian_pv
+from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
 """
@@ -135,26 +135,25 @@ class Actor:
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
-def create_random(actor_id):
+def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     """
     Create actor instance with random dataframes .
     """
-    # TODO improve random signals
-    nb_ts = 24
-    time_idx = pd.date_range("2021-01-01", freq="H", periods=nb_ts)
+    time_idx = pd.date_range(start_date, freq="{}min".format(int(60/ts_hour)), periods=nb_ts)
     cols = ["load", "pv", "schedule", "prices"]
     values = np.random.rand(nb_ts, len(cols))
     df = pd.DataFrame(values, columns=cols, index=time_idx)
 
     # Multiply random generation signal with gaussian/PV-like characteristic
-    day_ts = np.linspace(0, 24, 24)
-    df["pv"] *= gaussian_pv(day_ts, 12, 3)
+    for day in daily(df, 24 * ts_hour):
+        day["pv"] *= gaussian_pv(ts_hour, 3)
 
     # Random scale factor generation, load and price time series in boundaries
     ls = random.uniform(0.5, 1.3)
     ps = random.uniform(1, 7)
-    # Probability of an actor to possess a PV, here 30%
-    ps = random.choices([0, ps], [0.6, 0.4], k=1)
+    # Probability of an actor to possess a PV, here 40%
+    pv_prob = 0.4
+    ps = random.choices([0, ps], [1-pv_prob, pv_prob], k=1)
     df["schedule"] = ps * df["pv"] - ls * df["load"]
     max_price = 0.3
     df["prices"] *= max_price

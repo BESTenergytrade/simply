@@ -40,3 +40,9 @@ class TestActor:
     def test_create_random(self):
         a = create_random(0)
         assert a.id == 0
+
+    def test_create_random_multidays_halfhour(self):
+        data_cfg = {"nb_ts": 96, "ts_hour": 2}
+        a = create_random(0, **data_cfg)
+        # time series is longer than one day
+        assert a.data.index[0].date() != a.data.index[-1].date()
