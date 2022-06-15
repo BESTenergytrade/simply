@@ -30,6 +30,6 @@ def get_all_data(df, col="pv"):
 
     :param df: actor DataFrame with multi-column-index (actor_col, assets_col)
     :param col: selected assets_col
-    :return:
+    :return: DataFrame with single column level comprising all columns of equal sub-column name col
     """
     return df.iloc[:, df.columns.get_level_values(1) == col]
