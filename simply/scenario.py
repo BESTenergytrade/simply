@@ -90,8 +90,6 @@ class Scenario:
         """
         Extracts asset data from all actors of the scenario and plots all time series per asset type
         as well as the aggregated sum per asset.
-
-        :param sc: Scenario which holds actor data
         """
         actor_data = self.concat_actor_data()
         fig, ax = plt.subplots(3)
