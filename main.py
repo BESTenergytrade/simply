@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 
 from simply import scenario, market, market_2pac, market_fair
 from simply.config import Config
-from simply.util import summerize_actor_trading, plot_actor_data
+from simply.util import summerize_actor_trading
 
 
 """
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     if cfg.show_plots:
         sc.power_network.plot()
-        plot_actor_data(sc)
+        sc.plot_actor_data()
 
     # Fast forward to interesting start interval for PV energy trading
     for a in sc.actors:
