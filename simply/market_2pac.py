@@ -72,6 +72,7 @@ class TwoSidedPayAsClear(Market):
             ask_y = [ask_y[0]] + ask_y
             ask_x_sum = [0] + [sum(ask_x[:(i + 1)]) for i, _ in enumerate(ask_x)]
 
+            plt.figure()
             plt.step(bid_x_sum, bid_y, where="pre", label="bids")
             plt.step(ask_x_sum, ask_y, where="pre", label="asks")
             plt.legend()
