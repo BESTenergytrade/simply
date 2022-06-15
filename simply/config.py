@@ -10,7 +10,8 @@ class Config:
     After creation, the generated instance is available as Config.config,
     the parsed file as Config.parser.
 
-    Config attributes, grouped by section, with default in brackets:
+    Config attributes, grouped by section, with default in brackets
+
     [default]
         - start - initial timestep [8]\n
         - nb_ts - number of timesteps to simulate [3]\n
@@ -34,6 +35,7 @@ class Config:
         - weight_factor: conversion factor from grid fees to power network node weight [0.1]\n
     [actor]
         - horizon - number of timesteps to look ahead for prediction [24]
+
     :param cfg_file: configuration file path with the attributes listed above.
     :type cfg_file: str
     :keyword cfg_file: start
