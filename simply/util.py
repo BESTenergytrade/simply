@@ -22,3 +22,14 @@ def summerize_actor_trading(sc):
         .apply(pd.Series)
         .rename({0: "energy", 1: "avg_price"}, axis=1)
     )
+
+
+def get_all_data(df, col="pv"):
+    """
+    Select all columns 'col' at subcolumn level of the actors DataFrame.
+
+    :param df: actor DataFrame with multi-column-index (actor_col, assets_col)
+    :param col: selected assets_col
+    :return: DataFrame with single column level comprising all columns of equal sub-column name col
+    """
+    return df.iloc[:, df.columns.get_level_values(1) == col]

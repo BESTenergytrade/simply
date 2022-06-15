@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     if cfg.show_plots:
         sc.power_network.plot()
-        sc.actors[0].plot(["load", "pv"])
+        sc.plot_actor_data()
 
     # Fast forward to interesting start interval for PV energy trading
     for a in sc.actors:

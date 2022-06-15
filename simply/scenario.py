@@ -2,9 +2,11 @@ import json
 from networkx.readwrite import json_graph
 import pandas as pd
 import random
+import matplotlib.pyplot as plt
 
 from simply import actor
 from simply import power_network
+from simply.util import get_all_data
 
 
 class Scenario:
@@ -75,6 +77,31 @@ class Scenario:
 
         # save map_actors
         dirpath.joinpath('map_actors.json').write_text(json.dumps(self.map_actors, indent=2))
+
+    def concat_actor_data(self):
+        """
+        Create a list of all actor data DataFrames and concatenate them using multi-column keys
+        :return: DataFrame with multi-column-index (actor-level, asset-level)
+        """
+        data = [a.data for a in self.actors]
+        return pd.concat(data, keys=range(len(self.actors)), axis=1)
+
+    def plot_actor_data(self):
+        """
+        Extracts asset data from all actors of the scenario and plots all time series per asset type
+        as well as the aggregated sum per asset.
+        """
+        actor_data = self.concat_actor_data()
+        fig, ax = plt.subplots(3)
+        ax[0].set_title("PV")
+        ax[1].set_title("Load")
+        ax[2].set_title("Sum")
+        get_all_data(actor_data, "pv").plot(ax=ax[0], legend=False)
+        get_all_data(actor_data, "load").plot(ax=ax[1], legend=False)
+        get_all_data(actor_data, "pv").sum(axis=1).plot(ax=ax[2])
+        get_all_data(actor_data, "load").sum(axis=1).plot(ax=ax[2])
+        ax[2].legend(["pv", "load"])
+        plt.show()
 
 
 def from_dict(scenario_dict):
