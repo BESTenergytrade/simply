@@ -4,7 +4,6 @@ show_prints = true
 path = examples/example_scenario
 nb_ts = 3
 save_csv = true
-# If orders should be saved, the market should not be reset
 reset_market = true
 data_format = csv
 update_scenario = false
