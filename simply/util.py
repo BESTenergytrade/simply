@@ -26,15 +26,30 @@ def summerize_actor_trading(sc):
 
 
 def get_all_data(df, col="pv"):
+    """
+    Select all columns 'col' at subcolumn level of the actors DataFrame.
+
+    :param df: actor DataFrame with multi-column-index (actor_col, assets_col)
+    :param col: selected assets_col
+    :return:
+    """
     return df.iloc[:, df.columns.get_level_values(1) == col]
 
 
 def concat_actor_data(sc):
+    # Create a list of all actor data DataFrames and concatenate them using multi-column-index
     data = [a.data for a in sc.actors]
     return pd.concat(data, keys=range(len(sc.actors)), axis=1)
 
 
 def plot_actor_data(sc):
+    """
+    Extracts asset data from all actors of the scenario and plots all time series per asset type
+    as well as the aggregated sum per asset.
+
+    :param sc: Scenario which holds actor data
+    :return:
+    """
     actor_data = concat_actor_data(sc)
     fig, ax = plt.subplots(3)
     ax[0].set_title("PV")
@@ -45,3 +60,4 @@ def plot_actor_data(sc):
     get_all_data(actor_data, "pv").sum(axis=1).plot(ax=ax[2])
     get_all_data(actor_data, "load").sum(axis=1).plot(ax=ax[2])
     ax[2].legend(["pv", "load"])
+    plt.show()
