@@ -21,7 +21,7 @@ additional cost of +1.
 
 Network
 -------
-.. figure:: network.png
+.. figure:: _static/network.png
    :scale: 35%
    :alt: Power Network
 
