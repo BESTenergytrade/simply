@@ -15,6 +15,8 @@ class TwoSidedPayAsClear(Market):
         # order orders by price
         bids = self.get_bids().sort_values(["price", "energy"], ascending=False)
         asks = self.get_asks().sort_values(["price", "energy"], ascending=True)
+        if show:
+            plot_merit_order(bids, asks)
 
         if len(bids) == 0 or len(asks) == 0:
             # no bids or no asks: no match
@@ -64,21 +66,23 @@ class TwoSidedPayAsClear(Market):
         if show:
             print(matches)
 
-            # value asignment in iterrows does not change dataframe -> original shown
-            bid_x, bid_y = bids["energy"].to_list(), bids["price"].to_list()
-            bid_y = [bid_y[0]] + bid_y
-            bid_x_sum = [0] + [sum(bid_x[:(i + 1)]) for i, _ in enumerate(bid_x)]
-            ask_x, ask_y = asks["energy"].to_list(), asks["price"].to_list()
-            ask_y = [ask_y[0]] + ask_y
-            ask_x_sum = [0] + [sum(ask_x[:(i + 1)]) for i, _ in enumerate(ask_x)]
-
-            plt.figure()
-            plt.step(bid_x_sum, bid_y, where="pre", label="bids")
-            plt.step(ask_x_sum, ask_y, where="pre", label="asks")
-            plt.legend()
-            plt.xlabel("volume")
-            plt.ylabel("price")
-            plt.show()
-
         self.append_to_csv(matches, 'matches.csv')
         return matches
+
+
+def plot_merit_order(bids, asks):
+    # value asignment in iterrows does not change dataframe -> original shown
+    bid_x, bid_y = bids["energy"].to_list(), bids["price"].to_list()
+    bid_y = [bid_y[0]] + bid_y
+    bid_x_sum = [0] + [sum(bid_x[:(i + 1)]) for i, _ in enumerate(bid_x)]
+    ask_x, ask_y = asks["energy"].to_list(), asks["price"].to_list()
+    ask_y = [ask_y[0]] + ask_y
+    ask_x_sum = [0] + [sum(ask_x[:(i + 1)]) for i, _ in enumerate(ask_x)]
+
+    plt.figure()
+    plt.step(bid_x_sum, bid_y, where="pre", label="bids")
+    plt.step(ask_x_sum, ask_y, where="pre", label="asks")
+    plt.legend()
+    plt.xlabel("volume")
+    plt.ylabel("price")
+    plt.show()
