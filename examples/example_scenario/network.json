@@ -1,0 +1,78 @@
+{
+  "random": {
+    "directed": false,
+    "multigraph": false,
+    "graph": {},
+    "nodes": [
+      {
+        "id": 0
+      },
+      {
+        "id": 1
+      },
+      {
+        "id": 2
+      },
+      {
+        "id": 3
+      },
+      {
+        "id": "H2"
+      },
+      {
+        "id": "H0"
+      },
+      {
+        "id": "H1"
+      },
+      {
+        "id": "H3"
+      },
+      {
+        "id": "H4"
+      }
+    ],
+    "links": [
+      {
+        "weight": 0,
+        "source": 0,
+        "target": 1
+      },
+      {
+        "weight": 0.1,
+        "source": 0,
+        "target": 3
+      },
+      {
+        "weight": 0,
+        "source": 1,
+        "target": "H2"
+      },
+      {
+        "weight": 0,
+        "source": 1,
+        "target": "H0"
+      },
+      {
+        "weight": 0,
+        "source": 1,
+        "target": "H3"
+      },
+      {
+        "weight": 0,
+        "source": 2,
+        "target": 3
+      },
+      {
+        "weight": 0,
+        "source": 2,
+        "target": "H1"
+      },
+      {
+        "weight": 0,
+        "source": 2,
+        "target": "H4"
+      }
+    ]
+  }
+}
