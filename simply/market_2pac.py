@@ -65,7 +65,6 @@ class TwoSidedPayAsClear(Market):
 
         if show:
             print(matches)
-            plot_merit_order(bids, asks)
 
         self.append_to_csv(matches, 'matches.csv')
         return matches
