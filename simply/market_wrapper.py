@@ -19,12 +19,12 @@ def accept_orders(market, time, orders):
     # apply conversion factor except for market maker orders
     for bid in orders["bids"]:
         energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2 ** 63 - 1)
-        cluster = (bid.get("attributes") or {}).get("cluster")
+        cluster = bid.get("cluster")
         order = Order(-1, time, bid["buyer"], cluster, energy, bid["energy_rate"])
         market.accept_order(order, order_id=bid["id"])
     for ask in orders["offers"]:
         energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2 ** 63 - 1)
-        cluster = (ask.get("attributes") or {}).get("cluster")
+        cluster = ask.get("cluster")
         order = Order(1, time, ask["seller"], cluster, energy, ask["energy_rate"])
         market.accept_order(order, order_id=ask["id"])
 
@@ -105,7 +105,11 @@ class BestClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
     """
 
     @classmethod
-    def get_matches_recommendations(cls, mycoDict):
+    def get_matches_recommendations(cls, mycoDict, grid_fee_matrix=None):
+        """
+        :param grid_fee_matrix: two-dimensional nXn list used to calculate grid-fees e.g.,
+            [[0,1],[1,0]]"""
+
         pn = power_network.create_random(1)
         recommendations = []
 
@@ -119,7 +123,7 @@ class BestClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
                 map_actors = {actor: node_id for actor, node_id in zip(actors, actor_nodes)}
                 pn.add_actors_map(map_actors)
 
-                m = market_fair.BestMarket(time=time, network=pn)
+                m = market_fair.BestMarket(time=time, network=pn, grid_fee_matrix=grid_fee_matrix)
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 
