@@ -8,17 +8,16 @@ import matplotlib.pyplot as plt
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
-"""
+Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+Order.__doc__ = """
 Struct to hold order
 
-type: sign of order, representing bid (-1) or ask (+1)
-time: timestamp when order was created
-actor_id: ID of ordering actor
-energy: sum of energy needed or provided. Will be rounded down according to the market's energy unit
-price: bidding/asking price for 1 kWh
+:param type: sign of order, representing bid (-1) or ask (+1)
+:param time: timestamp when order was created
+:param actor_id: ID of ordering actor
+:param energy: sum of energy needed or provided. Will be rounded down according to the market's energy unit
+:param price: bidding/asking price for 1 kWh
 """
-Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
-
 
 class Actor:
     def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}):
