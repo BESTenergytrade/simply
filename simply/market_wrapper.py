@@ -19,12 +19,12 @@ def accept_orders(market, time, orders):
     # apply conversion factor except for market maker orders
     for bid in orders["bids"]:
         energy = min(bid["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2 ** 63 - 1)
-        cluster = bid.get('cluster')
+        cluster = bid.get("cluster")
         order = Order(-1, time, bid["buyer"], cluster, energy, bid["energy_rate"])
         market.accept_order(order, order_id=bid["id"])
     for ask in orders["offers"]:
         energy = min(ask["energy"] * ENERGY_UNIT_CONVERSION_FACTOR, 2 ** 63 - 1)
-        cluster = ask.get('cluster')
+        cluster = ask.get("cluster")
         order = Order(1, time, ask["seller"], cluster, energy, ask["energy_rate"])
         market.accept_order(order, order_id=ask["id"])
 
@@ -106,6 +106,10 @@ class BestClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
 
     @classmethod
     def get_matches_recommendations(cls, mycoDict, grid_fee_matrix=None):
+        """
+        :param grid_fee_matrix: two-dimensional nXn list used to calculate grid-fees e.g.,
+            [[0,1],[1,0]"""
+
         pn = power_network.create_random(1)
         recommendations = []
 
