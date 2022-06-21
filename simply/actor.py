@@ -29,7 +29,7 @@ class Actor:
     :param str csv: Filename in which this actor's data should be stored
     :param float ls: (optional) Scaling factor for load time series
     :param float ps: (optional) Scaling factor for photovoltaic time series
-    :param dict pm: (optional) Further Parameters to be set
+    :param dict pm: (optional) Prediction multiplier used to manipulate prediction time series based on the data time series
 
     Members:
 
@@ -58,7 +58,7 @@ class Actor:
     self.orders : list
         List of generated orders
     self.traded : dict
-        Dictionary of received trading results including matched energy and clearing prices
+        Dictionary of received trading results per time slot including matched energy and clearing prices
     """
     def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}):
         """
@@ -104,7 +104,9 @@ class Actor:
 
     def plot(self, columns):
         """
-        Plot columns from an actor's predicted schedule.
+        Plot columns from an actor's asset data and prediction with suffix label.
+
+        :param str columns: name of the asset that should be plotted
         """
         pd.concat(
             [self.pred[columns].add_suffix("_pred"), self.data[columns]], axis=1
@@ -113,8 +115,11 @@ class Actor:
 
     def generate_order(self):
         """
-        Generate new order for current timestep according to predicted schedule.
-        Returns order.
+        Generate new order for current time slot according to predicted schedule
+        and both store and return it.
+
+        :return: generated new order
+        :rtype: Order
         """
         # TODO calculate amount of energy to fulfil personal schedule
         energy = self.pred["schedule"][self.t]
@@ -131,14 +136,20 @@ class Actor:
 
     def receive_market_results(self, time, sign, energy, price):
         """
-        Callback function when order is matched. Updates the actor's traded info.
+        Callback function when order is matched. Updates the actor's individual trading result.
+
+        :param str time: time slot of market results
+        :param int sign: for energy sold or bought represented by -1 or +1  respectively
+        :param float energy: energy volume that was successfully traded
+        :param float price: achieved clearing price for the stated energy
         """
+
         # TODO update schedule, if possible e.g. battery
         # TODO post settlement of differences
-        # cleared market is in the past
+        # Cleared market should not be in the past and sign can only take two values
         assert time < self.t
         assert sign in [-1, 1]
-        # append traded energy and price to actor's trading info
+        # append traded energy and price to actor's trades
         post = (sign * energy, price)
         pre = self.traded.get(time, ([], []))
         self.traded[time] = tuple(e + [post[i]] for i, e in enumerate(pre))
@@ -147,6 +158,8 @@ class Actor:
         """
         Builds dictionary for saving. external_data returns simple data instead of
         member dump.
+
+        :param dict external_data: (optional) Dictionary with additional data e.g. on prediction error time series
         """
         if external_data:
             args_no_df = {
@@ -159,7 +172,9 @@ class Actor:
 
     def save_csv(self, dirpath):
         """
-        Saves data and pred dataframes to given file.
+        Saves data and pred dataframes to given directory with actor specific csv file.
+
+        :param str dirpath: (optional) Path of the directory in which the actor csv file should be stored.
         """
         # TODO if "predicted" values do not equal actual time series values,
         #  also errors need to be saved
@@ -172,7 +187,14 @@ class Actor:
 
 def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     """
-    Create actor instance with random dataframes .
+    Create actor instance with random asset time series and random scaling factors
+
+    :param str actor_id: unique actor identifier
+    :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's asset time series
+    :param int nb_ts: number of time slots that should be generated
+    :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
+    :return: generated Actor object
+    :rtype: Actor
     """
     time_idx = pd.date_range(start_date, freq="{}min".format(int(60/ts_hour)), periods=nb_ts)
     cols = ["load", "pv", "schedule", "prices"]
