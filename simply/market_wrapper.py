@@ -108,7 +108,7 @@ class BestClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
     def get_matches_recommendations(cls, mycoDict, grid_fee_matrix=None):
         """
         :param grid_fee_matrix: two-dimensional nXn list used to calculate grid-fees e.g.,
-            [[0,1],[1,0]"""
+            [[0,1],[1,0]]"""
 
         pn = power_network.create_random(1)
         recommendations = []
