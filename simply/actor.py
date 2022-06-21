@@ -20,15 +20,51 @@ Struct to hold order
 """
 
 class Actor:
+    """
+    Actor is the representation of a prosumer, i.e. is holding resources (load, photovoltaic/PV)
+    and defining an energy management schedule, generating bids or asks and receiving trading results.
+
+    :param int actor_id: unique identifier of the actor
+    :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "prices" are processed
+    :param str csv: Filename in which this actor's data should be stored
+    :param float ls: (optional) Scaling factor for load time series
+    :param float ps: (optional) Scaling factor for photovoltaic time series
+    :param dict pm: (optional) Further Parameters to be set
+
+    Members:
+
+    id : str
+        Identifier of the actor to be set on creation
+    grid_id : str
+        [unused] Location of the actor in the network (init default: None)
+    t : int
+        Actor's current time slot should equal current market time slot (init default: 0)
+    horizon : int
+        [unused] Horizon to which energy management is considered (cfg.parser.get("actor", "horizon", fallback=24))
+    load_scale : float
+        Scaling factor for load time series (default: init ls)
+    pv_scale : float
+        Scaling factor for photovoltaic time series (default: init ps)
+    error_scale : float
+        [unused] Noise scaling factor (default: 0)
+    battery : object
+        [unused] Representation of a battery (default: None)
+    data : pandas.DataFrame()
+        Actual generation and load time series as would be measured (default: init df)
+    pred : pandas.DataFrame()
+        Assumption of generation and load time series as would be predicted (default: init df + error)
+    csv_file : str
+        Filename in which this actor's data should be stored
+    self.orders : list
+        List of generated orders
+    self.traded : dict
+        Dictionary of received trading results including matched energy and clearing prices
+    """
     def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}):
         """
-        Actor is the representation of a prosumer with ressources (load, photovoltaic)
-
-        :param actor_id: unique identification of the actor
-        :param df: DataFrame, column names "load", "pv" and "prices" are processed
-        :param ls: (optional)
-        :param ps: (optional)
-        :param pm: (optional)
+        Actor Constructor that defines an ID, and extracts resource time series from the given
+         DataFrame scaled by respective factors as well as the schedule on which basis orders
+         are generated.
         """
         # TODO add battery component
         self.id = actor_id
