@@ -8,28 +8,70 @@ import matplotlib.pyplot as plt
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
-"""
+Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+Order.__doc__ = """
 Struct to hold order
 
-type: sign of order, representing bid (-1) or ask (+1)
-time: timestamp when order was created
-actor_id: ID of ordering actor
-energy: sum of energy needed or provided. Will be rounded down according to the market's energy unit
-price: bidding/asking price for 1 kWh
+:param type: sign of order, representing bid (-1) or ask (+1)
+:param time: timestamp when order was created
+:param actor_id: ID of ordering actor
+:param energy: sum of energy needed or provided. Will be rounded down according to the market's
+    energy unit
+:param price: bidding/asking price for 1 kWh
 """
-Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 
 
 class Actor:
+    """
+    Actor is the representation of a prosumer, i.e. is holding resources (load, photovoltaic/PV)
+    and defining an energy management schedule, generating bids or asks and receiving trading
+    results.
+
+    :param int actor_id: unique identifier of the actor
+    :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "prices" are processed
+    :param str csv: Filename in which this actor's data should be stored
+    :param float ls: (optional) Scaling factor for load time series
+    :param float ps: (optional) Scaling factor for photovoltaic time series
+    :param dict pm: (optional) Prediction multiplier used to manipulate prediction time series based
+        on the data time series
+
+    Members:
+
+    id : str
+        Identifier of the actor to be set on creation
+    grid_id : str
+        [unused] Location of the actor in the network (init default: None)
+    t : int
+        Actor's current time slot should equal current market time slot (init default: 0)
+    horizon : int
+        [unused] Horizon to which energy management is considered
+        (default: cfg.parser.get("actor", "horizon", fallback=24))
+    load_scale : float
+        Scaling factor for load time series (default: init ls)
+    pv_scale : float
+        Scaling factor for photovoltaic time series (default: init ps)
+    error_scale : float
+        [unused] Noise scaling factor (default: 0)
+    battery : object
+        [unused] Representation of a battery (default: None)
+    data : pandas.DataFrame()
+        Actual generation and load time series as would be measured (default: init df)
+    pred : pandas.DataFrame()
+        Assumption of generation and load time series as would be predicted
+        (default: init df + error)
+    csv_file : str
+        Filename in which this actor's data should be stored
+    self.orders : list
+        List of generated orders
+    self.traded : dict
+        Dictionary of received trading results per time slot including matched energy and clearing
+        prices
+    """
     def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}):
         """
-        Actor is the representation of a prosumer with ressources (load, photovoltaic)
-
-        :param actor_id: unique identification of the actor
-        :param df: DataFrame, column names "load", "pv" and "prices" are processed
-        :param ls: (optional)
-        :param ps: (optional)
-        :param pm: (optional)
+        Actor Constructor that defines an ID, and extracts resource time series from the given
+         DataFrame scaled by respective factors as well as the schedule on which basis orders
+         are generated.
         """
         # TODO add battery component
         self.id = actor_id
@@ -69,7 +111,9 @@ class Actor:
 
     def plot(self, columns):
         """
-        Plot columns from an actor's predicted schedule.
+        Plot columns from an actor's asset data and prediction with suffix label.
+
+        :param str columns: name of the asset that should be plotted
         """
         pd.concat(
             [self.pred[columns].add_suffix("_pred"), self.data[columns]], axis=1
@@ -78,8 +122,11 @@ class Actor:
 
     def generate_order(self):
         """
-        Generate new order for current timestep according to predicted schedule.
-        Returns order.
+        Generate new order for current time slot according to predicted schedule
+        and both store and return it.
+
+        :return: generated new order
+        :rtype: Order
         """
         # TODO calculate amount of energy to fulfil personal schedule
         energy = self.pred["schedule"][self.t]
@@ -96,14 +143,20 @@ class Actor:
 
     def receive_market_results(self, time, sign, energy, price):
         """
-        Callback function when order is matched. Updates the actor's traded info.
+        Callback function when order is matched. Updates the actor's individual trading result.
+
+        :param str time: time slot of market results
+        :param int sign: for energy sold or bought represented by -1 or +1  respectively
+        :param float energy: energy volume that was successfully traded
+        :param float price: achieved clearing price for the stated energy
         """
+
         # TODO update schedule, if possible e.g. battery
         # TODO post settlement of differences
-        # cleared market is in the past
+        # Cleared market should not be in the past and sign can only take two values
         assert time < self.t
         assert sign in [-1, 1]
-        # append traded energy and price to actor's trading info
+        # append traded energy and price to actor's trades
         post = (sign * energy, price)
         pre = self.traded.get(time, ([], []))
         self.traded[time] = tuple(e + [post[i]] for i, e in enumerate(pre))
@@ -112,6 +165,9 @@ class Actor:
         """
         Builds dictionary for saving. external_data returns simple data instead of
         member dump.
+
+        :param dict external_data: (optional) Dictionary with additional data e.g. on prediction
+            error time series
         """
         if external_data:
             args_no_df = {
@@ -124,7 +180,10 @@ class Actor:
 
     def save_csv(self, dirpath):
         """
-        Saves data and pred dataframes to given file.
+        Saves data and pred dataframes to given directory with actor specific csv file.
+
+        :param str dirpath: (optional) Path of the directory in which the actor csv file should be
+            stored.
         """
         # TODO if "predicted" values do not equal actual time series values,
         #  also errors need to be saved
@@ -137,7 +196,15 @@ class Actor:
 
 def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     """
-    Create actor instance with random dataframes .
+    Create actor instance with random asset time series and random scaling factors
+
+    :param str actor_id: unique actor identifier
+    :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
+        asset time series
+    :param int nb_ts: number of time slots that should be generated
+    :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
+    :return: generated Actor object
+    :rtype: Actor
     """
     time_idx = pd.date_range(start_date, freq="{}min".format(int(60/ts_hour)), periods=nb_ts)
     cols = ["load", "pv", "schedule", "prices"]
