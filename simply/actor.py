@@ -15,21 +15,25 @@ Struct to hold order
 :param type: sign of order, representing bid (-1) or ask (+1)
 :param time: timestamp when order was created
 :param actor_id: ID of ordering actor
-:param energy: sum of energy needed or provided. Will be rounded down according to the market's energy unit
+:param energy: sum of energy needed or provided. Will be rounded down according to the market's
+    energy unit
 :param price: bidding/asking price for 1 kWh
 """
+
 
 class Actor:
     """
     Actor is the representation of a prosumer, i.e. is holding resources (load, photovoltaic/PV)
-    and defining an energy management schedule, generating bids or asks and receiving trading results.
+    and defining an energy management schedule, generating bids or asks and receiving trading
+    results.
 
     :param int actor_id: unique identifier of the actor
     :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "prices" are processed
     :param str csv: Filename in which this actor's data should be stored
     :param float ls: (optional) Scaling factor for load time series
     :param float ps: (optional) Scaling factor for photovoltaic time series
-    :param dict pm: (optional) Prediction multiplier used to manipulate prediction time series based on the data time series
+    :param dict pm: (optional) Prediction multiplier used to manipulate prediction time series based
+        on the data time series
 
     Members:
 
@@ -40,7 +44,8 @@ class Actor:
     t : int
         Actor's current time slot should equal current market time slot (init default: 0)
     horizon : int
-        [unused] Horizon to which energy management is considered (cfg.parser.get("actor", "horizon", fallback=24))
+        [unused] Horizon to which energy management is considered
+        (default: cfg.parser.get("actor", "horizon", fallback=24))
     load_scale : float
         Scaling factor for load time series (default: init ls)
     pv_scale : float
@@ -52,13 +57,15 @@ class Actor:
     data : pandas.DataFrame()
         Actual generation and load time series as would be measured (default: init df)
     pred : pandas.DataFrame()
-        Assumption of generation and load time series as would be predicted (default: init df + error)
+        Assumption of generation and load time series as would be predicted
+        (default: init df + error)
     csv_file : str
         Filename in which this actor's data should be stored
     self.orders : list
         List of generated orders
     self.traded : dict
-        Dictionary of received trading results per time slot including matched energy and clearing prices
+        Dictionary of received trading results per time slot including matched energy and clearing
+        prices
     """
     def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}):
         """
@@ -159,7 +166,8 @@ class Actor:
         Builds dictionary for saving. external_data returns simple data instead of
         member dump.
 
-        :param dict external_data: (optional) Dictionary with additional data e.g. on prediction error time series
+        :param dict external_data: (optional) Dictionary with additional data e.g. on prediction
+            error time series
         """
         if external_data:
             args_no_df = {
@@ -174,7 +182,8 @@ class Actor:
         """
         Saves data and pred dataframes to given directory with actor specific csv file.
 
-        :param str dirpath: (optional) Path of the directory in which the actor csv file should be stored.
+        :param str dirpath: (optional) Path of the directory in which the actor csv file should be
+            stored.
         """
         # TODO if "predicted" values do not equal actual time series values,
         #  also errors need to be saved
@@ -190,7 +199,8 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     Create actor instance with random asset time series and random scaling factors
 
     :param str actor_id: unique actor identifier
-    :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's asset time series
+    :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
+        asset time series
     :param int nb_ts: number of time slots that should be generated
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :return: generated Actor object
