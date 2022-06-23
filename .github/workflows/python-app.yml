@@ -38,3 +38,6 @@ jobs:
       run: |
         pip install -r doc/requirements.txt
         make -C doc html
+        cd doc/sourse
+        python -m sphinx -T -E -W --keep-going -b html -d _build/doctrees -D language=en . _build/html
+        cd ..
