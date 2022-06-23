@@ -1,5 +1,9 @@
 version: 2
 
+python:
+  install:
+    - requirements: doc/requirements.txt
+
 sphinx:
   builder: html
   configuration: doc/source/conf.py
