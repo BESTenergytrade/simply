@@ -257,3 +257,4 @@ class TestPayAsBid:
         m.accept_order(Order(1, 0, 0, 1, 1, 2))
         matches = m.match()
         assert len(matches) == 1
+
