@@ -2,6 +2,6 @@ version: 2
 
 sphinx:
   builder: html
-  configuration: conf.py
+  configuration: doc/source/conf.py
   fail_on_warning: true
   
