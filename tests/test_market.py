@@ -1,9 +1,9 @@
 from simply.actor import Order
 from simply.market import Market
 from simply.power_network import PowerNetwork
-import networkx as nx
 
 import pytest
+import networkx as nx
 
 
 class TestMarket:
@@ -257,3 +257,20 @@ class TestPayAsBid:
         m.accept_order(Order(1, 0, 0, 1, 1, 2))
         matches = m.match()
         assert len(matches) == 1
+
+    def test_matching_algorithms_example_scenario(self):
+        nw = nx.Graph()
+        nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
+        pn = PowerNetwork("", nw, weight_factor=2)
+        m = Market(0, network=pn)
+        # add bids
+        m.accept_order(Order(-1, 0, 1, 1, 0.1, 10))
+        m.accept_order(Order(-1, 0, 1, 1, 0.1, 7))
+        m.accept_order(Order(-1, 0, 0, 0, 0.1, 10))
+        # add asks
+        m.accept_order(Order(1, 0, 3, 1, 0.1, 6))
+        m.accept_order(Order(1, 0, 3, 1, 0.1, 4))
+        matches = m.match()
+        # check the correct number of orders traded at the correct price
+        assert len(matches) == 2
+        assert matches[0]["price"] == 10 and matches[1]["price"] == 10
