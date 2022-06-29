@@ -111,9 +111,9 @@ The table below illustrates the matching of the :ref:`example_scenario`:
 +--------------------------------+-------------------------------+----------------+
 | Bids                           | Asks                          | Matched Price  |
 +================================+===============================+================+
-| actor 1, order_id 0, price 10  | actor 3, order_id 4, price 4  | 6              |
+| actor 1, order_id 0, price 10  | actor 3, order_id 4, price 4  | 7              |
 +--------------------------------+-------------------------------+----------------+
-| actor 0, order_id 2, price 10  | actor 3, order_id 3, price 6  | 6              |
+| actor 0, order_id 2, price 10  | actor 3, order_id 3, price 6  | 7              |
 +--------------------------------+-------------------------------+----------------+
 | actor 1, order_id 1, price 7   |                               |                |
 +--------------------------------+-------------------------------+----------------+
