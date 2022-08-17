@@ -48,7 +48,7 @@ def generate_recommendations(market_id, time, bids, asks, matches):
 
 class MatchingAlgorithm(ABC):
     @staticmethod
-    def get_market_matches(mycoDict, market):
+    def get_market_matches(mycoDict, market, grid_fee_matrix=None):
         """
         Unpacks order dictionary per market and time slot
         and match the orders using the given market.
@@ -57,20 +57,27 @@ class MatchingAlgorithm(ABC):
             dict with bids and offers in lists {'bids': [], 'offers': []}
         :type mycoDict: dict
         :param market: Market object that implements the matching algorithm
+        :param grid_fee_matrix: two-dimensional nXn list used to calculate grid-fees e.g.,
+            [[0,1],[1,0]]
         :return: list of dictionaries with matches in all given markets and time slots
         """
+
         recommendations = []
 
         for market_id, market_name in mycoDict.items():
             for time, orders in market_name.items():
-                m = market(time=time)
+                actors = [bid["id"] for bid in orders["bids"]] + \
+                         [ask["id"] for ask in orders["offers"]]
+
+                m = market(time=time, grid_fee_matrix=grid_fee_matrix)
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 
                 accept_orders(m, time, orders)
                 matches = m.match()
 
-                recommendations += generate_recommendations(market_id, time, bids, asks, matches)
+                recommendations += generate_recommendations(market_id, time, bids, asks,
+                                                            matches)
 
         return recommendations
 
@@ -85,8 +92,8 @@ class BestPayAsBidMatchingAlgorithm(MatchingAlgorithm):
     """
 
     @classmethod
-    def get_matches_recommendations(cls, mycoDict):
-        return super().get_market_matches(mycoDict, market.Market)
+    def get_matches_recommendations(cls, mycoDict, grid_fee_matrix=None):
+        return super().get_market_matches(mycoDict, market.Market, grid_fee_matrix)
 
 
 class BestPayAsClearMatchingAlgorithm(MatchingAlgorithm):
@@ -95,8 +102,8 @@ class BestPayAsClearMatchingAlgorithm(MatchingAlgorithm):
     """
 
     @classmethod
-    def get_matches_recommendations(cls, mycoDict):
-        return super().get_market_matches(mycoDict, market_2pac.TwoSidedPayAsClear)
+    def get_matches_recommendations(cls, mycoDict, grid_fee_matrix=None):
+        return super().get_market_matches(mycoDict, market_2pac.TwoSidedPayAsClear, grid_fee_matrix)
 
 
 class BestClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
@@ -106,34 +113,7 @@ class BestClusterPayAsClearMatchingAlgorithm(MatchingAlgorithm):
 
     @classmethod
     def get_matches_recommendations(cls, mycoDict, grid_fee_matrix=None):
-        """
-        :param grid_fee_matrix: two-dimensional nXn list used to calculate grid-fees e.g.,
-            [[0,1],[1,0]]"""
-
-        pn = power_network.create_random(1)
-        recommendations = []
-
-        for market_id, market_name in mycoDict.items():
-            for time, orders in market_name.items():
-                actors = [bid["id"] for bid in orders["bids"]] + \
-                         [ask["id"] for ask in orders["offers"]]
-                # Give actors a position in the network
-                # Currently at a single node with id 0
-                actor_nodes = [0 for i in actors]
-                map_actors = {actor: node_id for actor, node_id in zip(actors, actor_nodes)}
-                pn.add_actors_map(map_actors)
-
-                m = market_fair.BestMarket(time=time, network=pn, grid_fee_matrix=grid_fee_matrix)
-                bids = {bid["id"]: bid for bid in orders["bids"]}
-                asks = {ask["id"]: ask for ask in orders["offers"]}
-
-                accept_orders(m, time, orders)
-                matches = m.match()
-
-                recommendations += generate_recommendations(market_id, time, bids, asks,
-                                                            matches)
-
-        return recommendations
+        return super().get_market_matches(mycoDict, market_fair.BestMarket, grid_fee_matrix)
 
 
 if __name__ == "__main__":
