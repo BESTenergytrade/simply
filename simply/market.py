@@ -69,6 +69,13 @@ class Market:
         if order.time != self.t:
             raise ValueError("Wrong order time ({}), market is at time {}".format(order.time,
                                                                                   self.t))
+        # Ignore Orders without energy volume
+        if order.energy == 0:
+            return
+
+        if not order.price:
+            raise ValueError("Wrong order price ({})".format(order.price))
+
         if order.type not in [-1, 1]:
             raise ValueError("Wrong order type ({})".format(order.type))
 
@@ -123,7 +130,7 @@ class Market:
 
         if reset:
             # don't retain orders for next cycle
-            self.orders = pd.DataFrame()
+            self.orders = pd.DataFrame(columns=Order._fields)
         else:
             # remove fully matched orders
             self.orders = self.orders[self.orders.energy >= self.energy_unit]
