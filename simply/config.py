@@ -55,37 +55,63 @@ class Config:
             parser.read_string(config_string)
 
         # default section: basic simulation properties
-        # start timestep
-        self.start = parser.getint("default", "start", fallback=8)
-        # number of timesteps in simulation
-        self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
-        # number actors in simulation
-        self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
-        # number of nodes in simulation
-        self.nb_nodes = parser.getint('default', 'nb_nodes', fallback=4)
-        # interval between simulation timesteps
-        self.step_size = parser.getint("default", "step_size", fallback=1)
-        # list of timesteps in simulation
-        # not read from file but created from above information
-        self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
-
-        # show various plots
-        self.show_plots = parser.getboolean("default", "show_plots", fallback=False)
-        # print debug info to console
-        self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
-        # save orders and matching results to csv files
-        self.save_csv = parser.getboolean("default", "save_csv", fallback=True)
-
+        # ---------------------------
+        # scenario
+        # --------------------------
+        # load existing scenario
+        self.load_scenario = parser.getboolean("default", "load_scenario", fallback=False)
         # path of scenario file to load and/or store
         self.path = parser.get("default", "path", fallback="./scenarios/default")
         self.path = Path(self.path)
-        self.data_format = parser.get("default", "data_format", fallback="json")
+
         # reset market after each interval (discard unmatched orders)
         self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
         # always create new scenario in given path
         self.update_scenario = parser.getboolean("default", "update_scenario", fallback=False)
 
-        # which market type to use?
-        self.market_type = parser.get("default", "market_type", fallback="default").lower()
+        # For generating random scenario
+        # possible data_formats json, csv
+        self.data_format = parser.get("default", "data_format", fallback="json")
+        # number actors in simulation
+        self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
+        # number of nodes in simulation
+        self.nb_nodes = parser.getint('default', 'nb_nodes', fallback=4)
         # weight factor: network charges to power network weight
         self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
+
+        # --------------------------
+        # market
+        # --------------------------
+        # start timestep
+        self.start = parser.getint("default", "start", fallback=8)
+        # number of timesteps in simulation
+        self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
+        # interval between simulation timesteps
+        self.step_size = parser.getint("default", "step_size", fallback=1)
+        # which market type to use? fair, merit, pac
+        self.market_type = parser.get("default", "market_type", fallback="default").lower()
+        # ? not in config py
+        energy_unit = 0.1
+
+        # --------------------------
+        # output
+        # --------------------------
+        # print debug info to console
+        self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
+        # show various plots
+        self.show_plots = parser.getboolean("default", "show_plots", fallback=False)
+        # save orders and matching results to csv files
+        self.save_csv = parser.getboolean("default", "save_csv", fallback=True)
+        # --------------------------
+
+
+
+        # list of timesteps in simulation
+        # not read from file but created from above information
+        # self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
+
+
+
+
+
+
