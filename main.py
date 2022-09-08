@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from simply import scenario, market, market_2pac, market_fair
 from simply.config import Config
 from simply.util import summerize_actor_trading
+from numpy import linspace
 
 
 """
@@ -27,6 +28,7 @@ if __name__ == "__main__":
     # Load scenario, if path exists with the correct format
     # otherwise remove all files in existing folder and create new scenario
     scenario_exists = len([False for i in cfg.path.glob(f"actor_*.{cfg.data_format}")]) != 0
+
     if scenario_exists and not cfg.update_scenario:
         sc = scenario.load(cfg.path, cfg.data_format)
     else:
@@ -56,7 +58,8 @@ if __name__ == "__main__":
         # default
         m = market.Market(0)
 
-    for t in cfg.list_ts:
+    list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
+    for t in list_ts:
         m.t = t
         for a in sc.actors:
             # TODO concurrent bidding of actors
