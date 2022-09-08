@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from simply import scenario, market, market_2pac, market_fair
 from simply.config import Config
 from simply.util import summerize_actor_trading
-import numpy as np
+from numpy import linspace
 
 
 """
@@ -53,14 +53,13 @@ if __name__ == "__main__":
     if "pac" in cfg.market_type:
         m = market_2pac.TwoSidedPayAsClear(0)
     elif cfg.market_type in ["fair", "merit"]:
-        m = market_fair.BestMarket(0, sc.power_network
-                                   )
+        m = market_fair.BestMarket(0, sc.power_network)
     else:
         # default
         m = market.Market(0)
 
-    list_ts = np.linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
-    for t in cfg.list_ts:
+    list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
+    for t in list_ts:
         m.t = t
         for a in sc.actors:
             # TODO concurrent bidding of actors
