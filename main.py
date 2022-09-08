@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from simply import scenario, market, market_2pac, market_fair
 from simply.config import Config
 from simply.util import summerize_actor_trading
-from numpy import linspace
+import numpy as np
 
 
 """
@@ -27,16 +27,26 @@ if __name__ == "__main__":
     cfg = Config(args.config)
     # Load scenario, if path exists with the correct format
     # otherwise remove all files in existing folder and create new scenario
+    # check if actor-files with correct format exist in cfg.path
     scenario_exists = len([False for i in cfg.path.glob(f"actor_*.{cfg.data_format}")]) != 0
 
-    if scenario_exists and not cfg.update_scenario:
-        sc = scenario.load(cfg.path, cfg.data_format)
+    print(cfg.path)
+
+    # load existing scenario or create random new one
+    if cfg.load_scenario:
+
+        if scenario_exists:
+            sc = scenario.load(cfg.path, cfg.data_format)
+        else:
+            raise Exception('Could not find actor data in path: '
+                            + str(cfg.path)
+                            + ' .')
     else:
         if cfg.path.exists():
             raise Exception('The path: ' + str(cfg.path) +
-                            ' already exists with another file structure.'
-                            'Please remove or rename folder to avoid confusion and restart '
-                            'simulation.')
+                            'already exists with another file structure.' 
+                            'Please remove or rename folder to avoid confusion and restart ' 
+                            'simulation .')
         sc = scenario.create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.path, cfg.data_format)
     # TODO output folder: add plots files
@@ -58,7 +68,7 @@ if __name__ == "__main__":
         # default
         m = market.Market(0)
 
-    list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
+    list_ts = np.linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
     for t in list_ts:
         m.t = t
         for a in sc.actors:
