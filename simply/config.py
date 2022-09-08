@@ -90,7 +90,7 @@ class Config:
         # which market type to use? fair, merit, pac
         self.market_type = parser.get("default", "market_type", fallback="default").lower()
         # ? not in config py
-        energy_unit = 0.1
+        # energy_unit = 0.1
 
         # --------------------------
         # output
@@ -102,7 +102,6 @@ class Config:
         # save orders and matching results to csv files
         self.save_csv = parser.getboolean("default", "save_csv", fallback=True)
         # --------------------------
-
 
         # list of timesteps in simulation
         # not read from file but created from above information
