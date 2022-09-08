@@ -1,5 +1,4 @@
 from configparser import ConfigParser, MissingSectionHeaderError
-from numpy import linspace
 from pathlib import Path
 
 
@@ -105,13 +104,6 @@ class Config:
         # --------------------------
 
 
-
         # list of timesteps in simulation
         # not read from file but created from above information
         # self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
-
-
-
-
-
-

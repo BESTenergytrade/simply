@@ -44,8 +44,8 @@ if __name__ == "__main__":
     else:
         if cfg.path.exists():
             raise Exception('The path: ' + str(cfg.path) +
-                            'already exists with another file structure.' 
-                            'Please remove or rename folder to avoid confusion and restart ' 
+                            'already exists with another file structure.'
+                            'Please remove or rename folder to avoid confusion and restart '
                             'simulation .')
         sc = scenario.create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.path, cfg.data_format)
