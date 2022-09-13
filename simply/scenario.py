@@ -205,7 +205,8 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
     :param num_nodes: number of nodes in the network
     :param num_actors: number of actors in the network
     :param weight_factor: weight factor used to derive grid fees
-    :param nb_ts: number of
+    :param ts_hour: number of time slot of equal length within one hour
+    :param nb_ts: number of time slots to be generated
     """
     # Create random nodes for power network
     pn = power_network.create_random(num_nodes)

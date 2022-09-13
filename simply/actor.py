@@ -242,26 +242,31 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     return Actor(actor_id, df, ls=ls, ps=ps)
 
 
-def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1):
+def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
+                    override_scaling=False):
     """
     Create actor instance with random asset time series and random scaling factors. Replace
 
     :param str actor_id: unique actor identifier
     :param Dict asset_dict: nested dictionary specifying 'csv' filename and column ('col_index')
-        per Actor asset
+        per asset or the time series index ('index') of the Actor
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated, derived from csv if None
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
+    :param override_scaling: if True the predefined scaling factors are overridden by the peak value
+        of each csv file
     :return: generated Actor object
     :rtype: Actor
     """
     # Random scale factor generation, load and price time series in boundaries
-    ls = random.uniform(0.8, 1.3) / ts_hour
-    ps = random.uniform(1, 7) / ts_hour
+    peak = {
+        "load": random.uniform(0.8, 1.3) / ts_hour,
+        "pv": random.uniform(1, 7) / ts_hour
+    }
     # Probability of an actor to possess a PV, here 40%
     pv_prob = 0.4
-    ps = random.choices([0, ps], [1 - pv_prob, pv_prob], k=1)
+    peak["pv"] = random.choices([0, peak["pv"]], [1 - pv_prob, pv_prob], k=1)
 
     # Initialize DataFrame
     cols = ["load", "pv", "schedule", "prices"]
@@ -281,10 +286,12 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
         )
         # Rename column and insert data based on dictionary
         df.loc[:, col] = csv_df.iloc[:nb_ts, csv_dict["col_index"]]
-        # Save peak value and normalize time series
-        csv_peak[col] = df[col].max()
+        # Override scaling factor by peak value (if True)
+        if override_scaling:
+            peak[col] = df[col].max()
+        # Normalize time series
         df[col] = df[col] / df[col].max()
-    # Set index
+    # Set new index, in case it was not read in via asset_dict, it is generated
     if "index" not in df.columns:
         df["index"] = pd.date_range(
             start_date,
@@ -303,7 +310,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
 
     # Dummy-Strategy:
     # Predefined energy management, energy volume and price for trades due to no flexibility
-    df["schedule"] = ps * df["pv"] - ls * df["load"]
+    df["schedule"] = peak["pv"] * df["pv"] - peak["load"] * df["load"]
     max_price = 0.3
     df["prices"] = np.random.rand(nb_ts, 1)
     df["prices"] *= max_price
@@ -315,4 +322,4 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
         * slot["prices"], axis=1
     )
 
-    return Actor(actor_id, df, ls=ls, ps=ps)
+    return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
