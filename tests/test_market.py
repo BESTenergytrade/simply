@@ -66,28 +66,28 @@ class TestMarket:
         m = Market(0)
         # round to energy unit
         m.energy_unit = 0.1
-        m.accept_order(Order(1, 0, 0, None, 0.1, 0))
+        m.accept_order(Order(1, 0, 0, None, 0.1, 1))
         assert m.orders.at[0, "energy"] == pytest.approx(0.1)
-        m.accept_order(Order(1, 0, 0, None, 0.3, 0))
+        m.accept_order(Order(1, 0, 0, None, 0.3, 1))
         assert m.orders.at[1, "energy"] == pytest.approx(0.3)
         # below energy unit
-        m.accept_order(Order(1, 0, 0, None, 0.09, 0))
+        m.accept_order(Order(1, 0, 0, None, 0.09, 1))
         assert len(m.orders) == 2
         # round down
-        m.accept_order(Order(1, 0, 0, None, 0.55, 0))
+        m.accept_order(Order(1, 0, 0, None, 0.55, 1))
         assert m.orders.at[2, "energy"] == pytest.approx(0.5)
         # reset orders
         m.orders = m.orders[:0]
         m.energy_unit = 1
-        m.accept_order(Order(1, 0, 0, None, 1, 0))
+        m.accept_order(Order(1, 0, 0, None, 1, 1))
         assert m.orders.at[0, "energy"] == pytest.approx(1)
-        m.accept_order(Order(1, 0, 0, None, 3, 0))
+        m.accept_order(Order(1, 0, 0, None, 3, 1))
         assert m.orders.at[1, "energy"] == pytest.approx(3)
         # below energy unit
-        m.accept_order(Order(1, 0, 0, None, 0.9, 0))
+        m.accept_order(Order(1, 0, 0, None, 0.9, 1))
         assert len(m.orders) == 2
         # round down
-        m.accept_order(Order(1, 0, 0, None, 5.5, 0))
+        m.accept_order(Order(1, 0, 0, None, 5.5, 1))
         assert m.orders.at[2, "energy"] == pytest.approx(5)
 
     def test_get_bids(self):
