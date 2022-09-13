@@ -273,7 +273,6 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     df = pd.DataFrame([], columns=cols)
 
     # Read csv files for each asset
-    csv_peak = {}
     for col, csv_dict in asset_dict.items():
         # if csv_dict is empty
         if not csv_dict:
