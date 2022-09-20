@@ -1,0 +1,808 @@
+[
+    {
+        "prosumerName": "residential_1",
+        "prosumerType": "residential",
+        "prosumerID": "e3e70682-c209-4cac-629f-6fbed82c07cd",
+        "gridLocation": "N04",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "67a9c378-7c65-c1e5-82e2-e662f728b4fa",
+                "peakPower": 2.9517,
+                "timeOffset": 0,
+                "pred_models": [
+                    5,
+                    11,
+                    3,
+                    2
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "40212ef7-cca5-a5a1-9e4d-6e3c1846d424",
+                "capacity": 4.949,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "4f65d4d9-259f-4329-e6f4-590b9a164106",
+                "peakPower": 0.8649,
+                "sigma": 0.13,
+                "timeOffset": -3,
+                "pred_models": [
+                    11,
+                    9,
+                    6,
+                    2
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_2",
+        "prosumerType": "residential",
+        "prosumerID": "a3f2c9bf-9c63-16b9-50f2-44556f25e2a2",
+        "gridLocation": "N02",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "85776e9a-dd84-f39e-7154-5a137a1d5006",
+                "peakPower": 1.5934,
+                "timeOffset": 0,
+                "pred_models": [
+                    12,
+                    11,
+                    2,
+                    11
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "004ae545-a011-6be5-ab0c-1681c8f8e3d0",
+                "capacity": 3.4476,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "ded733e8-b421-eaeb-5340-97cabaf3897a",
+                "peakPower": 0.5955,
+                "sigma": 0.13,
+                "timeOffset": -3,
+                "pred_models": [
+                    7,
+                    3,
+                    12,
+                    10
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_3",
+        "prosumerType": "residential",
+        "prosumerID": "fe43c49e-1498-18d1-1759-edc372ae2244",
+        "gridLocation": "N03",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "1beb3711-7d41-e602-eece-328bff7b118e",
+                "peakPower": 2.3269,
+                "timeOffset": 0,
+                "pred_models": [
+                    9,
+                    7,
+                    10,
+                    7
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "49a3e80e-966e-1277-8c17-45a79a6a5f92",
+                "capacity": 2.78,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "2f120554-4a53-08cc-3dfa-bc08935ddd72",
+                "peakPower": 0.9107,
+                "sigma": 0.13,
+                "timeOffset": -1,
+                "pred_models": [
+                    1,
+                    12,
+                    4,
+                    1
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_4",
+        "prosumerType": "residential",
+        "prosumerID": "e07405eb-2156-63ab-c1f2-54b8adc0da7a",
+        "gridLocation": "N02",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "b306d1a8-e5ee-ac76-148b-2758d7ab7928",
+                "peakPower": 2.5252,
+                "timeOffset": 4,
+                "pred_models": [
+                    11,
+                    7,
+                    7,
+                    3
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "f323ca74-d344-7490-96fd-35d0adf20806",
+                "capacity": 2.6777,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "eabca8d0-b341-facd-ff0a-c0f1a425799a",
+                "peakPower": 0.5412,
+                "sigma": 0.13,
+                "timeOffset": 1,
+                "pred_models": [
+                    8,
+                    6,
+                    8,
+                    11
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_5",
+        "prosumerType": "residential",
+        "prosumerID": "4562be7f-bb42-e0b2-0426-465e3e37952d",
+        "gridLocation": "N01",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "552116dd-2ba4-b180-cb69-ca385f3f5638",
+                "peakPower": 2.7239,
+                "timeOffset": 2,
+                "pred_models": [
+                    2,
+                    2,
+                    9,
+                    1
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "9a27d858-88c1-32ad-efbf-c19ee8f6cf32",
+                "capacity": 3.7224,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "wind",
+                "deviceID": "d480865f-9b38-fe80-3042-e325a28f5ab0",
+                "peakPower": 0.6956,
+                "sigma": 0.13,
+                "timeOffset": -3,
+                "pred_models": [
+                    5,
+                    12,
+                    1,
+                    1
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_6",
+        "prosumerType": "residential",
+        "prosumerID": "7aaf0e89-1fb7-97fa-b7d6-467b2f5a522a",
+        "gridLocation": "N02",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "05d51433-ade9-b2b4-efdd-35f80fa34266",
+                "peakPower": 2.1384,
+                "timeOffset": 4,
+                "pred_models": [
+                    2,
+                    4,
+                    3,
+                    8
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "7795e986-80ee-526e-0fa0-7a3f2e295065",
+                "capacity": 1.1575,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "wind",
+                "deviceID": "429817c5-3308-fb2e-642a-ad48fcfcfa81",
+                "peakPower": 0.9522,
+                "sigma": 0.13,
+                "timeOffset": 1,
+                "pred_models": [
+                    6,
+                    11,
+                    7,
+                    9
+                ]
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "ad1b8f60-c9e4-dab2-0edc-6d2bc470f0e7",
+                "peakPower": 0.9227,
+                "sigma": 0.13,
+                "timeOffset": -2,
+                "pred_models": [
+                    5,
+                    4,
+                    8,
+                    6
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_7",
+        "prosumerType": "residential",
+        "prosumerID": "ae68690a-78bc-7175-0361-524c2cc0f859",
+        "gridLocation": "N04",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "4fbaecc0-eae2-025e-8233-9e23dff3334b",
+                "peakPower": 2.083,
+                "timeOffset": 1,
+                "pred_models": [
+                    8,
+                    2,
+                    9,
+                    6
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "47e7f593-8b58-85ca-0bb2-c3f0bd30291a",
+                "capacity": 1.5394,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "5bf49c04-ac64-2b4c-49b2-5ded9c31d9b2",
+                "peakPower": 0.8578,
+                "sigma": 0.13,
+                "timeOffset": -2,
+                "pred_models": [
+                    5,
+                    5,
+                    8,
+                    1
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_8",
+        "prosumerType": "residential",
+        "prosumerID": "28fafd04-559b-5975-b2d6-50af313b32b7",
+        "gridLocation": "N02",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "e01bbf50-b5d9-7ef7-60ef-147172b8ff39",
+                "peakPower": 1.5473,
+                "timeOffset": 2,
+                "pred_models": [
+                    11,
+                    7,
+                    10,
+                    9
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "285e25b4-b396-9057-425c-b200105ada6b",
+                "capacity": 2.7855,
+                "chargePower": 0.5
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_9",
+        "prosumerType": "residential",
+        "prosumerID": "e245a460-0004-884c-c167-733f9a9e4310",
+        "gridLocation": "N01",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "0cc36d8c-7786-3fe5-d675-ebf74fe30c9a",
+                "peakPower": 1.782,
+                "timeOffset": 2,
+                "pred_models": [
+                    12,
+                    8,
+                    2,
+                    9
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "6ae04d52-adb3-28cb-f315-8c0c66dd7794",
+                "capacity": 2.2647,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "acfebb4b-d29e-8693-faf1-501b009a815b",
+                "peakPower": 0.806,
+                "sigma": 0.13,
+                "timeOffset": 4,
+                "pred_models": [
+                    3,
+                    8,
+                    3,
+                    4
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_10",
+        "prosumerType": "residential",
+        "prosumerID": "19a5711b-2ea6-0b99-fa7f-f8bfb044284a",
+        "gridLocation": "N04",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "0597aab6-14d3-0dbc-a0ac-f4c9658de17e",
+                "peakPower": 2.8708,
+                "timeOffset": 0,
+                "pred_models": [
+                    10,
+                    2,
+                    4,
+                    8
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "df3277fd-1d77-ce40-58d8-7776a51ad4f3",
+                "capacity": 1.6178,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "8ef066d4-4279-b14d-ae55-cdff34ab18fd",
+                "peakPower": 0.9733,
+                "sigma": 0.13,
+                "timeOffset": 1,
+                "pred_models": [
+                    12,
+                    11,
+                    1,
+                    9
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_11",
+        "prosumerType": "residential",
+        "prosumerID": "7e969cf3-a7c5-cb87-9b8b-71a1b38a05fb",
+        "gridLocation": "N04",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "2da44da1-89b5-b368-df14-c6125f58d5b5",
+                "peakPower": 2.0634,
+                "timeOffset": -1,
+                "pred_models": [
+                    4,
+                    2,
+                    4,
+                    5
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "9edb95f2-c787-ddfb-5697-f17c17fd3736",
+                "capacity": 1.1427,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "65111656-5c64-6036-4a1e-b1b7955d0e77",
+                "peakPower": 0.5648,
+                "sigma": 0.13,
+                "timeOffset": 4,
+                "pred_models": [
+                    2,
+                    9,
+                    12,
+                    4
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "residential_12",
+        "prosumerType": "residential",
+        "prosumerID": "122411e6-ba89-82dd-85e6-9ea9db66bfda",
+        "gridLocation": "N03",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "1bd09448-6a2b-3200-4c9a-0ae15419eefc",
+                "peakPower": 2.3412,
+                "timeOffset": -3,
+                "pred_models": [
+                    6,
+                    5,
+                    10,
+                    10
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "6d316b4a-7f6b-8793-b318-ad4c1db2b452",
+                "capacity": 1.1513,
+                "chargePower": 0.5
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "a0722aa0-2aa3-6cf7-eb70-ba6527d99a23",
+                "peakPower": 0.9031,
+                "sigma": 0.13,
+                "timeOffset": 2,
+                "pred_models": [
+                    12,
+                    2,
+                    10,
+                    3
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "business_1",
+        "prosumerType": "business",
+        "prosumerID": "0202861c-6283-0869-0fa7-ee0538974df5",
+        "gridLocation": "N01",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "eb8f2056-72d3-cc5d-4a31-b24384dd6da6",
+                "peakPower": 12.8829,
+                "timeOffset": 3,
+                "pred_models": [
+                    9,
+                    3,
+                    2,
+                    3
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "6e648043-2aa5-0f4e-c6f0-093395d18051",
+                "capacity": 5.9597,
+                "chargePower": 1
+            },
+            {
+                "deviceType": "wind",
+                "deviceID": "b3b68b57-da54-f267-dd13-8266d26d5396",
+                "peakPower": 2.806,
+                "sigma": 0.33,
+                "timeOffset": -4,
+                "pred_models": [
+                    6,
+                    9,
+                    2,
+                    5
+                ]
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "cc249558-f2ad-985f-ff3e-0ba10ac728b4",
+                "peakPower": 2.2468,
+                "sigma": 0.33,
+                "timeOffset": -1,
+                "pred_models": [
+                    2,
+                    6,
+                    5,
+                    10
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "business_2",
+        "prosumerType": "business",
+        "prosumerID": "fba52e59-98a3-3736-fd1a-c7ce1ad0a6f2",
+        "gridLocation": "N04",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "6c596216-ae0f-dbc8-a36b-cb0167e98363",
+                "peakPower": 9.9541,
+                "timeOffset": 4,
+                "pred_models": [
+                    12,
+                    4,
+                    6,
+                    6
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "ee6a8e2f-9c19-ed34-8af5-890333b5b3ce",
+                "capacity": 6.0939,
+                "chargePower": 1
+            }
+        ]
+    },
+    {
+        "prosumerName": "business_3",
+        "prosumerType": "business",
+        "prosumerID": "52631db9-d170-34ce-5179-7350e6256403",
+        "gridLocation": "N01",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "c8bf23fb-9a43-1f7a-41c3-0359dfde2281",
+                "peakPower": 13.4233,
+                "timeOffset": -2,
+                "pred_models": [
+                    7,
+                    9,
+                    10,
+                    1
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "10fc9eee-0a17-27f7-ea5f-24b6de6fec4b",
+                "capacity": 6.1255,
+                "chargePower": 1
+            },
+            {
+                "deviceType": "wind",
+                "deviceID": "72d6bc20-d80d-6a1c-c247-2fd603e9ba02",
+                "peakPower": 2.7238,
+                "sigma": 0.33,
+                "timeOffset": 1,
+                "pred_models": [
+                    10,
+                    11,
+                    6,
+                    5
+                ]
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "92e94e89-089b-30a0-809f-292387a1798f",
+                "peakPower": 2.3571,
+                "sigma": 0.33,
+                "timeOffset": -3,
+                "pred_models": [
+                    10,
+                    10,
+                    12,
+                    9
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "business_4",
+        "prosumerType": "business",
+        "prosumerID": "4a276dda-34c3-494a-c12e-a9b8e7e13ed8",
+        "gridLocation": "N05",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "7b72590b-f8f8-f071-d360-da696af79ad2",
+                "peakPower": 11.0743,
+                "timeOffset": 2,
+                "pred_models": [
+                    3,
+                    11,
+                    1,
+                    11
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "4124405b-91fc-fe88-81c1-6e984d6cd782",
+                "capacity": 6.6634,
+                "chargePower": 1
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "68777bab-c5c1-4262-4d84-9ec5d334886f",
+                "peakPower": 2.6201,
+                "sigma": 0.33,
+                "timeOffset": 2,
+                "pred_models": [
+                    1,
+                    8,
+                    2,
+                    4
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "industrial_1",
+        "prosumerType": "industrial",
+        "prosumerID": "f11ddff7-0e37-0526-5582-a3bdd476fe38",
+        "gridLocation": "N01",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "dd02e100-e3d4-8408-7de8-a2342412579d",
+                "peakPower": 21.7354,
+                "timeOffset": -3,
+                "pred_models": [
+                    2,
+                    12,
+                    5,
+                    8
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "c734bb05-788c-31f6-19fa-a06e0c0a5967",
+                "capacity": 11.5137,
+                "chargePower": 2
+            },
+            {
+                "deviceType": "wind",
+                "deviceID": "52ebdac5-a145-7899-21f8-c1569e0df45b",
+                "peakPower": 22.0008,
+                "sigma": 5,
+                "timeOffset": -3,
+                "pred_models": [
+                    8,
+                    3,
+                    10,
+                    10
+                ]
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "7799a8e2-b368-c553-9c30-ceaa0f66b32d",
+                "peakPower": 21.5047,
+                "sigma": 5,
+                "timeOffset": 1,
+                "pred_models": [
+                    12,
+                    9,
+                    4,
+                    11
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "industrial_2",
+        "prosumerType": "industrial",
+        "prosumerID": "cca1a034-633c-bf79-e96a-a1aff55e3aa2",
+        "gridLocation": "N03",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "fbbff9e0-ae56-702a-f521-ca9fdf5e6f78",
+                "peakPower": 20.1901,
+                "timeOffset": -3,
+                "pred_models": [
+                    10,
+                    3,
+                    10,
+                    6
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "a1cba182-ca20-854d-5b47-1c437499b28c",
+                "capacity": 10.7534,
+                "chargePower": 2
+            },
+            {
+                "deviceType": "wind",
+                "deviceID": "4160ff92-7c75-50f2-0a3c-2c6fef2d9a38",
+                "peakPower": 24.4478,
+                "sigma": 5,
+                "timeOffset": -4,
+                "pred_models": [
+                    8,
+                    7,
+                    3,
+                    2
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "industrial_3",
+        "prosumerType": "industrial",
+        "prosumerID": "809e2109-c786-7a38-a09f-1aede38690e7",
+        "gridLocation": "N05",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "254bf7ae-1d0a-b994-f20b-575d4e28e674",
+                "peakPower": 23.9184,
+                "timeOffset": 2,
+                "pred_models": [
+                    6,
+                    2,
+                    2,
+                    1
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "07dc02b1-f45d-a406-bbf9-bb0127f9e728",
+                "capacity": 17.9134,
+                "chargePower": 2
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "f655860b-dd32-e231-eb56-16997f22cd12",
+                "peakPower": 22.2254,
+                "sigma": 5,
+                "timeOffset": 1,
+                "pred_models": [
+                    1,
+                    1,
+                    5,
+                    1
+                ]
+            }
+        ]
+    },
+    {
+        "prosumerName": "industrial_4",
+        "prosumerType": "industrial",
+        "prosumerID": "d48c93f3-028d-042b-2d8b-5b41590e83da",
+        "gridLocation": "N02",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "24aeba79-e4b8-2987-98ba-0f0e120d7126",
+                "peakPower": 15.0323,
+                "timeOffset": -1,
+                "pred_models": [
+                    8,
+                    9,
+                    11,
+                    9
+                ]
+            },
+            {
+                "deviceType": "battery",
+                "deviceID": "9ad7558f-eecb-325b-064f-768db080e003",
+                "capacity": 12.3286,
+                "chargePower": 2
+            },
+            {
+                "deviceType": "wind",
+                "deviceID": "582dd972-7a08-9ca8-1cc5-a8a0743c7e9d",
+                "peakPower": 16.3016,
+                "sigma": 5,
+                "timeOffset": 0,
+                "pred_models": [
+                    12,
+                    5,
+                    6,
+                    4
+                ]
+            }
+        ]
+    }
+]
