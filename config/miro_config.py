@@ -1,3 +1,4 @@
+import datetime
 from argparse import ArgumentParser
 import json
 import random
@@ -17,6 +18,14 @@ from simply.util import daily, gaussian_pv
 2) """
 
 
+# Helper function to build power network from community config json
+def map_actors(config_df):
+    map = {}
+    for i in config_df.index:
+        map[config_df["prosumerName"][i]] = config_df["gridLocation"][i]
+    return map
+
+
 # Power Network
 def create_power_network_from_config(network_path, weight_factor=1):
     with open(network_path) as user_file:
@@ -33,7 +42,40 @@ def create_power_network_from_config(network_path, weight_factor=1):
 
 
 # Actor
-def create_actor_from_config(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1):
+def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
+                             ts_hour=1, cols=["load", "pv", "schedule", "prices"]):
+    # Initialize DataFrame
+    df = pd.DataFrame([], columns=cols)
+
+    # Read csv files for each asset
+    csv_peak = {}
+    for col, csv_dict in asset_dict.items():
+        # if csv_dict is empty
+        if not csv_dict:
+            continue
+        csv_df = pd.read_csv(
+            csv_dict["csv"],
+            sep=',',
+            parse_dates=['Time'],
+            dayfirst=True,
+            index_col=['Time']
+        )
+
+        start_date = pd.to_datetime(start_date)
+        # Rename column and insert data based on dictionary
+        ts_minutes = nb_ts * (60/ts_hour)
+        time_change = datetime.timedelta(minutes=ts_minutes)
+        end_date = start_date + time_change
+
+        df.loc[:, col] = csv_df[start_date:end_date]
+        # Save peak value and normalize time series
+        csv_peak[col] = df[col].max()
+
+    return Actor(actor_id, df)
+
+
+def create_random_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
+                             ts_hour=1):
     """
     Create actor instance with random asset time series and random scaling factors. Replace
 
@@ -113,14 +155,9 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2021-01-01", n
 
 # Scenario
 def create_scenario_from_config(config_json, network_path, data_dirpath=None, weight_factor=1,
-                                ts_hour=4, nb_ts=None, start_date="2021-01-01"):
+                                ts_hour=4, nb_ts=None, start_date="2016-01-01"):
     # Parse json
     config_df = pd.read_json(config_json)
-
-    # for
-    #
-    #
-    #
 
     # Create nodes for power network
     pn = create_power_network_from_config(network_path, weight_factor)
@@ -143,7 +180,7 @@ def create_scenario_from_config(config_json, network_path, data_dirpath=None, we
     for i, filename in enumerate(filenames):
         # save actor_id and data description in list
         household_type.update({i: filename.stem})
-        print(f'actor_id: {i} - household: {household_type[i]}')
+        print(f'actor_id: {config_df["prosumerName"][i]} - household: {household_type[i]}')
         # read file
         a = create_actor_from_config(
             "H_" + str(i),
@@ -158,13 +195,16 @@ def create_scenario_from_config(config_json, network_path, data_dirpath=None, we
 
         actors.append(a)
 
-    map_actors = pn.add_actors_random(actors)
+    actor_map = map_actors(config_df)
+    actor_map = pn.add_actors_map(actor_map)
 
+    pn.plot()
     # Update shortest paths and the grid fee matrix
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
+    pn.to_json()
 
-    return Scenario(pn, actors, map_actors)
+    return Scenario(pn, actors, actor_map)
 
 
 if __name__ == "__main__":
@@ -176,8 +216,20 @@ if __name__ == "__main__":
 
     # Include the absolute paths here:
     config_json_path = '/Users/emilmargrain/Documents/GitHub/simply/config/community_config.json'
-    network_path = '/Users/emilmargrain/Documents/GitHub/simply/config/network.json'
+    network_path = '/Users/emilmargrain/Documents/GitHub/simply/config/fortis_network.json'
 
     data_path = Path("../sample", "households_sample")
 
-    sc = create_scenario_from_config(config_json_path, network_path, data_path, nb_ts=3*96)
+    sc = create_scenario_from_config(config_json_path, network_path, data_path, nb_ts=3 * 96)
+
+    sc.save(cfg.path, cfg.data_format)
+
+    if cfg.show_plots:
+        sc.power_network.plot()
+        sc.plot_actor_data()
+    sc.power_network.to_image()
+    sc.power_network.to_json()
+    if cfg.show_prints:
+        print(sc.to_dict())
+        print(sc.power_network.short_paths)
+        print(sc)
