@@ -18,6 +18,35 @@ from simply.util import daily, gaussian_pv
 2) """
 
 
+def basic_strategy(df):
+    df["schedule"] = df["pv"] - df["load"]
+    return df
+
+
+def dummy_strategy(df, ts_hour, nb_ts, max_price=0.3, net_price_factor=0.7, pv_prob=0.4):
+    # Random scale factor generation, load and price time series in boundaries
+    peak = {
+        "load": random.uniform(0.8, 1.3) / ts_hour,
+        "pv": random.uniform(1, 7) / ts_hour
+    }
+    # Probability of an actor to possess a PV, here 40%
+    peak["pv"] = random.choices([0, peak["pv"]], [1 - pv_prob, pv_prob], k=1)
+
+    # Dummy-Strategy:
+    # Predefined energy management, energy volume and price for trades due to no flexibility
+    df["schedule"] = peak["pv"] * df["pv"] - peak["load"] * df["load"]
+    df["prices"] = np.random.rand(nb_ts, 1)
+    df["prices"] *= max_price
+    # Adapt order price by a factor to compensate net pricing of ask orders
+    # (i.e. positive power) Bids however include network charges
+    net_price_factor = 0.7
+    df["prices"] = df.apply(
+        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor
+                     * slot["prices"], axis=1
+    )
+    return df
+
+
 # Helper function to build power network from community config json
 def map_actors(config_df):
     map = {}
@@ -43,9 +72,15 @@ def create_power_network_from_config(network_path, weight_factor=1):
 
 # Actor
 def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
-                             ts_hour=1, cols=["load", "pv", "schedule", "prices"]):
+                             ts_hour=1, cols=["load", "pv", "schedule", "prices"], pv_prob=0.4):
     # Initialize DataFrame
     df = pd.DataFrame([], columns=cols)
+
+    start_date = pd.to_datetime(start_date)
+    # Rename column and insert data based on dictionary
+    ts_minutes = (nb_ts - 1) * (60/ts_hour)
+    time_change = datetime.timedelta(minutes=ts_minutes)
+    end_date = start_date + time_change
 
     # Read csv files for each asset
     csv_peak = {}
@@ -61,144 +96,70 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
             index_col=['Time']
         )
 
-        start_date = pd.to_datetime(start_date)
-        # Rename column and insert data based on dictionary
-        ts_minutes = nb_ts * (60/ts_hour)
-        time_change = datetime.timedelta(minutes=ts_minutes)
-        end_date = start_date + time_change
-
         df.loc[:, col] = csv_df[start_date:end_date]
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
 
+    # df = dummy_strategy(df, ts_hour=ts_hour, nb_ts=nb_ts, pv_prob=pv_prob)
+    df = basic_strategy(df)
+
     return Actor(actor_id, df)
-
-
-def create_random_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
-                             ts_hour=1):
-    """
-    Create actor instance with random asset time series and random scaling factors. Replace
-
-    :param str actor_id: unique actor identifier
-    :param Dict asset_dict: nested dictionary specifying 'csv' filename and column ('col_index')
-        per Actor asset
-    :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
-        asset time series
-    :param int nb_ts: number of time slots that should be generated, derived from csv if None
-    :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
-    :return: generated Actor object
-    :rtype: Actor
-    """
-    # Random scale factor generation, load and price time series in boundaries
-    ls = random.uniform(0.8, 1.3) / ts_hour
-    ps = random.uniform(1, 7) / ts_hour
-    # Probability of an actor to possess a PV, here 40%
-    pv_prob = 0.4
-    ps = random.choices([0, ps], [1 - pv_prob, pv_prob], k=1)
-
-    # Initialize DataFrame
-    cols = ["load", "pv", "schedule", "prices"]
-    df = pd.DataFrame([], columns=cols)
-
-    # Read csv files for each asset
-    csv_peak = {}
-    for col, csv_dict in asset_dict.items():
-        # if csv_dict is empty
-        if not csv_dict:
-            continue
-        csv_df = pd.read_csv(
-            csv_dict["csv"],
-            sep=',',
-            parse_dates=['Time'],
-            dayfirst=True
-        )
-        # Rename column and insert data based on dictionary
-        df.loc[:, col] = csv_df.iloc[:nb_ts, csv_dict["col_index"]]
-        # Save peak value and normalize time series
-        csv_peak[col] = df[col].max()
-        df[col] = df[col] / df[col].max()
-
-    # Set index
-    if "index" not in df.columns:
-        df["index"] = pd.date_range(
-            start=start_date,
-            freq="{}min".format(int(60 / ts_hour)),
-            periods=nb_ts
-        )
-    df = df.set_index("index")
-
-    # If pv asset key is present but dictionary does not contain a filename
-    if "pv" in asset_dict.keys() and not asset_dict["pv"].get("filename"):
-        # Initialize PV with random noise
-        df["pv"] = np.random.rand(nb_ts, 1)
-        # Multiply random generation signal with gaussian/PV-like characteristic per day
-
-        for day in daily(df, 24 * ts_hour):
-            day["pv"] *= gaussian_pv(ts_hour, 3)
-
-    # Dummy-Strategy:
-    # Predefined energy management, energy volume and price for trades due to no flexibility
-    df["schedule"] = ps * df["pv"] - ls * df["load"]
-    max_price = 0.3
-    df["prices"] = np.random.rand(nb_ts, 1)
-    df["prices"] *= max_price
-    # Adapt order price by a factor to compensate net pricing of ask orders
-    # (i.e. positive power) Bids however include network charges
-    net_price_factor = 0.7
-    df["prices"] = df.apply(
-        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor
-                     * slot["prices"], axis=1
-    )
-
-    return Actor(actor_id, df, ls=ls, ps=ps)
 
 
 # Scenario
 def create_scenario_from_config(config_json, network_path, data_dirpath=None, weight_factor=1,
-                                ts_hour=4, nb_ts=None, start_date="2016-01-01"):
+                                ts_hour=4, nb_ts=None, start_date="2016-01-01",
+                                plot_network=False, pv_filename="generated_pv.csv",
+                                price_filename="basic_prices.csv", pv_prob=1, normalised=False):
+
+    loads_path = data_dirpath.joinpath("households_sample")
+    pv_path = data_dirpath.joinpath("pv")
+    price_path = data_dirpath.joinpath("price")
+
     # Parse json
     config_df = pd.read_json(config_json)
-
     # Create nodes for power network
     pn = create_power_network_from_config(network_path, weight_factor)
-    pn.plot()
 
-    num_actors = len(config_df.index)
-    # Read all filenames from given directory
+    if plot_network is True:
+        pn.plot()
 
-    filenames = data_dirpath.glob("*.csv")
-    # Choose a random sample of files to read
-    # x = list(filenames)
-    filenames = random.sample(list(filenames), num_actors)
+    actor_types = list(config_df['prosumerType'])
 
-    # Assign csv file to actor and save dictionary
-    household_type = {}
     # create initial list of actors
     actors = []
 
-    # iterate over list of files to be read to update actors
-    for i, filename in enumerate(filenames):
-        # save actor_id and data description in list
-        household_type.update({i: filename.stem})
-        print(f'actor_id: {config_df["prosumerName"][i]} - household: {household_type[i]}')
-        # read file
-        a = create_actor_from_config(
-            "H_" + str(i),
-            asset_dict={
-                "load": {"csv": filename, "col_index": 1},
-                # "pv": {}
-            },
-            start_date=start_date,
-            nb_ts=nb_ts,
-            ts_hour=ts_hour
-        )
+    for i, actor_row in config_df.iterrows():
+        if 'filename' in actor_row['devices'][0]:
+            load_filename = actor_row['devices'][0]['filename']
+        else:
+            file_df = pd.read_csv("/Users/emilmargrain/Documents/GitHub/simply/config/loads_dir"
+                                  ".csv")
+            current_type_files = file_df[file_df['Type'] == actor_types[i]]
+            # Take the first filename associated with the prosumerType
+            load_filename = list(current_type_files['Filename'])[0]
 
-        actors.append(a)
+        asset_dict = {'load': {"csv": loads_path.joinpath(load_filename), "col_index": 1},
+                      "pv": {"csv": pv_path.joinpath(pv_filename), "col_index": 1},
+                      "prices": {"csv": price_path.joinpath(price_filename), "col_index": 1}}
+
+        actor = create_actor_from_config(actor_row['prosumerName'],
+                                         asset_dict=asset_dict,
+                                         start_date=start_date,
+                                         nb_ts=nb_ts,
+                                         ts_hour=ts_hour,
+                                         pv_prob=pv_prob)
+
+        actors.append(actor)
+        print(f'{i} actor added')
+        print(f'{load_filename}')
 
     actor_map = map_actors(config_df)
     actor_map = pn.add_actors_map(actor_map)
 
-    pn.plot()
+    if plot_network is True:
+        pn.plot()
+
     # Update shortest paths and the grid fee matrix
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
@@ -208,28 +169,31 @@ def create_scenario_from_config(config_json, network_path, data_dirpath=None, we
 
 
 if __name__ == "__main__":
+    # Include the absolute paths here:
+    config_json_path = '/Users/emilmargrain/Documents/GitHub/simply/config/community_config2.json'
+    network_path = '/Users/emilmargrain/Documents/GitHub/simply/config/fortis_network.json'
+    config_path = '/Users/emilmargrain/Documents/GitHub/simply/config/config.txt'
+
+    # This could be added to config.py
+    data_dirpath = Path("../sample")
+    sc_path = Path("../scenarios/default")
+
     # """Check that the argument parsing below is necessary"""
     parser = ArgumentParser(description='Entry point for market simulation')
-    parser.add_argument('config', nargs='?', default="", help='configuration file')
+    parser.add_argument('config', nargs='?', default=config_path, help='configuration file')
     args = parser.parse_args()
+
     cfg = Config(args.config)
+    #
+    cfg.nb_ts = 3 * 96
+    # cfg = build_config(config_json_path, nb_ts)
 
-    # Include the absolute paths here:
-    config_json_path = '/Users/emilmargrain/Documents/GitHub/simply/config/community_config.json'
-    network_path = '/Users/emilmargrain/Documents/GitHub/simply/config/fortis_network.json'
-
-    data_path = Path("../sample", "households_sample")
-
-    sc = create_scenario_from_config(config_json_path, network_path, data_path, nb_ts=3 * 96)
-
-    sc.save(cfg.path, cfg.data_format)
+    sc = create_scenario_from_config(config_json_path, network_path, data_dirpath, nb_ts=cfg.nb_ts)
+    sc.save(sc_path, cfg.data_format)
 
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_actor_data()
+
     sc.power_network.to_image()
     sc.power_network.to_json()
-    if cfg.show_prints:
-        print(sc.to_dict())
-        print(sc.power_network.short_paths)
-        print(sc)
