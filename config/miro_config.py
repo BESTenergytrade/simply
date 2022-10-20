@@ -1,21 +1,26 @@
 import datetime
-from argparse import ArgumentParser
-import json
 import random
-from pathlib import Path
-import pandas as pd
+import json
+import os
 import numpy as np
+import pandas as pd
+from pathlib import Path
+from argparse import ArgumentParser
 from networkx.readwrite import json_graph
 
 from simply.actor import Actor
 from simply.scenario import Scenario
 from simply.power_network import PowerNetwork
 from simply.config import Config
-from simply.util import daily, gaussian_pv
 
-"""Key functionality:
-1) Allow user to select how many (and what type of agents) to include
-2) """
+
+def end_date_from_ts(start_date="2016-01-01", nb_ts=None, ts_hour=1):
+    start_date = pd.to_datetime(start_date)
+    # Rename column and insert data based on dictionary
+    ts_minutes = (nb_ts - 1) * (60 / ts_hour)
+    time_change = datetime.timedelta(minutes=ts_minutes)
+    end_date = start_date + time_change
+    return start_date, end_date
 
 
 def basic_strategy(df):
@@ -73,14 +78,8 @@ def create_power_network_from_config(network_path, weight_factor=1):
 # Actor
 def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
                              ts_hour=1, cols=["load", "pv", "schedule", "prices"], pv_prob=0.4):
-    # Initialize DataFrame
     df = pd.DataFrame([], columns=cols)
-
-    start_date = pd.to_datetime(start_date)
-    # Rename column and insert data based on dictionary
-    ts_minutes = (nb_ts - 1) * (60/ts_hour)
-    time_change = datetime.timedelta(minutes=ts_minutes)
-    end_date = start_date + time_change
+    start_date, end_date = end_date_from_ts(start_date, nb_ts, ts_hour)
 
     # Read csv files for each asset
     csv_peak = {}
@@ -106,53 +105,74 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
     return Actor(actor_id, df)
 
 
-# Scenario
-def create_scenario_from_config(config_json, network_path, data_dirpath=None, weight_factor=1,
-                                ts_hour=4, nb_ts=None, start_date="2016-01-01",
-                                plot_network=False, pv_filename="generated_pv.csv",
-                                price_filename="basic_prices.csv", pv_prob=1, normalised=False):
+def read_config_json(config_json):
+    config_df = pd.read_json(config_json)
+    if 'market_maker' in list(config_df['prosumerType']):
+        # config_df.drop('market_maker', axis=1)
 
-    loads_path = data_dirpath.joinpath("households_sample")
+        config_df = config_df[config_df.prosumerType != 'market_maker']
+        config_df = config_df.append({'prosumerName': 'market_maker_sell',
+                                      'prosumerType': 'market_maker_sell', 'gridLocation':
+                                          'market_maker'}, ignore_index=True)
+        config_df = config_df.append({'prosumerName': 'market_maker_buy',
+                                      'prosumerType': 'market_maker_buy',
+                                      'gridLocation': 'market_maker'}, ignore_index=True)
+
+    return config_df
+
+
+# Scenario
+def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
+                                weight_factor=1, ts_hour=4, nb_ts=None, start_date="2016-01-01",
+                                plot_network=False, price_filename="basic_prices.csv", pv_prob=1,
+                                normalised=False):
+    loads_path = data_dirpath.joinpath("load")
     pv_path = data_dirpath.joinpath("pv")
     price_path = data_dirpath.joinpath("price")
 
     # Parse json
-    config_df = pd.read_json(config_json)
+    config_df = read_config_json(config_json)
     # Create nodes for power network
     pn = create_power_network_from_config(network_path, weight_factor)
 
     if plot_network is True:
         pn.plot()
 
-    actor_types = list(config_df['prosumerType'])
-
-    # create initial list of actors
     actors = []
+    file_dict = {}
+    asset_dict = {}
 
     for i, actor_row in config_df.iterrows():
-        if 'filename' in actor_row['devices'][0]:
-            load_filename = actor_row['devices'][0]['filename']
-        else:
-            file_df = pd.read_csv("/Users/emilmargrain/Documents/GitHub/simply/config/loads_dir"
-                                  ".csv")
-            current_type_files = file_df[file_df['Type'] == actor_types[i]]
+        # If there is no devices use
+        if actor_row['devices'] != actor_row['devices']:
+            file_df = pd.read_csv(loads_dir_path)
+            current_type_files = file_df[file_df['Type'] == actor_row['prosumerType']]
             # Take the first filename associated with the prosumerType
-            load_filename = list(current_type_files['Filename'])[0]
+            file_dict['load'] = list(current_type_files['Filename'])[0]
 
-        asset_dict = {'load': {"csv": loads_path.joinpath(load_filename), "col_index": 1},
-                      "pv": {"csv": pv_path.joinpath(pv_filename), "col_index": 1},
-                      "prices": {"csv": price_path.joinpath(price_filename), "col_index": 1}}
+        else:
+            for device in actor_row['devices']:
+                # save the csv file name
+                file_dict[device['deviceType']] = device['deviceID']
 
-        actor = create_actor_from_config(actor_row['prosumerName'],
-                                         asset_dict=asset_dict,
-                                         start_date=start_date,
-                                         nb_ts=nb_ts,
-                                         ts_hour=ts_hour,
+        # Load
+        if 'load' in file_dict:
+            asset_dict['load'] = {"csv": loads_path.joinpath(file_dict['load']), "col_index": 1}
+
+        # PV
+        if 'solar' in file_dict:
+            asset_dict['pv'] = {"csv": pv_path.joinpath(file_dict['solar']), "col_index": 1}
+
+        # Prices
+        asset_dict['prices'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
+
+        actor = create_actor_from_config(actor_row['prosumerName'], asset_dict=asset_dict,
+                                         start_date=start_date, nb_ts=nb_ts, ts_hour=ts_hour,
                                          pv_prob=pv_prob)
 
         actors.append(actor)
         print(f'{i} actor added')
-        print(f'{load_filename}')
+        print(f'{file_dict["load"]}')
 
     actor_map = map_actors(config_df)
     actor_map = pn.add_actors_map(actor_map)
@@ -169,26 +189,24 @@ def create_scenario_from_config(config_json, network_path, data_dirpath=None, we
 
 
 if __name__ == "__main__":
-    # Include the absolute paths here:
-    config_json_path = '/Users/emilmargrain/Documents/GitHub/simply/config/community_config2.json'
-    network_path = '/Users/emilmargrain/Documents/GitHub/simply/config/fortis_network.json'
-    config_path = '/Users/emilmargrain/Documents/GitHub/simply/config/config.txt'
+    dirname = os.path.dirname(__file__)
+    config_json_path = os.path.join(dirname, 'example_config.json')
+    network_path = os.path.join(dirname, 'example_network.json')
+    config_path = os.path.join(dirname, 'config.txt')
+    loads_dir_path = os.path.join(dirname, 'loads_dir.csv')
 
-    # This could be added to config.py
     data_dirpath = Path("../sample")
     sc_path = Path("../scenarios/default")
 
-    # """Check that the argument parsing below is necessary"""
     parser = ArgumentParser(description='Entry point for market simulation')
     parser.add_argument('config', nargs='?', default=config_path, help='configuration file')
     args = parser.parse_args()
 
     cfg = Config(args.config)
-    #
     cfg.nb_ts = 3 * 96
-    # cfg = build_config(config_json_path, nb_ts)
 
-    sc = create_scenario_from_config(config_json_path, network_path, data_dirpath, nb_ts=cfg.nb_ts)
+    sc = create_scenario_from_config(config_json_path, network_path, data_dirpath=data_dirpath,
+                                     nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path)
     sc.save(sc_path, cfg.data_format)
 
     if cfg.show_plots:
