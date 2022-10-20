@@ -46,8 +46,8 @@ def dummy_strategy(df, ts_hour, nb_ts, max_price=0.3, net_price_factor=0.7, pv_p
     # (i.e. positive power) Bids however include network charges
     net_price_factor = 0.7
     df["prices"] = df.apply(
-        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor
-                     * slot["prices"], axis=1
+        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor * slot["prices"],
+        axis=1
     )
     return df
 
