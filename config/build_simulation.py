@@ -35,13 +35,6 @@ def dummy_strategy(df, ts_hour, nb_ts, max_price=0.3, net_price_factor=0.7, pv_p
         "pv": random.uniform(1, 7) / ts_hour
     }
     # Probability of an actor to possess a PV, here 40%
-    peak["pv"] = random.choices([0, peak["pv"]], [1 - pv_prob, pv_prob], k=1)
-
-    # Dummy-Strategy:
-    # Predefined energy management, energy volume and price for trades due to no flexibility
-    df["schedule"] = peak["pv"] * df["pv"] - peak["load"] * df["load"]
-    df["prices"] = np.random.rand(nb_ts, 1)
-    df["prices"] *= max_price
     # Adapt order price by a factor to compensate net pricing of ask orders
     # (i.e. positive power) Bids however include network charges
     net_price_factor = 0.7
@@ -64,9 +57,7 @@ def map_actors(config_df):
 def create_power_network_from_config(network_path, weight_factor=1):
     with open(network_path) as user_file:
         file_contents = user_file.read()
-
     network_json = json.loads(file_contents)
-
     network_name = list(network_json.keys())[0]
     network_json = list(network_json.values())[0]
     network = json_graph.node_link_graph(network_json,
@@ -77,7 +68,8 @@ def create_power_network_from_config(network_path, weight_factor=1):
 
 # Actor
 def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
-                             ts_hour=1, cols=["load", "pv", "schedule", "prices"], pv_prob=0.4):
+                             ts_hour=1, cols=["load", "pv", "schedule", "prices"], pv_prob=0.4,
+                             normalised=False):
     df = pd.DataFrame([], columns=cols)
     start_date, end_date = end_date_from_ts(start_date, nb_ts, ts_hour)
 
@@ -87,36 +79,32 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
         # if csv_dict is empty
         if not csv_dict:
             continue
-        csv_df = pd.read_csv(
-            csv_dict["csv"],
-            sep=',',
-            parse_dates=['Time'],
-            dayfirst=True,
-            index_col=['Time']
-        )
-
+        csv_df = pd.read_csv(csv_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=True,
+                             index_col=['Time'])
         df.loc[:, col] = csv_df[start_date:end_date]
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
 
-    # df = dummy_strategy(df, ts_hour=ts_hour, nb_ts=nb_ts, pv_prob=pv_prob)
-    df = basic_strategy(df)
+    if normalised:
+        df = dummy_strategy(df, ts_hour=ts_hour, nb_ts=nb_ts, pv_prob=pv_prob)
+    else:
+        df = basic_strategy(df)
 
     return Actor(actor_id, df)
 
 
 def read_config_json(config_json):
     config_df = pd.read_json(config_json)
+    # Include market maker
     if 'market_maker' in list(config_df['prosumerType']):
-        # config_df.drop('market_maker', axis=1)
-
         config_df = config_df[config_df.prosumerType != 'market_maker']
-        config_df = config_df.append({'prosumerName': 'market_maker_sell',
-                                      'prosumerType': 'market_maker_sell', 'gridLocation':
-                                          'market_maker'}, ignore_index=True)
-        config_df = config_df.append({'prosumerName': 'market_maker_buy',
-                                      'prosumerType': 'market_maker_buy',
-                                      'gridLocation': 'market_maker'}, ignore_index=True)
+        market_maker_sell = pd.DataFrame({'prosumerName': 'market_maker_sell',
+                                          'prosumerType': 'market_maker_sell', 'gridLocation':
+                                              'market_maker'}, index=[0])
+        market_maker_buy = pd.DataFrame({'prosumerName': 'market_maker_buy',
+                                         'prosumerType': 'market_maker_buy',
+                                         'gridLocation': 'market_maker'}, index=[0])
+        config_df = pd.concat([config_df, market_maker_buy, market_maker_sell], ignore_index=True)
 
     return config_df
 
@@ -126,6 +114,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
                                 weight_factor=1, ts_hour=4, nb_ts=None, start_date="2016-01-01",
                                 plot_network=False, price_filename="basic_prices.csv", pv_prob=1,
                                 normalised=False):
+    # Extend paths
     loads_path = data_dirpath.joinpath("load")
     pv_path = data_dirpath.joinpath("pv")
     price_path = data_dirpath.joinpath("price")
@@ -168,7 +157,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 
         actor = create_actor_from_config(actor_row['prosumerName'], asset_dict=asset_dict,
                                          start_date=start_date, nb_ts=nb_ts, ts_hour=ts_hour,
-                                         pv_prob=pv_prob)
+                                         pv_prob=pv_prob, normalised=normalised)
 
         actors.append(actor)
         print(f'{i} actor added')
@@ -179,11 +168,11 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 
     if plot_network is True:
         pn.plot()
+        pn.to_json()
 
     # Update shortest paths and the grid fee matrix
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
-    pn.to_json()
 
     return Scenario(pn, actors, actor_map)
 
@@ -204,14 +193,17 @@ if __name__ == "__main__":
 
     cfg = Config(args.config)
     cfg.nb_ts = 3 * 96
+    save_network = False
 
     sc = create_scenario_from_config(config_json_path, network_path, data_dirpath=data_dirpath,
-                                     nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path)
+                                     nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path,
+                                     normalised=False)
     sc.save(sc_path, cfg.data_format)
 
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_actor_data()
 
-    sc.power_network.to_image()
-    sc.power_network.to_json()
+    if save_network:
+        sc.power_network.to_image()
+        sc.power_network.to_json()
