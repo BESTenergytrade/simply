@@ -1,5 +1,4 @@
 import datetime
-import random
 import json
 import os
 import pandas as pd
@@ -65,7 +64,6 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
         df.loc[:, col] = csv_df[start_date:end_date]
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
-
 
     df = basic_strategy(df)
 
