@@ -2,7 +2,6 @@ import datetime
 import random
 import json
 import os
-import numpy as np
 import pandas as pd
 from pathlib import Path
 from argparse import ArgumentParser
@@ -25,23 +24,6 @@ def end_date_from_ts(start_date="2016-01-01", nb_ts=None, ts_hour=1):
 
 def basic_strategy(df):
     df["schedule"] = df["pv"] - df["load"]
-    return df
-
-
-def dummy_strategy(df, ts_hour, nb_ts, max_price=0.3, net_price_factor=0.7, pv_prob=0.4):
-    # Random scale factor generation, load and price time series in boundaries
-    peak = {
-        "load": random.uniform(0.8, 1.3) / ts_hour,
-        "pv": random.uniform(1, 7) / ts_hour
-    }
-    # Probability of an actor to possess a PV, here 40%
-    # Adapt order price by a factor to compensate net pricing of ask orders
-    # (i.e. positive power) Bids however include network charges
-    net_price_factor = 0.7
-    df["prices"] = df.apply(
-        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor * slot["prices"],
-        axis=1
-    )
     return df
 
 
@@ -68,8 +50,7 @@ def create_power_network_from_config(network_path, weight_factor=1):
 
 # Actor
 def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
-                             ts_hour=1, cols=["load", "pv", "schedule", "prices"], pv_prob=0.4,
-                             normalised=False):
+                             ts_hour=1, cols=["load", "pv", "schedule", "prices"]):
     df = pd.DataFrame([], columns=cols)
     start_date, end_date = end_date_from_ts(start_date, nb_ts, ts_hour)
 
@@ -85,10 +66,8 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
 
-    if normalised:
-        df = dummy_strategy(df, ts_hour=ts_hour, nb_ts=nb_ts, pv_prob=pv_prob)
-    else:
-        df = basic_strategy(df)
+
+    df = basic_strategy(df)
 
     return Actor(actor_id, df)
 
@@ -112,8 +91,7 @@ def read_config_json(config_json):
 # Scenario
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
                                 weight_factor=1, ts_hour=4, nb_ts=None, start_date="2016-01-01",
-                                plot_network=False, price_filename="basic_prices.csv", pv_prob=1,
-                                normalised=False):
+                                plot_network=False, price_filename="basic_prices.csv"):
     # Extend paths
     loads_path = data_dirpath.joinpath("load")
     pv_path = data_dirpath.joinpath("pv")
@@ -156,8 +134,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         asset_dict['prices'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
 
         actor = create_actor_from_config(actor_row['prosumerName'], asset_dict=asset_dict,
-                                         start_date=start_date, nb_ts=nb_ts, ts_hour=ts_hour,
-                                         pv_prob=pv_prob, normalised=normalised)
+                                         start_date=start_date, nb_ts=nb_ts, ts_hour=ts_hour)
 
         actors.append(actor)
         print(f'{i} actor added')
@@ -196,8 +173,7 @@ if __name__ == "__main__":
     save_network = False
 
     sc = create_scenario_from_config(config_json_path, network_path, data_dirpath=data_dirpath,
-                                     nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path,
-                                     normalised=False)
+                                     nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path)
     sc.save(sc_path, cfg.data_format)
 
     if cfg.show_plots:
