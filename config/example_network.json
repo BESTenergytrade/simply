@@ -1,5 +1,5 @@
 {
-  "fortis_network": {
+  "example_network": {
     "directed": false,
     "multigraph": false,
     "graph": {},

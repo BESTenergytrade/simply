@@ -215,3 +215,15 @@ def load_network():
     for e in nw.edges:
         nw[e[0]][e[1]]["weight"] = random.randint(0, 10) * 0.1
     return PowerNetwork("random", nw)
+
+
+def create_power_network_from_config(network_path, weight_factor=1):
+    with open(network_path) as user_file:
+        file_contents = user_file.read()
+    network_json = json.loads(file_contents)
+    network_name = list(network_json.keys())[0]
+    network_json = list(network_json.values())[0]
+    network = json_graph.node_link_graph(network_json,
+                                         directed=network_json.get("directed", False),
+                                         multigraph=network_json.get("multigraph", False))
+    return PowerNetwork(network_name, network, weight_factor)

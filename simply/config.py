@@ -84,6 +84,7 @@ class Config:
         self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
         # always create new scenario in given path
         self.update_scenario = parser.getboolean("default", "update_scenario", fallback=False)
+        self.save_network = parser.getboolean("default", "save_network", fallback=False)
 
         # which market type to use?
         self.market_type = parser.get("default", "market_type", fallback="default").lower()

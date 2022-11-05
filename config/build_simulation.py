@@ -8,20 +8,28 @@ from networkx.readwrite import json_graph
 
 from simply.actor import Actor
 from simply.scenario import Scenario
-from simply.power_network import PowerNetwork
+from simply.power_network import create_power_network_from_config
 from simply.config import Config
 
 
-def end_date_from_ts(start_date="2016-01-01", nb_ts=None, ts_hour=1):
+def dates_to_datetime(start_date="2016-01-01", nb_ts=None, ts_hour=1):
     start_date = pd.to_datetime(start_date)
-    # Rename column and insert data based on dictionary
-    ts_minutes = (nb_ts - 1) * (60 / ts_hour)
-    time_change = datetime.timedelta(minutes=ts_minutes)
+    time_change = datetime.timedelta(minutes=(nb_ts - 1) * (60 / ts_hour))
     end_date = start_date + time_change
     return start_date, end_date
 
 
-def basic_strategy(df):
+def basic_strategy(df, csv_peak, pv_scaling, load_scaling):
+    if load_scaling:
+        df['load'] *= load_scaling
+    else:
+        df['load'] *= csv_peak['load']
+    if 'pv' in csv_peak:
+        if pv_scaling:
+            df['pv'] *= pv_scaling
+        else:
+            df['pv'] *= csv_peak['pv']
+
     df["schedule"] = df["pv"] - df["load"]
     return df
 
@@ -34,24 +42,12 @@ def map_actors(config_df):
     return map
 
 
-# Power Network
-def create_power_network_from_config(network_path, weight_factor=1):
-    with open(network_path) as user_file:
-        file_contents = user_file.read()
-    network_json = json.loads(file_contents)
-    network_name = list(network_json.keys())[0]
-    network_json = list(network_json.values())[0]
-    network = json_graph.node_link_graph(network_json,
-                                         directed=network_json.get("directed", False),
-                                         multigraph=network_json.get("multigraph", False))
-    return PowerNetwork(network_name, network, weight_factor)
-
-
 # Actor
 def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
-                             ts_hour=1, cols=["load", "pv", "schedule", "prices"]):
+                             ts_hour=1, cols=["load", "pv", "schedule", "prices"],
+                             pv_scaling=None, load_scaling=None):
     df = pd.DataFrame([], columns=cols)
-    start_date, end_date = end_date_from_ts(start_date, nb_ts, ts_hour)
+    start_date, end_date = dates_to_datetime(start_date, nb_ts, ts_hour)
 
     # Read csv files for each asset
     csv_peak = {}
@@ -61,11 +57,12 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
             continue
         csv_df = pd.read_csv(csv_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=True,
                              index_col=['Time'])
-        df.loc[:, col] = csv_df[start_date:end_date]
+        df[col] = csv_df[start_date:end_date]
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
+        df[col] = df[col] / csv_peak[col]
 
-    df = basic_strategy(df)
+    df = basic_strategy(df, csv_peak, pv_scaling, load_scaling)
 
     return Actor(actor_id, df)
 
@@ -89,7 +86,8 @@ def read_config_json(config_json):
 # Scenario
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
                                 weight_factor=1, ts_hour=4, nb_ts=None, start_date="2016-01-01",
-                                plot_network=False, price_filename="basic_prices.csv"):
+                                plot_network=False, price_filename="basic_prices.csv",
+                                pv_scaling=None, load_scaling=None):
     # Extend paths
     loads_path = data_dirpath.joinpath("load")
     pv_path = data_dirpath.joinpath("pv")
@@ -104,17 +102,16 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         pn.plot()
 
     actors = []
-    file_dict = {}
-    asset_dict = {}
 
     for i, actor_row in config_df.iterrows():
+        file_dict = {}
+        asset_dict = {}
         # If there is no devices use
         if actor_row['devices'] != actor_row['devices']:
             file_df = pd.read_csv(loads_dir_path)
             current_type_files = file_df[file_df['Type'] == actor_row['prosumerType']]
             # Take the first filename associated with the prosumerType
             file_dict['load'] = list(current_type_files['Filename'])[0]
-
         else:
             for device in actor_row['devices']:
                 # save the csv file name
@@ -132,7 +129,8 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         asset_dict['prices'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
 
         actor = create_actor_from_config(actor_row['prosumerName'], asset_dict=asset_dict,
-                                         start_date=start_date, nb_ts=nb_ts, ts_hour=ts_hour)
+                                         start_date=start_date, nb_ts=nb_ts, ts_hour=ts_hour,
+                                         pv_scaling=pv_scaling, load_scaling=load_scaling)
 
         actors.append(actor)
         print(f'{i} actor added')
@@ -167,17 +165,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     cfg = Config(args.config)
-    cfg.nb_ts = 3 * 96
-    save_network = False
 
     sc = create_scenario_from_config(config_json_path, network_path, data_dirpath=data_dirpath,
-                                     nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path)
+                                     nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path, pv_scaling=1)
     sc.save(sc_path, cfg.data_format)
 
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_actor_data()
 
-    if save_network:
+    if cfg.save_network:
         sc.power_network.to_image()
         sc.power_network.to_json()
