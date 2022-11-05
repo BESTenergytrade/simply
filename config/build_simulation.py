@@ -10,6 +10,12 @@ from simply.power_network import create_power_network_from_config
 from simply.config import Config
 
 
+def check_data_present(loads_path, pv_path, price_path):
+    for path in [loads_path, pv_path, price_path]:
+        if len(os.listdir(path)) == 0:
+            raise Exception(f'{path} is missing data.')
+
+
 def dates_to_datetime(start_date="2016-01-01", nb_ts=None, ts_hour=1):
     start_date = pd.to_datetime(start_date)
     time_change = datetime.timedelta(minutes=(nb_ts - 1) * (60 / ts_hour))
@@ -90,6 +96,9 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     loads_path = data_dirpath.joinpath("load")
     pv_path = data_dirpath.joinpath("pv")
     price_path = data_dirpath.joinpath("price")
+
+    # check for data
+    check_data_present(loads_path, pv_path, price_path)
 
     # Parse json
     config_df = read_config_json(config_json)
