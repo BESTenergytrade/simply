@@ -1,6 +1,7 @@
 import datetime
 import os
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from argparse import ArgumentParser
 
@@ -34,6 +35,8 @@ def basic_strategy(df, csv_peak, pv_scaling, load_scaling):
         else:
             df['pv'] *= csv_peak['pv']
 
+    # remove nan
+    df = df.fillna(0)
     df["schedule"] = df["pv"] - df["load"]
     return df
 
@@ -73,6 +76,8 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
 
 def read_config_json(config_json):
     config_df = pd.read_json(config_json)
+    if 'devices' not in config_df:
+        config_df['devices'] = np.nan
     # Include market maker
     if 'market_maker' in list(config_df['prosumerType']):
         config_df = config_df[config_df.prosumerType != 'market_maker']
