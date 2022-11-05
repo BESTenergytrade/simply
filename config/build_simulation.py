@@ -1,10 +1,8 @@
 import datetime
-import json
 import os
 import pandas as pd
 from pathlib import Path
 from argparse import ArgumentParser
-from networkx.readwrite import json_graph
 
 from simply.actor import Actor
 from simply.scenario import Scenario
