@@ -24,17 +24,16 @@ def dates_to_datetime(start_date="2016-01-01", nb_ts=None, ts_hour=1):
     return start_date, end_date
 
 
-def basic_strategy(df, csv_peak, pv_scaling, load_scaling):
-    if load_scaling:
-        df['load'] *= load_scaling
+def basic_strategy(df, csv_peak, ps, ls):
+    if ls:
+        df['load'] *= ls
     else:
         df['load'] *= csv_peak['load']
     if 'pv' in csv_peak:
-        if pv_scaling:
-            df['pv'] *= pv_scaling
+        if ps:
+            df['pv'] *= ps
         else:
             df['pv'] *= csv_peak['pv']
-
     # remove nan
     df = df.fillna(0)
     df["schedule"] = df["pv"] - df["load"]
@@ -52,7 +51,7 @@ def map_actors(config_df):
 # Actor
 def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
                              ts_hour=1, cols=["load", "pv", "schedule", "prices"],
-                             pv_scaling=None, load_scaling=None):
+                             ps=None, ls=None):
     df = pd.DataFrame([], columns=cols)
     start_date, end_date = dates_to_datetime(start_date, nb_ts, ts_hour)
 
@@ -69,9 +68,9 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
         csv_peak[col] = df[col].max()
         df[col] = df[col] / csv_peak[col]
 
-    df = basic_strategy(df, csv_peak, pv_scaling, load_scaling)
+    df = basic_strategy(df, csv_peak, ps, ls)
 
-    return Actor(actor_id, df)
+    return Actor(actor_id, df, ls=1, ps=1)
 
 
 def read_config_json(config_json):
@@ -96,7 +95,7 @@ def read_config_json(config_json):
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
                                 weight_factor=1, ts_hour=4, nb_ts=None, start_date="2016-01-01",
                                 plot_network=False, price_filename="basic_prices.csv",
-                                pv_scaling=None, load_scaling=None):
+                                ps=None, ls=None):
     # Extend paths
     loads_path = data_dirpath.joinpath("load")
     pv_path = data_dirpath.joinpath("pv")
@@ -142,7 +141,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 
         actor = create_actor_from_config(actor_row['prosumerName'], asset_dict=asset_dict,
                                          start_date=start_date, nb_ts=nb_ts, ts_hour=ts_hour,
-                                         pv_scaling=pv_scaling, load_scaling=load_scaling)
+                                         ps=ps, ls=ls)
 
         actors.append(actor)
         print(f'{i} actor added')
@@ -179,7 +178,7 @@ if __name__ == "__main__":
     cfg = Config(args.config)
 
     sc = create_scenario_from_config(config_json_path, network_path, data_dirpath=data_dirpath,
-                                     nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path, pv_scaling=1)
+                                     nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path, ps=1)
     sc.save(sc_path, cfg.data_format)
 
     if cfg.show_plots:
