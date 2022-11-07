@@ -1,5 +1,6 @@
 import datetime
 import os
+import json
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -9,6 +10,16 @@ from simply.actor import Actor
 from simply.scenario import Scenario
 from simply.power_network import create_power_network_from_config
 from simply.config import Config
+
+
+def update_actor_json(dirpath):
+    with open(f'{dirpath}/actors.json') as f:
+        d = json.load(f)
+    if 'market_maker_buy' in d:
+        d['market_maker_buy']['id'] = 'market_maker'
+        d['market_maker_sell']['id'] = 'market_maker'
+        dirpath.mkdir(parents=True, exist_ok=True)
+        dirpath.joinpath('actors.json').write_text(json.dumps(d, indent=2))
 
 
 def check_data_present(loads_path, pv_path, price_path):
@@ -180,6 +191,7 @@ if __name__ == "__main__":
     sc = create_scenario_from_config(config_json_path, network_path, data_dirpath=data_dirpath,
                                      nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path, ps=1)
     sc.save(sc_path, cfg.data_format)
+    update_actor_json(sc_path)
 
     if cfg.show_plots:
         sc.power_network.plot()
