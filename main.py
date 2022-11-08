@@ -31,6 +31,7 @@ if __name__ == "__main__":
 
     if scenario_exists and not cfg.update_scenario:
         sc = scenario.load(cfg.path, cfg.data_format)
+        print(f'Scenario loaded from {cfg.path}')
     else:
         if cfg.path.exists():
             raise Exception('The path: ' + str(cfg.path) +

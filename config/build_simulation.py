@@ -180,18 +180,18 @@ if __name__ == "__main__":
     loads_dir_path = os.path.join(dirname, 'loads_dir.csv')
 
     data_dirpath = Path("../sample")
-    sc_path = Path("../scenarios/default")
 
     parser = ArgumentParser(description='Entry point for market simulation')
     parser.add_argument('config', nargs='?', default=config_path, help='configuration file')
     args = parser.parse_args()
 
     cfg = Config(args.config)
+    cfg.path = Path('../') / cfg.path
 
     sc = create_scenario_from_config(config_json_path, network_path, data_dirpath=data_dirpath,
                                      nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path, ps=1)
-    sc.save(sc_path, cfg.data_format)
-    update_actor_json(sc_path)
+    sc.save(cfg.path, cfg.data_format)
+    update_actor_json(cfg.path)
 
     if cfg.show_plots:
         sc.power_network.plot()
