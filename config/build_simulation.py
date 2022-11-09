@@ -173,12 +173,11 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 
 
 if __name__ == "__main__":
-    dirname = os.path.dirname(__file__)
-    config_json_path = os.path.join(dirname, 'example_config.json')
-    network_path = os.path.join(dirname, 'example_network.json')
-    config_path = os.path.join(dirname, 'config.txt')
-    loads_dir_path = os.path.join(dirname, 'loads_dir.csv')
-
+    dirname = Path(__file__).parent
+    config_json_path = dirname / Path('example_config.json')
+    network_path = dirname / Path('example_network.json')
+    config_path = dirname / Path('config.txt')
+    loads_dir_path = dirname / Path('loads_dir.csv')
     data_dirpath = Path("../sample")
 
     parser = ArgumentParser(description='Entry point for market simulation')
