@@ -66,7 +66,8 @@ class TwoSidedPayAsClear(Market):
         if show:
             print(matches)
 
-        self.append_to_csv(matches, 'matches.csv')
+        output = self.process_matches_for_csv(matches)
+        self.append_to_csv(output, 'matches.csv')
         return matches
 
 

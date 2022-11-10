@@ -32,8 +32,10 @@ class Market:
             self.grid_fee_matrix = network.grid_fee_matrix
         self.EPS = 1e-10
         if self.save_csv:
-            match_header = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
-                            "ask_cluster", "energy", "price")
+            match_header = ["time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
+                            "ask_cluster", "energy", "price"]
+            if len(self.grid_fee_matrix) > 1:
+                match_header.append('grid_fee')
             self.create_csv('matches.csv', match_header)
             self.create_csv('orders.csv', Order._fields)
 
@@ -188,7 +190,8 @@ class Market:
         if show:
             print(matches)
 
-        self.append_to_csv(matches, 'matches.csv')
+        output = self.process_matches_for_csv(matches)
+        self.append_to_csv(output, 'matches.csv')
         return matches
 
     def append_to_csv(self, data, filename):
@@ -200,6 +203,18 @@ class Market:
         with open(self.csv_path / filename, 'w') as f:
             writer = csv.writer(f)
             writer.writerow(headers)
+
+    def process_matches_for_csv(self, matches):
+        if self.grid_fee_matrix and len(self.grid_fee_matrix) > 1:
+            output = []
+            for match in matches:
+                if match['bid_cluster'] and match['ask_cluster']:
+                    match['grid_fee'] = self.grid_fee_matrix[match['bid_cluster']]
+                    [match['ask_cluster']]
+                    output.append(match)
+            return output
+        else:
+            return matches
 
     def apply_grid_fee(self, ask, bid):
         ask.price += self.grid_fee_matrix[bid.cluster][ask.cluster]
