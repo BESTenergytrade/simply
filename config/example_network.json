@@ -40,13 +40,13 @@
         "target": "N04"
       },
       {
-        "weight": 0,
+        "weight": 1,
         "source": "N04",
         "target": "N05"
       },
       {
         "weight": 0,
-        "source": "N04",
+        "source": "N05",
         "target": "market_maker"
       }
     ]
