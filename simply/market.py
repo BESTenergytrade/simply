@@ -208,10 +208,10 @@ class Market:
         if self.grid_fee_matrix and len(self.grid_fee_matrix) > 1:
             output = []
             for match in matches:
-                if match['bid_cluster'] and match['ask_cluster']:
-                    match['grid_fee'] = self.grid_fee_matrix[match['bid_cluster']]
-                    [match['ask_cluster']]
-                    output.append(match)
+                if match['bid_cluster'] is not None and match['ask_cluster'] is not None:
+                    match['grid_fee'] = \
+                        self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
+                output.append(match)
             return output
         else:
             return matches
