@@ -67,7 +67,8 @@ class Actor:
         Dictionary of received trading results per time slot including matched energy and clearing
         prices
     """
-    def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}):
+
+    def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}, grid_id=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -75,7 +76,7 @@ class Actor:
         """
         # TODO add battery component
         self.id = actor_id
-        self.grid_id = None
+        self.grid_id = grid_id
         self.t = cfg.parser.getint("default", "start", fallback=0)
         self.horizon = cfg.parser.get("actor", "horizon", fallback=24)
 
@@ -119,7 +120,7 @@ class Actor:
         for column in ["load", "pv", "prices", "schedule"]:
             if column in self.data.columns:
                 self.pred[column] = self.data[column].iloc[
-                                        self.t: self.t + self.horizon
+                                    self.t: self.t + self.horizon
                                     ].reset_index(drop=True) + self.pm[column]
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
@@ -141,7 +142,7 @@ class Actor:
         # TODO take flexibility into account to generate the bid
 
         # TODO replace order type by enum
-        new = Order(np.sign(energy), self.t, self.id, None, abs(energy), price)
+        new = Order(np.sign(energy), self.t, self.id, self.grid_id, abs(energy), price)
         self.orders.append(new)
         # update schedule for next time step
         self.t += 1
@@ -213,7 +214,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     :return: generated Actor object
     :rtype: Actor
     """
-    time_idx = pd.date_range(start_date, freq="{}min".format(int(60/ts_hour)), periods=nb_ts)
+    time_idx = pd.date_range(start_date, freq="{}min".format(int(60 / ts_hour)), periods=nb_ts)
     cols = ["load", "pv", "schedule", "prices"]
     values = np.random.rand(nb_ts, len(cols))
     df = pd.DataFrame(values, columns=cols, index=time_idx)
@@ -227,7 +228,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     ps = random.uniform(1, 7)
     # Probability of an actor to possess a PV, here 40%
     pv_prob = 0.4
-    ps = random.choices([0, ps], [1-pv_prob, pv_prob], k=1)
+    ps = random.choices([0, ps], [1 - pv_prob, pv_prob], k=1)
     df["schedule"] = ps * df["pv"] - ls * df["load"]
     max_price = 0.3
     df["prices"] *= max_price
@@ -236,7 +237,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     net_price_factor = 0.7
     df["prices"] = df.apply(
         lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor
-        * slot["prices"], axis=1
+                     * slot["prices"], axis=1
     )
 
     return Actor(actor_id, df, ls=ls, ps=ps)
@@ -318,7 +319,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     net_price_factor = 0.7
     df["prices"] = df.apply(
         lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor
-        * slot["prices"], axis=1
+                     * slot["prices"], axis=1
     )
 
     return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
