@@ -119,11 +119,13 @@ class Actor:
     def update(self):
         for column in ["load", "pv", "prices", "schedule"]:
             if column in self.data.columns:
-                self.pred[column] = self.data[column].iloc[
-                                    self.t: self.t + self.horizon
-                                    ].reset_index(drop=True) + self.pm[column]
+                self.pred[column] = \
+                    self.data[column].iloc[self.t: self.t + self.horizon].reset_index(drop=True) \
+                    + self.pm[column]
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
+
+        # if self.battery:
 
     def generate_order(self):
         """
@@ -235,11 +237,8 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     # Adapt order price by a factor to compensate net pricing of ask orders
     # (i.e. positive power) Bids however include network charges
     net_price_factor = 0.7
-    df["prices"] = df.apply(
-        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor
-                     * slot["prices"], axis=1
-    )
-
+    df["prices"] = df.apply(lambda slot: slot["prices"] - (slot["schedule"] > 0)
+                            * net_price_factor * slot["prices"], axis=1)
     return Actor(actor_id, df, ls=ls, ps=ps)
 
 
@@ -318,8 +317,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     # (i.e. positive power) Bids however include network charges
     net_price_factor = 0.7
     df["prices"] = df.apply(
-        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor
-                     * slot["prices"], axis=1
-    )
+        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor * slot["prices"],
+        axis=1)
 
     return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
