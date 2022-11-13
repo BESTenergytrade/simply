@@ -162,7 +162,7 @@ def load(dirpath, data_format):
 
     for aj in actors:
         if aj.id in pn.node_to_cluster:
-            aj.grid_id = pn.node_to_cluster[aj.id]
+            aj.cluster = pn.node_to_cluster[aj.id]
 
     # read map_actors
     map_actor_text = next(dirpath.glob('map_actors.*')).read_text()

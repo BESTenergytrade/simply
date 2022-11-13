@@ -68,7 +68,7 @@ class Actor:
         prices
     """
 
-    def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}, grid_id=None):
+    def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}, cluster=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -76,7 +76,8 @@ class Actor:
         """
         # TODO add battery component
         self.id = actor_id
-        self.grid_id = grid_id
+        self.grid_id = None
+        self.cluster = cluster
         self.t = cfg.parser.getint("default", "start", fallback=0)
         self.horizon = cfg.parser.get("actor", "horizon", fallback=24)
 
@@ -144,7 +145,7 @@ class Actor:
         # TODO take flexibility into account to generate the bid
 
         # TODO replace order type by enum
-        new = Order(np.sign(energy), self.t, self.id, self.grid_id, abs(energy), price)
+        new = Order(np.sign(energy), self.t, self.id, self.cluster, abs(energy), price)
         self.orders.append(new)
         # update schedule for next time step
         self.t += 1
