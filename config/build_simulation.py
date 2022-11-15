@@ -1,6 +1,7 @@
 import datetime
 import os
 import json
+import shutil
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -12,7 +13,9 @@ from simply.power_network import create_power_network_from_config
 from simply.config import Config
 
 
-def update_actor_json(dirpath):
+# Helper functions
+def update_actor_json_for_market_maker(dirpath):
+    """Changes market_maker buy and sell to shared id."""
     with open(f'{dirpath}/actors.json') as f:
         d = json.load(f)
     if 'market_maker_buy' in d:
@@ -23,12 +26,20 @@ def update_actor_json(dirpath):
 
 
 def check_data_present(loads_path, pv_path, price_path):
+    """Returns a custom error message if load, pv or price data files are missing."""
     for path in [loads_path, pv_path, price_path]:
         if len(os.listdir(path)) == 0:
             raise Exception(f'{path} is missing data.')
 
 
+def remove_existing_dir(path):
+    """Deletes existing repository stored in scenario save location. """
+    if path.is_dir():
+        shutil.rmtree(path)
+
+
 def dates_to_datetime(start_date="2016-01-01", nb_ts=None, ts_hour=1):
+    """Converts string dates to datetime dtype and calculates end date from timesteps parameter. """
     start_date = pd.to_datetime(start_date)
     time_change = datetime.timedelta(minutes=(nb_ts - 1) * (60 / ts_hour))
     end_date = start_date + time_change
@@ -36,6 +47,7 @@ def dates_to_datetime(start_date="2016-01-01", nb_ts=None, ts_hour=1):
 
 
 def basic_strategy(df, csv_peak, ps, ls):
+    """Scales load and pv by peak or scaling factor parameter and calculates schedule."""
     if ls:
         df['load'] *= ls
     else:
@@ -51,15 +63,35 @@ def basic_strategy(df, csv_peak, ps, ls):
     return df
 
 
-# Helper function to build power network from community config json
 def map_actors(config_df):
+    """Helper function to build power network from community config json."""
     map = {}
     for i in config_df.index:
         map[config_df["prosumerName"][i]] = config_df["gridLocation"][i]
     return map
 
 
-# Actor
+def read_config_json(config_json):
+    """Builds a pandas dataframe containing values from config json and splits market_maker into
+    buy and sell."""
+    config_df = pd.read_json(config_json)
+    if 'devices' not in config_df:
+        config_df['devices'] = np.nan
+    # Include market maker
+    if 'market_maker' in list(config_df['prosumerType']):
+        config_df = config_df[config_df.prosumerType != 'market_maker']
+        market_maker_sell = pd.DataFrame({'prosumerName': 'market_maker_sell',
+                                          'prosumerType': 'market_maker_sell', 'gridLocation':
+                                              'market_maker'}, index=[0])
+        market_maker_buy = pd.DataFrame({'prosumerName': 'market_maker_buy',
+                                         'prosumerType': 'market_maker_buy',
+                                         'gridLocation': 'market_maker'}, index=[0])
+        config_df = pd.concat([config_df, market_maker_buy, market_maker_sell], ignore_index=True)
+
+    return config_df
+
+
+# Primary functions
 def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
                              ts_hour=1, cols=["load", "pv", "schedule", "prices"],
                              ps=None, ls=None):
@@ -82,24 +114,6 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
     df = basic_strategy(df, csv_peak, ps, ls)
 
     return Actor(actor_id, df, ls=1, ps=1)
-
-
-def read_config_json(config_json):
-    config_df = pd.read_json(config_json)
-    if 'devices' not in config_df:
-        config_df['devices'] = np.nan
-    # Include market maker
-    if 'market_maker' in list(config_df['prosumerType']):
-        config_df = config_df[config_df.prosumerType != 'market_maker']
-        market_maker_sell = pd.DataFrame({'prosumerName': 'market_maker_sell',
-                                          'prosumerType': 'market_maker_sell', 'gridLocation':
-                                              'market_maker'}, index=[0])
-        market_maker_buy = pd.DataFrame({'prosumerName': 'market_maker_buy',
-                                         'prosumerType': 'market_maker_buy',
-                                         'gridLocation': 'market_maker'}, index=[0])
-        config_df = pd.concat([config_df, market_maker_buy, market_maker_sell], ignore_index=True)
-
-    return config_df
 
 
 # Scenario
@@ -173,24 +187,34 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 
 
 if __name__ == "__main__":
+    # Store default configuration files and directories paths
     dirname = Path(__file__).parent
-    config_json_path = dirname / Path('example_config.json')
+    config_json_path = dirname / Path('community_config.json')
     network_path = dirname / Path('example_network.json')
     config_path = dirname / Path('config.txt')
     loads_dir_path = dirname / Path('loads_dir.csv')
     data_dirpath = Path("../sample")
 
+    # Parse configuration files and directories paths as arguments
     parser = ArgumentParser(description='Entry point for market simulation')
+    parser.add_argument('scenario_config', nargs='?', default=config_json_path,
+                        help='scenario config json file')
+    parser.add_argument('network', nargs='?', default=network_path, help='network json file')
     parser.add_argument('config', nargs='?', default=config_path, help='configuration file')
+    parser.add_argument('loads_dir', nargs='?', default=loads_dir_path,
+                        help='loads assignment csv file')
+    parser.add_argument('data_dir', nargs='?', default=data_dirpath, help='data directory')
     args = parser.parse_args()
 
+    # Build config object using configuration file
     cfg = Config(args.config)
     cfg.path = Path('../') / cfg.path
-
-    sc = create_scenario_from_config(config_json_path, network_path, data_dirpath=data_dirpath,
-                                     nb_ts=cfg.nb_ts, loads_dir_path=loads_dir_path, ps=1)
+    # Reset save location directory
+    remove_existing_dir(cfg.path)
+    sc = create_scenario_from_config(args.scenario_config, args.network, data_dirpath=args.data_dir,
+                                     nb_ts=cfg.nb_ts, loads_dir_path=args.loads_dir, ps=1, ls=None)
     sc.save(cfg.path, cfg.data_format)
-    update_actor_json(cfg.path)
+    # update_actor_json_for_market_maker(cfg.path)
 
     if cfg.show_plots:
         sc.power_network.plot()
