@@ -90,3 +90,6 @@ class Config:
         self.market_type = parser.get("default", "market_type", fallback="default").lower()
         # weight factor: network charges to power network weight
         self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
+
+        # actor section
+        self.horizon = parser.getint("default", "horizon", fallback=24)

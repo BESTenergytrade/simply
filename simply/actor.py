@@ -79,7 +79,7 @@ class Actor:
         self.grid_id = None
         self.cluster = cluster
         self.t = cfg.parser.getint("default", "start", fallback=0)
-        self.horizon = cfg.parser.get("actor", "horizon", fallback=24)
+        self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
 
         self.load_scale = ls
         self.pv_scale = ps

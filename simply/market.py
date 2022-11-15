@@ -22,7 +22,7 @@ class Market:
         self.t = time
         self.trades = None
         self.matches = []
-        self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
+        self.energy_unit = cfg.parser.getfloat("default", "energy_unit", fallback=0.1)
         self.actor_callback = {}
         self.network = network
         self.save_csv = cfg.parser.getboolean("default", "save_csv", fallback=False)
