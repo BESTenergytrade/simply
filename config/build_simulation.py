@@ -214,7 +214,7 @@ if __name__ == "__main__":
     sc = create_scenario_from_config(args.scenario_config, args.network, data_dirpath=args.data_dir,
                                      nb_ts=cfg.nb_ts, loads_dir_path=args.loads_dir, ps=1, ls=None)
     sc.save(cfg.path, cfg.data_format)
-    # update_actor_json_for_market_maker(cfg.path)
+    update_actor_json_for_market_maker(cfg.path)
 
     if cfg.show_plots:
         sc.power_network.plot()
