@@ -1,5 +1,4 @@
-[
-  {
+[{
         "comment": "Below is an example of market maker actor.",
         "prosumerName": "market_maker",
         "prosumerType": "market_maker",
@@ -13,7 +12,7 @@
         "devices": [
             {
                 "deviceType": "load",
-                "deviceID": "CHH10_sample.csv",
+                "deviceID": "CHH10_sample.csv"
             },
             {
                 "deviceType": "solar",
@@ -29,7 +28,7 @@
         "devices": [
             {
                 "deviceType": "load",
-                "deviceID": "CHH9_sample.csv",
+                "deviceID": "CHH9_sample.csv"
             }
         ]
     },
