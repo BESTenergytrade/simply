@@ -1,0 +1,46 @@
+[default]
+
+#--------------------------
+# scenario
+#--------------------------
+# path of scenario file to load and/or store
+path = scenarios/default
+# reset market after each interval (discard unmatched orders)
+reset_market = True
+# always create new scenario in given path
+update_scenario = False
+# data_format: json, csv
+data_format = csv
+# number actors in simulation
+nb_actors = 50
+# number of nodes in simulation
+nb_nodes = 5
+# weight factor: network charges to power network weight
+weight_factor = 0.1
+
+#--------------------------
+# market
+#--------------------------
+# start timestep
+start = 0
+# number of timesteps in simulation
+nb_ts = 1
+# interval between simulation timesteps
+step_size = 1
+# which market type to use? fair, merit, pac
+market_type = fair
+# ? not in config py
+energy_unit = 0.0001
+# actor section
+horizon = 288
+
+#--------------------------
+# output
+#--------------------------
+# print debug info to console
+show_prints = True
+# show various plots
+show_plots = False
+# save orders and matching results to csv files
+save_csv = True
+#--------------------------
