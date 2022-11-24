@@ -14,8 +14,8 @@ from simply.config import Config
 
 
 # Helper functions
-def update_actor_json_for_market_maker(dirpath):
-    """Changes market_maker buy and sell to shared id."""
+def insert_market_maker_id(dirpath):
+    """Changes market_maker buy and sell to shared id within the actors json path of the dirpath."""
     with open(f'{dirpath}/actors.json') as f:
         d = json.load(f)
     if 'market_maker_buy' in d:
