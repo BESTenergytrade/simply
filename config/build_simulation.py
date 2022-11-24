@@ -39,7 +39,7 @@ def remove_existing_dir(path):
 
 
 def dates_to_datetime(start_date="2016-01-01", nb_ts=None, ts_hour=1):
-    """Converts string dates to datetime dtype and calculates end date from timesteps parameter. """
+    """Converts string dates to datetime dtype and calculates end date from timesteps parameter."""
     start_date = pd.to_datetime(start_date)
     time_change = datetime.timedelta(minutes=(nb_ts - 1) * (60 / ts_hour))
     end_date = start_date + time_change
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     sc = create_scenario_from_config(args.scenario_config, args.network, data_dirpath=args.data_dir,
                                      nb_ts=cfg.nb_ts, loads_dir_path=args.loads_dir, ps=1, ls=None)
     sc.save(cfg.path, cfg.data_format)
-    update_actor_json_for_market_maker(cfg.path)
+    insert_market_maker_id(cfg.path)
 
     if cfg.show_plots:
         sc.power_network.plot()

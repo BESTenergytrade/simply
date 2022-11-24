@@ -142,7 +142,6 @@ def load(dirpath, data_format):
     pn = power_network.PowerNetwork(network_name, network)
 
     # read actors
-
     actors = []
     if data_format == "csv":
         actors_file = next(dirpath.glob("actors.*"))
@@ -160,6 +159,7 @@ def load(dirpath, data_format):
             ai = [aj["id"], pd.read_json(aj["df"]), aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
             actors.append(actor.Actor(*ai))
 
+    # Give actors knowledge of the cluster they belong to
     for aj in actors:
         if aj.id in pn.node_to_cluster:
             aj.cluster = pn.node_to_cluster[aj.id]
