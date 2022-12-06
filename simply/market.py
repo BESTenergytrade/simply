@@ -208,7 +208,8 @@ class Market:
 
     def create_csv(self, filename, headers):
         """
-        create_csv() creates a new CSV file with the given filename at the given path with the given headers.
+        create_csv() creates a new CSV file with the given filename at the given path with the given
+        headers.
 
         :param filename: the name of the file to be created
         :param headers: a list of strings representing the headers to be written to the file
