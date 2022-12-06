@@ -134,15 +134,7 @@ def load(dirpath, data_format):
     meta = json.loads(meta_text)
     rng_seed = meta.get("rng_seed", None)
 
-    # read power network
-    network_text = next(dirpath.glob('network.*')).read_text()
-    network_json = json.loads(network_text)
-    network_name = list(network_json.keys())[0]
-    network_json = list(network_json.values())[0]
-    network = json_graph.node_link_graph(network_json,
-                                         directed=network_json.get("directed", False),
-                                         multigraph=network_json.get("multigraph", False))
-    pn = power_network.PowerNetwork(network_name, network)
+    pn = power_network.create_power_network_from_config(next(dirpath.glob('network.*')))
 
     # read actors
     actors = []
