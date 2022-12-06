@@ -219,7 +219,3 @@ if __name__ == "__main__":
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_actor_data()
-
-    if cfg.save_network:
-        sc.power_network.to_image()
-        sc.power_network.to_json()
