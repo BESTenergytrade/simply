@@ -17,6 +17,7 @@ def daily(df, daily_ts=24):
 
 
 def summerize_actor_trading(sc):
+    # Check if at least one trade has happened
     empty = True
     for i in [a.traded for a in sc.actors]:
         if len(i) != 0:
