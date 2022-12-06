@@ -209,7 +209,9 @@ class Market:
         if match['bid_cluster'] and match['ask_cluster']:
             return self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
 
-    def process_matches_for_csv(self, matches):
+    def add_grid_fee_info(self, matches):
+        """Takes in a list of matches, and returns the same list with an additional field
+        'grid_fee' added to each match dictionary."""
         if self.grid_fee_matrix and len(self.grid_fee_matrix) > 1:
             output = []
             for match in matches:
