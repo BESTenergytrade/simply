@@ -204,13 +204,16 @@ class Market:
             writer = csv.writer(f)
             writer.writerow(headers)
 
+    def get_grid_fee(self, match):
+        """Returns the grid fee associated with the bid and ask clusters from a match."""
+        if match['bid_cluster'] and match['ask_cluster']:
+            return self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
+
     def process_matches_for_csv(self, matches):
         if self.grid_fee_matrix and len(self.grid_fee_matrix) > 1:
             output = []
             for match in matches:
-                if match['bid_cluster'] is not None and match['ask_cluster'] is not None:
-                    match['grid_fee'] = \
-                        self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
+                match['grid_fee'] = self.get_grid_fee(match)
                 output.append(match)
             return output
         else:
