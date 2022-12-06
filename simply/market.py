@@ -195,23 +195,48 @@ class Market:
         return matches
 
     def append_to_csv(self, data, filename):
+        """
+        append_to_csv() appends the given data to the specified CSV file.
+
+        :param data: the data to be appended to the file, as a Pandas DataFrame
+        :param filename: the name of the file to which data should be appended
+        :return: None
+        """
         if self.save_csv:
             saved_data = pd.DataFrame(data, dtype=object)
             saved_data.to_csv(self.csv_path / filename, mode='a', index=False, header=False)
 
     def create_csv(self, filename, headers):
+        """
+        create_csv() creates a new CSV file with the given filename at the given path with the given headers.
+
+        :param filename: the name of the file to be created
+        :param headers: a list of strings representing the headers to be written to the file
+        :return: None
+        """
         with open(self.csv_path / filename, 'w') as f:
             writer = csv.writer(f)
             writer.writerow(headers)
 
     def get_grid_fee(self, match):
-        """Returns the grid fee associated with the bid and ask clusters from a match."""
+        """
+        Returns the grid fee associated with the bid and ask clusters of a given match.
+
+        :param match: a dictionary representing a match, with keys 'bid_cluster' and 'ask_cluster'
+        :return: the grid fee associated with the given bid and ask clusters
+        """
         if match['bid_cluster'] and match['ask_cluster']:
             return self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
 
     def add_grid_fee_info(self, matches):
-        """Takes in a list of matches, and returns the same list with an additional field
-        'grid_fee' added to each match dictionary."""
+        """
+        Takes in a list of matches and returns the same list with an additional field 'grid_fee'
+        added to each match dictionary.
+
+        :param matches: a list of dictionaries representing matches, with keys 'bid_cluster' and
+        'ask_cluster'
+        :return: the input list of matches with the additional field 'grid_fee'
+        """
         if self.grid_fee_matrix and len(self.grid_fee_matrix) > 1:
             output = []
             for match in matches:
@@ -222,4 +247,12 @@ class Market:
             return matches
 
     def apply_grid_fee(self, ask, bid):
+        """
+        Updates the given ask price by adding the grid fee associated with the given bid and ask
+        clusters.
+
+        :param ask: the ask price to be updated
+        :param bid: the bid used to determine the grid fee to be applied
+        :return: None
+        """
         ask.price += self.grid_fee_matrix[bid.cluster][ask.cluster]
