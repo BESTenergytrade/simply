@@ -235,7 +235,7 @@ class Market:
         added to each match dictionary.
 
         :param matches: a list of dictionaries representing matches, with keys 'bid_cluster' and
-        'ask_cluster'
+            'ask_cluster'
         :return: the input list of matches with the additional field 'grid_fee'
         """
         if self.grid_fee_matrix and len(self.grid_fee_matrix) > 1:
