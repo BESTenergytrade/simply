@@ -17,7 +17,7 @@ class Market:
     This class provides a basic matching strategy which may be overridden.
     """
 
-    def __init__(self, time, network=None, grid_fee_matrix=None):
+    def __init__(self, time, network=None, grid_fee_matrix=None, default_fee=0):
         self.orders = pd.DataFrame(columns=Order._fields)
         self.t = time
         self.trades = None
@@ -28,14 +28,13 @@ class Market:
         self.save_csv = cfg.parser.getboolean("default", "save_csv", fallback=False)
         self.csv_path = Path(cfg.parser.get("default", "path", fallback="./scenarios/default"))
         self.grid_fee_matrix = grid_fee_matrix
+        self.default_fee = default_fee
         if network is not None and grid_fee_matrix is None:
             self.grid_fee_matrix = network.grid_fee_matrix
         self.EPS = 1e-10
         if self.save_csv:
             match_header = ["time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
-                            "ask_cluster", "energy", "price"]
-            if len(self.grid_fee_matrix) > 1:
-                match_header.append('grid_fee')
+                            "ask_cluster", "energy", "price", 'grid_fee']
             self.create_csv('matches.csv', match_header)
             self.create_csv('orders.csv', Order._fields)
 
@@ -226,7 +225,9 @@ class Market:
         :param match: a dictionary representing a match, with keys 'bid_cluster' and 'ask_cluster'
         :return: the grid fee associated with the given bid and ask clusters
         """
-        if match['bid_cluster'] and match['ask_cluster']:
+        if match['bid_cluster'] is None or match['ask_cluster'] is None:
+            return self.default_fee
+        else:
             return self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
 
     def add_grid_fee_info(self, matches):
@@ -238,14 +239,11 @@ class Market:
             'ask_cluster'
         :return: the input list of matches with the additional field 'grid_fee'
         """
-        if self.grid_fee_matrix and len(self.grid_fee_matrix) > 1:
-            output = []
-            for match in matches:
-                match['grid_fee'] = self.get_grid_fee(match)
-                output.append(match)
-            return output
-        else:
-            return matches
+        output = []
+        for match in matches:
+            match['grid_fee'] = self.get_grid_fee(match)
+            output.append(match)
+        return output
 
     def apply_grid_fee(self, ask, bid):
         """
