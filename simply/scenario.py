@@ -94,14 +94,17 @@ class Scenario:
         as well as the aggregated sum per asset.
         """
         actor_data = self.concat_actor_data()
-        fig, ax = plt.subplots(3)
+        fig, ax = plt.subplots(3, sharex=True)
         ax[0].set_title("PV")
         ax[1].set_title("Load")
         ax[2].set_title("Sum")
-        get_all_data(actor_data, "pv").plot(ax=ax[0], legend=False)
-        get_all_data(actor_data, "load").plot(ax=ax[1], legend=False)
-        get_all_data(actor_data, "pv").sum(axis=1).plot(ax=ax[2])
-        get_all_data(actor_data, "load").sum(axis=1).plot(ax=ax[2])
+        pv_df = get_all_data(actor_data, "pv")
+        load_df = get_all_data(actor_data, "load")
+        mask = load_df.apply(lambda x: abs(x) == 2 ** 63 - 1)
+        pv_df.plot(ax=ax[0], legend=False)
+        load_df[~mask].plot(ax=ax[1], legend=False)
+        pv_df.sum(axis=1).plot(ax=ax[2])
+        load_df[~mask].sum(axis=1).plot(ax=ax[2])
         ax[2].legend(["pv", "load"])
         plt.show()
 
