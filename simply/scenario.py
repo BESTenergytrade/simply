@@ -78,8 +78,7 @@ class Scenario:
         # save map_actors
         dirpath.joinpath('map_actors.json').write_text(json.dumps(self.map_actors, indent=2))
 
-        self.power_network.to_image()
-        self.power_network.to_json()
+        self.power_network.to_image(dirpath)
 
     def concat_actor_data(self):
         """

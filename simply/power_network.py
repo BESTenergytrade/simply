@@ -3,6 +3,7 @@ import random
 import networkx as nx
 from networkx.readwrite import json_graph
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 import simply.config as cfg
 
@@ -108,9 +109,9 @@ class PowerNetwork:
                     self.grid_fee_matrix[i][j] = w
                     self.grid_fee_matrix[j][i] = w
 
-    def to_image(self):
+    def to_image(self, dirpath=Path("./")):
         fig = self.plot(False)
-        fig.savefig(self.name + ".png")
+        fig.savefig(dirpath / f"{self.name}.png")
 
     def plot(self, show=True):
         fig = plt.figure()

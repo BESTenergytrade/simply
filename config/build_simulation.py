@@ -74,7 +74,10 @@ def map_actors(config_df):
 def read_config_json(config_json):
     """Builds a pandas dataframe containing values from config json and splits market_maker into
     buy and sell."""
-    config_df = pd.read_json(config_json)
+    try:
+        config_df = pd.read_json(config_json)
+    except ValueError as e:
+        raise ValueError(f"You have to provide a correct json file: {e}")
     if 'devices' not in config_df:
         config_df['devices'] = np.nan
     # Include market maker
@@ -106,7 +109,7 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
             continue
         csv_df = pd.read_csv(csv_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=True,
                              index_col=['Time'])
-        df[col] = csv_df[start_date:end_date]
+        df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, 0]
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
         df[col] = df[col] / csv_peak[col]
@@ -131,6 +134,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 
     # Parse json
     config_df = read_config_json(config_json)
+
     # Create nodes for power network
     pn = create_power_network_from_config(network_path, weight_factor)
 
@@ -189,7 +193,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 if __name__ == "__main__":
     # Store default configuration files and directories paths
     dirname = Path(__file__).parent
-    config_json_path = dirname / Path('community_config.json')
+    config_json_path = dirname / Path('example_config.json')
     network_path = dirname / Path('example_network.json')
     config_path = dirname / Path('config.txt')
     loads_dir_path = dirname / Path('loads_dir.csv')
@@ -199,11 +203,11 @@ if __name__ == "__main__":
     parser = ArgumentParser(description='Entry point for market simulation')
     parser.add_argument('scenario_config', nargs='?', default=config_json_path,
                         help='scenario config json file')
-    parser.add_argument('network', nargs='?', default=network_path, help='network json file')
-    parser.add_argument('config', nargs='?', default=config_path, help='configuration file')
-    parser.add_argument('loads_dir', nargs='?', default=loads_dir_path,
+    parser.add_argument('--network', default=network_path, help='network json file')
+    parser.add_argument('--config', default=config_path, help='configuration file')
+    parser.add_argument('--loads_dir',  default=loads_dir_path,
                         help='loads assignment csv file')
-    parser.add_argument('data_dir', nargs='?', default=data_dirpath, help='data directory')
+    parser.add_argument('--data_dir', default=data_dirpath, help='data directory')
     args = parser.parse_args()
 
     # Build config object using configuration file
