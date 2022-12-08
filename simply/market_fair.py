@@ -21,10 +21,6 @@ class BestMarket(Market):
 
     def __init__(self, time, network=None, grid_fee_matrix=None):
         super().__init__(time, network, grid_fee_matrix)
-        if self.save_csv:
-            match_header = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
-                            "ask_cluster", "energy", "price", 'grid_fee')
-            self.create_csv('matches.csv', match_header)
 
     def match(self, show=False):
         asks = self.get_asks()
@@ -241,6 +237,7 @@ class BestMarket(Market):
         if show:
             print(matches)
 
-        self.append_to_csv(matches, 'matches.csv')
+        output = self.add_grid_fee_info(matches)
+        self.append_to_csv(output, 'matches.csv')
 
         return matches

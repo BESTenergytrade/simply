@@ -31,6 +31,7 @@ if __name__ == "__main__":
 
     if scenario_exists and not cfg.update_scenario:
         sc = scenario.load(cfg.path, cfg.data_format)
+        print(f'Scenario loaded from {cfg.path}')
     else:
         if cfg.path.exists():
             raise Exception('The path: ' + str(cfg.path) +
@@ -51,12 +52,12 @@ if __name__ == "__main__":
 
     # generate requested market
     if "pac" in cfg.market_type:
-        m = market_2pac.TwoSidedPayAsClear(0)
+        m = market_2pac.TwoSidedPayAsClear(0, network=sc.power_network)
     elif cfg.market_type in ["fair", "merit"]:
         m = market_fair.BestMarket(0, sc.power_network)
     else:
         # default
-        m = market.Market(0)
+        m = market.Market(0, network=sc.power_network)
 
     list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
     for t in list_ts:

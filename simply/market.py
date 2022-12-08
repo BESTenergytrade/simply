@@ -22,7 +22,7 @@ class Market:
         self.t = time
         self.trades = None
         self.matches = []
-        self.energy_unit = cfg.parser.getfloat("market", "energy_unit", fallback=0.1)
+        self.energy_unit = cfg.parser.getfloat("default", "energy_unit", fallback=0.1)
         self.actor_callback = {}
         self.network = network
         self.save_csv = cfg.parser.getboolean("default", "save_csv", fallback=False)
@@ -32,8 +32,10 @@ class Market:
             self.grid_fee_matrix = network.grid_fee_matrix
         self.EPS = 1e-10
         if self.save_csv:
-            match_header = ("time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
-                            "ask_cluster", "energy", "price")
+            match_header = ["time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
+                            "ask_cluster", "energy", "price"]
+            if len(self.grid_fee_matrix) > 1:
+                match_header.append('grid_fee')
             self.create_csv('matches.csv', match_header)
             self.create_csv('orders.csv', Order._fields)
 
@@ -188,18 +190,70 @@ class Market:
         if show:
             print(matches)
 
-        self.append_to_csv(matches, 'matches.csv')
+        output = self.add_grid_fee_info(matches)
+        self.append_to_csv(output, 'matches.csv')
         return matches
 
     def append_to_csv(self, data, filename):
+        """
+        append_to_csv() appends the given data to the specified CSV file.
+
+        :param data: the data to be appended to the file, as a Pandas DataFrame
+        :param filename: the name of the file to which data should be appended
+        :return: None
+        """
         if self.save_csv:
             saved_data = pd.DataFrame(data, dtype=object)
             saved_data.to_csv(self.csv_path / filename, mode='a', index=False, header=False)
 
     def create_csv(self, filename, headers):
+        """
+        create_csv() creates a new CSV file with the given filename at the given path with the given
+        headers.
+
+        :param filename: the name of the file to be created
+        :param headers: a list of strings representing the headers to be written to the file
+        :return: None
+        """
         with open(self.csv_path / filename, 'w') as f:
             writer = csv.writer(f)
             writer.writerow(headers)
 
+    def get_grid_fee(self, match):
+        """
+        Returns the grid fee associated with the bid and ask clusters of a given match.
+
+        :param match: a dictionary representing a match, with keys 'bid_cluster' and 'ask_cluster'
+        :return: the grid fee associated with the given bid and ask clusters
+        """
+        if match['bid_cluster'] and match['ask_cluster']:
+            return self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
+
+    def add_grid_fee_info(self, matches):
+        """
+        Takes in a list of matches and returns the same list with an additional field 'grid_fee'
+        added to each match dictionary.
+
+        :param matches: a list of dictionaries representing matches, with keys 'bid_cluster' and
+            'ask_cluster'
+        :return: the input list of matches with the additional field 'grid_fee'
+        """
+        if self.grid_fee_matrix and len(self.grid_fee_matrix) > 1:
+            output = []
+            for match in matches:
+                match['grid_fee'] = self.get_grid_fee(match)
+                output.append(match)
+            return output
+        else:
+            return matches
+
     def apply_grid_fee(self, ask, bid):
+        """
+        Updates the given ask price by adding the grid fee associated with the given bid and ask
+        clusters.
+
+        :param ask: the ask price to be updated
+        :param bid: the bid used to determine the grid fee to be applied
+        :return: None
+        """
         ask.price += self.grid_fee_matrix[bid.cluster][ask.cluster]

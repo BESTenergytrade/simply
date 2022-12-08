@@ -78,6 +78,8 @@ class Scenario:
         # save map_actors
         dirpath.joinpath('map_actors.json').write_text(json.dumps(self.map_actors, indent=2))
 
+        self.power_network.to_image(dirpath)
+
     def concat_actor_data(self):
         """
         Create a list of all actor data DataFrames and concatenate them using multi-column keys
@@ -131,18 +133,9 @@ def load(dirpath, data_format):
     meta = json.loads(meta_text)
     rng_seed = meta.get("rng_seed", None)
 
-    # read power network
-    network_text = next(dirpath.glob('network.*')).read_text()
-    network_json = json.loads(network_text)
-    network_name = list(network_json.keys())[0]
-    network_json = list(network_json.values())[0]
-    network = json_graph.node_link_graph(network_json,
-                                         directed=network_json.get("directed", False),
-                                         multigraph=network_json.get("multigraph", False))
-    pn = power_network.PowerNetwork(network_name, network)
+    pn = power_network.create_power_network_from_config(next(dirpath.glob('network.*')))
 
     # read actors
-
     actors = []
     if data_format == "csv":
         actors_file = next(dirpath.glob("actors.*"))
@@ -159,6 +152,11 @@ def load(dirpath, data_format):
             aj = json.loads(at)
             ai = [aj["id"], pd.read_json(aj["df"]), aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
             actors.append(actor.Actor(*ai))
+
+    # Give actors knowledge of the cluster they belong to
+    for aj in actors:
+        if aj.id in pn.node_to_cluster:
+            aj.cluster = pn.node_to_cluster[aj.id]
 
     # read map_actors
     map_actor_text = next(dirpath.glob('map_actors.*')).read_text()
