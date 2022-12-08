@@ -40,7 +40,6 @@ if __name__ == "__main__":
                             'simulation.')
         sc = scenario.create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.path, cfg.data_format)
-    # TODO output folder: add plots files
 
     if cfg.show_plots:
         sc.power_network.plot()
@@ -63,7 +62,6 @@ if __name__ == "__main__":
     for t in list_ts:
         m.t = t
         for a in sc.actors:
-            # TODO concurrent bidding of actors
             order = a.generate_order()
             if order:
                 m.accept_order(order, callback=a.receive_market_results)
