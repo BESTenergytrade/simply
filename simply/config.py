@@ -89,6 +89,8 @@ class Config:
         self.market_type = parser.get("default", "market_type", fallback="default").lower()
         # weight factor: network charges to power network weight
         self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
+        # default grid_fee to be used by market maker
+        self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
 
         # actor section
         self.horizon = parser.getint("default", "horizon", fallback=24)
