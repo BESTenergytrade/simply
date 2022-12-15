@@ -116,7 +116,7 @@ class BestMarket(Market):
                             "ask_cluster": ask.cluster,
                             "energy": self.energy_unit,
                             "price": ask.adjusted_price,
-                            "grid_fee": ask.adjusted_price - ask.price
+                            "included_grid_fee": ask.adjusted_price - ask.price
                         })
                     # get next bid
                     try:
@@ -197,6 +197,7 @@ class BestMarket(Market):
         asks = orders[orders.type == 1]
         if not bids_mm.empty:
             # select bidding market maker by order ID, that has highest price
+            bids_mm['price'] += self.default_grid_fee
             bid_mm_id = bids_mm['price'].astype(float).idxmax()
             bid_mm = bids_mm.loc[bid_mm_id]
             asks = asks[asks["price"] <= bid_mm.price]
@@ -210,13 +211,15 @@ class BestMarket(Market):
                     "bid_cluster": bid_mm.cluster,
                     "ask_cluster": ask.cluster,
                     "energy": ask.energy,
-                    "price": bid_mm.price
+                    "price": bid_mm.price,
+                    "included_grid_fee": self.default_grid_fee
                 })
 
         # match bids only with ask market maker with lowest price
         bids = orders[orders.type == -1]
         if not asks_mm.empty:
             # select asking market maker by order ID, that has lowest price
+            asks_mm['price'] += self.default_grid_fee
             ask_mm_id = asks_mm['price'].astype(float).idxmin()
             ask_mm = asks_mm.loc[ask_mm_id]
             # indices of matched bids equal order IDs respectively
@@ -231,7 +234,8 @@ class BestMarket(Market):
                     "bid_cluster": bid.cluster,
                     "ask_cluster": ask_mm.cluster,
                     "energy": bid.energy,
-                    "price": ask_mm.price
+                    "price": ask_mm.price,
+                    "included_grid_fee": self.default_grid_fee
                 })
 
         if show:

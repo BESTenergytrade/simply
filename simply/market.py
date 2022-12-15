@@ -36,7 +36,7 @@ class Market:
         self.EPS = 1e-10
         if self.save_csv:
             match_header = ["time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
-                            "ask_cluster", "energy", "price", 'grid_fee']
+                            "ask_cluster", "energy", "price", 'included_grid_fee']
             self.create_csv('matches.csv', match_header)
             self.create_csv('orders.csv', Order._fields)
 
@@ -252,7 +252,7 @@ class Market:
         """
         output = []
         for match in matches:
-            match['grid_fee'] = self.get_grid_fee(match)
+            match['included_grid_fee'] = self.get_grid_fee(match)
             output.append(match)
         return output
 
