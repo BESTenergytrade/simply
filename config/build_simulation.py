@@ -13,14 +13,14 @@ from simply.power_network import create_power_network_from_config
 from simply.config import Config
 
 """
-This script creates a simulation scenario from a config JSON file, network JSON file, 
-configuration text file, a loads assignment CSV file, and a data directory. 
+This script creates a simulation scenario from a config JSON file, network JSON file,
+configuration text file, a loads assignment CSV file, and a data directory.
 
-It creates a scenario object and uses this to create an Actor and Power Network object. The Actor 
-object is created using a basic strategy function, and the Power Network is created using a 
-create power network from config function. Additionally, it has helper functions to insert the 
-market maker ID, check if the data is present, remove existing directory, convert string dates to 
-datetime dtype, and build a pandas dataframe from the config JSON. """
+It creates a scenario object and uses this to create an Actor and Power Network object. The Actor
+object is created using a basic strategy function, and the Power Network is created using a
+create power network from config function. Additionally, it has helper functions to insert the
+market maker ID, check if the data is present, remove existing directory, convert string dates to
+datetime dtype, and build a pandas dataframe from the config JSON."""
 
 
 # Helper functions
@@ -144,7 +144,8 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
                                 plot_network=False, price_filename="basic_prices.csv",
                                 ps=None, ls=None):
     """
-    Create a Scenario object from a configuration json, network path, loads directory path and other optional parameters.
+    Create a Scenario object from a configuration json, network path, loads directory path and
+    other optional parameters.
 
     :param config_json: Path object of the configuration json
     :param network_path: Path object of the network csv
@@ -153,12 +154,12 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     :param weight_factor: Weight factor used to derive grid fees, defaults to 1
     :param ts_hour: Number of time slot of equal length within one hour, defaults to 4
     :param nb_ts: Number of time slots to be generated, defaults to None
-    :param start_date: Start date of the scenario, defaults to "2016-01-01"
-    :param plot_network: Boolean value to indicate whether the network should be plotted, defaults to False
+    :param start_date: Start date of the scenario,defaults to "2016-01-01"
+    :param plot_network: Boolean value to indicate whether the network should be plotted,
+        defaults to False
     :param price_filename: Name of the price csv file, defaults to "basic_prices.csv"
-    :param ps: Penalty scalar, defaults to None
-    :param ls: Loss scalar, defaults to None
-
+    :param ps: PV scalar, defaults to None
+    :param ls: Load scalar, defaults to None
     :return: Scenario object
     """
     # Extend paths
