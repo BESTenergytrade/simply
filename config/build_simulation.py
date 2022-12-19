@@ -105,7 +105,8 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
                              ts_hour=1, cols=["load", "pv", "schedule", "prices"],
                              ps=None, ls=None):
     """
-    Create an Actor object from its ID, asset dictionary, start date, number of time slots, time slot per hour, columns, penalty scalar and loss scalar.
+    Create an Actor object from its ID, asset dictionary, start date, number of time slots, time
+    slot per hour, columns, penalty scalar and loss scalar.
 
     :param actor_id: ID of the actor
     :param asset_dict: Dictionary of asset information
