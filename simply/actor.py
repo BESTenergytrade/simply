@@ -6,6 +6,7 @@ from collections import namedtuple
 import matplotlib.pyplot as plt
 
 from simply.util import daily, gaussian_pv
+from simply.battery import Battery
 import simply.config as cfg
 
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
@@ -84,7 +85,7 @@ class Actor:
         self.load_scale = ls
         self.pv_scale = ps
         self.error_scale = 0
-        self.battery = None
+        self.battery = Battery
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -126,8 +127,6 @@ class Actor:
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
-        # if self.battery:
-
     def generate_order(self):
         """
         Generate new order for current time slot according to predicted schedule
@@ -137,6 +136,8 @@ class Actor:
         :rtype: Order
         """
         # TODO calculate amount of energy to fulfil personal schedule
+        if self.battery:
+            self.battery.basic_strategy()
         energy = self.pred["schedule"][0]
         if energy == 0:
             return None
