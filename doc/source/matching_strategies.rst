@@ -130,9 +130,6 @@ If an ask is matched in more than one cluster, the match is only kept in the clu
 charge is the lowest. The match is deleted from the other clusters. The clusters with deleted matches 
 are then subjected to a new matching procedure. This procedure continues until no more duplicate matches occur. 
 
-
-Translated with www.DeepL.com/Translator (free version)
-
 The tables below illustrate the internal steps during the matching of the :ref:`example_scenario`
 using BEST matching:
 
