@@ -226,7 +226,8 @@ class Market:
         :param match: a dictionary representing a match, with keys 'bid_cluster' and 'ask_cluster'
         :return: the grid fee associated with the given bid and ask clusters
         """
-        if match['bid_cluster'] and match['ask_cluster']:
+        if isinstance(match['bid_cluster'], (int, float, str)) and isinstance(match['ask_cluster'],
+                                                                              (int, float, str)):
             return self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
 
     def add_grid_fee_info(self, matches):
