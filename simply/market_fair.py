@@ -2,8 +2,8 @@ import pandas as pd
 
 from simply.market import Market
 
-LARGE_ORDER_THRESHOLD = 2**32
-MARKET_MAKER_THRESHOLD = 2**63-1
+LARGE_ORDER_THRESHOLD = 2 ** 32
+MARKET_MAKER_THRESHOLD = 2 ** 63 - 1
 
 
 class BestMarket(Market):
@@ -19,8 +19,9 @@ class BestMarket(Market):
     This converges to an optimal solution.
     """
 
-    def __init__(self, time, network=None, grid_fee_matrix=None):
+    def __init__(self, time, network=None, grid_fee_matrix=None, disputed_matching='price'):
         super().__init__(time, network, grid_fee_matrix)
+        self.disputed_matching = disputed_matching
 
     def match(self, show=False):
         asks = self.get_asks()
@@ -54,12 +55,12 @@ class BestMarket(Market):
         asks = pd.DataFrame(asks)
         asks["order_id"] = asks.index
         asks = pd.DataFrame(asks.values.repeat(
-            asks.energy * (1/self.energy_unit), axis=0), columns=asks.columns)
+            asks.energy * (1 / self.energy_unit), axis=0), columns=asks.columns)
         asks.energy = self.energy_unit
         bids = pd.DataFrame(bids)
         bids["order_id"] = bids.index
         bids = pd.DataFrame(bids.values.repeat(
-            bids.energy * (1/self.energy_unit), axis=0), columns=bids.columns)
+            bids.energy * (1 / self.energy_unit), axis=0), columns=bids.columns)
         bids.energy = self.energy_unit
 
         # keep track which clusters have to be (re)matched
@@ -137,20 +138,8 @@ class BestMarket(Market):
                 # asks are removed where market clearing price is lower
                 for match_idx, match in enumerate(matches):
                     if match["ask_id"] == _match["ask_id"]:
-                        # same ask: compare prices
-                        if _match["price"] > match["price"]:
-                            # new match is better:
-                            # exclude old match
-                            exclude[match["bid_cluster"]].add(match["ask_id"])
-                            # replace old match
-                            matches[match_idx] = _match
-                            # redo other cluster
-                            clusters_to_match.add(match["bid_cluster"])
-                        else:
-                            # old match is better: exclude new match
-                            exclude[cluster_idx].add(_match["ask_id"])
-                            # redo current cluster
-                            clusters_to_match.add(cluster_idx)
+                        self.remove_double_matches(exclude, match, _match, clusters_to_match,
+                                                   matches, bids, match_idx)
                         break
                 else:
                     # new match does not conflict: insert as-is
@@ -241,3 +230,50 @@ class BestMarket(Market):
         self.append_to_csv(output, 'matches.csv')
 
         return matches
+
+    def exclude_matches(self, exclude, to_exclude, to_keep, clusters_to_match, matches,
+                        match_idx=None, exclude_exisiting=False):
+        exclude[to_exclude["bid_cluster"]].add(to_exclude["ask_id"])
+        if exclude_exisiting:
+            # replace old match
+            matches[match_idx] = to_keep
+        # redo other cluster
+        clusters_to_match.add(to_keep['bid_cluster'])
+
+    def remove_double_matches(self, exclude, match, _match, clusters_to_match, matches, bids,
+                              match_idx=None):
+        if self.disputed_matching == 'price':
+            if _match["price"] > match["price"]:
+                # new match is better:
+                # exclude old match
+                self.exclude_matches(exclude, match, _match, clusters_to_match, matches,
+                                     match_idx=match_idx, exclude_exisiting=True)
+            else:
+                # old match is better: exclude new match
+                self.exclude_matches(exclude, _match, match, clusters_to_match, matches,
+                                     exclude_exisiting=False)
+
+        elif self.disputed_matching == 'grid_fee':
+            if _match["grid_fee"] < match["grid_fee"] or _match["grid_fee"] == match["grid_fee"] \
+                    and bids.loc[_match['bid_id'], 'price'] > bids.loc[match['bid_id'], 'price']:
+                # new match is better:
+                # exclude old match
+                self.exclude_matches(exclude, match, _match, clusters_to_match,
+                                     matches, match_idx=match_idx, exclude_exisiting=True)
+            else:
+                # old match is better: exclude new match
+                self.exclude_matches(exclude, _match, match, clusters_to_match, matches,
+                                     exclude_exisiting=False)
+
+        elif self.disputed_matching == 'bid_price':
+            if bids.loc[_match['bid_id'], 'price'] > bids.loc[match['bid_id'], 'price'] or \
+                    bids.loc[_match['bid_id'], 'price'] == bids.loc[match['bid_id'], 'price'] and \
+                    _match['grid_fee'] < match['grid_fee']:
+                # new match is better:
+                # exclude old match
+                self.exclude_matches(exclude, match, _match, clusters_to_match, matches,
+                                     match_idx=match_idx, exclude_exisiting=True)
+            else:
+                # old match is better: exclude new match
+                self.exclude_matches(exclude, _match, match, clusters_to_match, matches,
+                                     exclude_exisiting=False)
