@@ -41,6 +41,7 @@ class Market:
             self.create_csv('orders.csv', Order._fields)
 
     def add_default_grid_fee(self):
+        # append column and row containing the default grid fee
         for row in self.grid_fee_matrix:
             row.append(self.default_grid_fee)
         additional_row = [self.default_grid_fee for i in range((len(self.grid_fee_matrix) + 1))]
@@ -237,6 +238,7 @@ class Market:
             return 0
         else:
             if match['bid_cluster'] is None or match['ask_cluster'] is None:
+                # default grid fee
                 return self.grid_fee_matrix[0][-1]
             else:
                 return self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]

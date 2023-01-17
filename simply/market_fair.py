@@ -31,7 +31,7 @@ class BestMarket(Market):
         large_asks = asks[large_asks_mask]
         asks_mm = large_asks[large_asks.energy >= MARKET_MAKER_THRESHOLD]
         if len(asks_mm) > 1:
-            print(f"WARNING! {len(asks_mm)} ask market makers")
+            print(f"WARNING! More than one ask market maker:{len(asks_mm)}")
         asks = asks[~large_asks_mask]
         if len(large_asks) > len(asks_mm):
             print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
@@ -39,7 +39,7 @@ class BestMarket(Market):
         large_bids = bids[large_bids_mask]
         bids_mm = large_bids[large_bids.energy >= MARKET_MAKER_THRESHOLD]
         if len(bids_mm) > 1:
-            print(f"WARNING! {len(bids_mm)} bid market makers")
+            print(f"WARNING! More than one bid market maker: {len(bids_mm)}")
         bids = bids[~large_bids_mask]
         if len(large_bids) > len(bids_mm):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))

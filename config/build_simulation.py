@@ -19,8 +19,9 @@ configuration text file, a loads assignment CSV file, and a data directory.
 It creates a scenario object and uses this to create an Actor and Power Network object. The Actor
 object is created using a basic strategy function, and the Power Network is created using a
 create power network from config function. Additionally, it has helper functions to insert the
-market maker ID, check if the data is present, remove existing directory, convert string dates to
-datetime dtype, and build a pandas dataframe from the config JSON."""
+market maker ID, check if the data is present, remove existing scenario directory,
+convert string dates to datetime dtype, and build a pandas dataframe from the config JSON.
+"""
 
 
 # Helper functions
@@ -105,8 +106,8 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
                              ts_hour=1, cols=["load", "pv", "schedule", "prices"],
                              ps=None, ls=None):
     """
-    Create an Actor object from its ID, asset dictionary, start date, number of time slots, time
-    slot per hour, columns, penalty scalar and loss scalar.
+    Create Actor with an ID and given asset time series shifted to a specified start time and
+    resolution (and scaled by factors ps/ls if given).
 
     :param actor_id: ID of the actor
     :param asset_dict: Dictionary of asset information
@@ -145,13 +146,14 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
                                 plot_network=False, price_filename="basic_prices.csv",
                                 ps=None, ls=None):
     """
-    Create a Scenario object from a configuration json, network path, loads directory path and
-    other optional parameters.
+    Create Scenario object while creating Actor objects from config_json referencing to time series
+     data in data_path. The Actors are further mapped to a defined network.
 
-    :param config_json: Path object of the configuration json
-    :param network_path: Path object of the network csv
+    :param config_json: Path object of the configuration json file
+    :param network_path: Path object of the network json file
     :param loads_dir_path: Path object of the directory containing loads csv
-    :param data_dirpath: Path object of the directory containing all data, defaults to None
+    :param data_dirpath: Path object of the directory containing all time series data,
+        defaults to None
     :param weight_factor: Weight factor used to derive grid fees, defaults to 1
     :param ts_hour: Number of time slot of equal length within one hour, defaults to 4
     :param nb_ts: Number of time slots to be generated, defaults to None
