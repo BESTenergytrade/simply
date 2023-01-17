@@ -55,6 +55,13 @@ class Config:
             parser.read_string(config_string)
 
         # default section: basic simulation properties
+        # --------------------------
+        # scenario
+        # --------------------------
+
+        # --------------------------
+        # market
+        # --------------------------
         # start timestep
         self.start = parser.getint("default", "start", fallback=8)
         # number of timesteps in simulation
@@ -69,12 +76,16 @@ class Config:
         # not read from file but created from above information
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
 
+        # --------------------------
+        # output
+        # --------------------------
         # show various plots
         self.show_plots = parser.getboolean("default", "show_plots", fallback=False)
         # print debug info to console
         self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
         # save orders and matching results to csv files
         self.save_csv = parser.getboolean("default", "save_csv", fallback=True)
+
 
         # path of scenario file to load and/or store
         self.path = parser.get("default", "path", fallback="./scenarios/default")
@@ -85,7 +96,7 @@ class Config:
         # always create new scenario in given path
         self.update_scenario = parser.getboolean("default", "update_scenario", fallback=False)
 
-        # which market type to use?
+        # market type to be use
         self.market_type = parser.get("default", "market_type", fallback="default").lower()
         # weight factor: network charges to power network weight
         self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
