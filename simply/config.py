@@ -58,23 +58,43 @@ class Config:
         # --------------------------
         # scenario
         # --------------------------
+        # path of scenario file to load and/or store
+        self.path = parser.get("default", "path", fallback="./scenarios/default")
+        self.path = Path(self.path)
+        self.data_format = parser.get("default", "data_format", fallback="json")
+        # reset market after each interval (discard unmatched orders)
+        self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
+        # always create new scenario in given path
+        self.update_scenario = parser.getboolean("default", "update_scenario", fallback=False)
 
-        # --------------------------
-        # market
-        # --------------------------
-        # start timestep
-        self.start = parser.getint("default", "start", fallback=8)
-        # number of timesteps in simulation
-        self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
+        # For generating random scenario
         # number actors in simulation
         self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
         # number of nodes in simulation
         self.nb_nodes = parser.getint('default', 'nb_nodes', fallback=4)
+        # weight factor: network charges to power network weight
+        self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
+
+        # --------------------------
+        # market
+        # --------------------------
+        # market type to be use
+        self.market_type = parser.get("default", "market_type", fallback="default").lower()
+        # default grid_fee to be used by market maker
+        self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
+
+        # time related
+        # start timestep
+        self.start = parser.getint("default", "start", fallback=8)
+        # number of timesteps in simulation
+        self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
         # interval between simulation timesteps
         self.step_size = parser.getint("default", "step_size", fallback=1)
         # list of timesteps in simulation
         # not read from file but created from above information
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
+        # actor section
+        self.horizon = parser.getint("default", "horizon", fallback=24)
 
         # --------------------------
         # output
@@ -85,23 +105,3 @@ class Config:
         self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
         # save orders and matching results to csv files
         self.save_csv = parser.getboolean("default", "save_csv", fallback=True)
-
-
-        # path of scenario file to load and/or store
-        self.path = parser.get("default", "path", fallback="./scenarios/default")
-        self.path = Path(self.path)
-        self.data_format = parser.get("default", "data_format", fallback="json")
-        # reset market after each interval (discard unmatched orders)
-        self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
-        # always create new scenario in given path
-        self.update_scenario = parser.getboolean("default", "update_scenario", fallback=False)
-
-        # market type to be use
-        self.market_type = parser.get("default", "market_type", fallback="default").lower()
-        # weight factor: network charges to power network weight
-        self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
-        # default grid_fee to be used by market maker
-        self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
-
-        # actor section
-        self.horizon = parser.getint("default", "horizon", fallback=24)
