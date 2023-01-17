@@ -32,6 +32,7 @@ class Config:
             [pab]/basic (pay-as-bid)\n
             pac/2pac (two-sided pay-as-clear)\n
             fair/merit (custom BEST market)\n
+        - energy_unit: size of energy units to be traded individually [0.01]\n
         - weight_factor: conversion factor from grid fees to power network node weight [0.1]\n
     [actor]
         - horizon - number of timesteps to look ahead for prediction [24]
@@ -80,6 +81,8 @@ class Config:
         # --------------------------
         # market type to be use
         self.market_type = parser.get("default", "market_type", fallback="default").lower()
+        # size of energy units to be traded individually
+        self.energy_unit = parser.getfloat("default", "energy_unit", fallback=0.01)
         # default grid_fee to be used by market maker
         self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
 
