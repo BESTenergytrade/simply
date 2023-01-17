@@ -5,8 +5,6 @@
 #--------------------------
 # path of scenario file to load and/or store
 path = examples/example_scenario
-# reset market after each interval (discard unmatched orders)
-reset_market = True
 # always create new scenario in given path
 update_scenario = False
 # possible data_formats: json, csv
@@ -29,8 +27,11 @@ start = 1
 nb_ts = 12
 # interval between simulation timesteps
 step_size = 1
+
 # which market type to use? fair, merit, pac
 market_type = fair
+# reset market after each interval (discard unmatched orders)
+reset_market = True
 # size of energy units to be traded individually
 energy_unit = 0.01
 

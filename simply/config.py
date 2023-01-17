@@ -63,8 +63,6 @@ class Config:
         self.path = parser.get("default", "path", fallback="./scenarios/default")
         self.path = Path(self.path)
         self.data_format = parser.get("default", "data_format", fallback="json")
-        # reset market after each interval (discard unmatched orders)
-        self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
         # always create new scenario in given path
         self.update_scenario = parser.getboolean("default", "update_scenario", fallback=False)
 
@@ -81,6 +79,8 @@ class Config:
         # --------------------------
         # market type to be use
         self.market_type = parser.get("default", "market_type", fallback="default").lower()
+        # reset market after each interval (discard unmatched orders)
+        self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
         # size of energy units to be traded individually
         self.energy_unit = parser.getfloat("default", "energy_unit", fallback=0.01)
         # default grid_fee to be used by market maker
