@@ -8,7 +8,7 @@ path = examples/example_scenario
 # reset market after each interval (discard unmatched orders)
 reset_market = True
 # always create new scenario in given path
-self.update_scenario = parser.getboolean("default", "update_scenario", fallback=False)
+update_scenario = False
 # possible data_formats: json, csv
 data_format = csv
 
