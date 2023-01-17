@@ -3,20 +3,22 @@
 #--------------------------
 # scenario
 #--------------------------
+# load existing scenario
+load_scenario = True
 # path of scenario file to load and/or store
 path = examples/example_scenario
 # reset market after each interval (discard unmatched orders)
-reset_market =True
-# always create new scenario in given path
-update_scenario = False
-# data_format: json, csv
+reset_market = True
+# possible data_formats: json, csv
 data_format = csv
+
+# For generating random scenario
 # number actors in simulation
 nb_actors = 10
 # number of nodes in simulation
 nb_nodes = 3
 # weight factor: network charges to power network weight
-weight_factor = 0.1
+weight_factor = 0.01
 
 #--------------------------
 # market
