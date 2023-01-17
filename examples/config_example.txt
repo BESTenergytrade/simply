@@ -32,7 +32,7 @@ step_size = 1
 # which market type to use? fair, merit, pac
 market_type = fair
 # size of energy units to be traded individually
-energy_unit = 0.1
+energy_unit = 0.01
 
 #--------------------------
 # output
