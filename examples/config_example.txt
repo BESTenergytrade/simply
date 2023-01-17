@@ -3,12 +3,12 @@
 #--------------------------
 # scenario
 #--------------------------
-# load existing scenario
-load_scenario = True
 # path of scenario file to load and/or store
 path = examples/example_scenario
 # reset market after each interval (discard unmatched orders)
 reset_market = True
+# always create new scenario in given path
+self.update_scenario = parser.getboolean("default", "update_scenario", fallback=False)
 # possible data_formats: json, csv
 data_format = csv
 
@@ -31,7 +31,7 @@ nb_ts = 12
 step_size = 1
 # which market type to use? fair, merit, pac
 market_type = fair
-# ? not in config py
+# size of energy units to be traded individually
 energy_unit = 0.1
 
 #--------------------------
