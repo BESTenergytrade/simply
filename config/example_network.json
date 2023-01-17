@@ -18,9 +18,6 @@
       },
       {
         "id":  "N05"
-      },
-      {
-        "id":  "market_maker"
       }
     ],
     "links": [
@@ -43,11 +40,6 @@
         "weight": 1,
         "source": "N04",
         "target": "N05"
-      },
-      {
-        "weight": 0,
-        "source": "N05",
-        "target": "market_maker"
       }
     ]
   }

@@ -19,8 +19,8 @@ class BestMarket(Market):
     This converges to an optimal solution.
     """
 
-    def __init__(self, time, network=None, grid_fee_matrix=None):
-        super().__init__(time, network, grid_fee_matrix)
+    def __init__(self, time, network=None, grid_fee_matrix=None, default_grid_fee=0):
+        super().__init__(time, network, grid_fee_matrix, default_grid_fee)
 
     def match(self, show=False):
         asks = self.get_asks()
@@ -30,12 +30,16 @@ class BestMarket(Market):
         large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
         large_asks = asks[large_asks_mask]
         asks_mm = large_asks[large_asks.energy >= MARKET_MAKER_THRESHOLD]
+        if len(asks_mm) > 1:
+            print(f"WARNING! More than one ask market maker:{len(asks_mm)}")
         asks = asks[~large_asks_mask]
         if len(large_asks) > len(asks_mm):
             print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
         large_bids_mask = bids.energy >= LARGE_ORDER_THRESHOLD
         large_bids = bids[large_bids_mask]
         bids_mm = large_bids[large_bids.energy >= MARKET_MAKER_THRESHOLD]
+        if len(bids_mm) > 1:
+            print(f"WARNING! More than one bid market maker: {len(bids_mm)}")
         bids = bids[~large_bids_mask]
         if len(large_bids) > len(bids_mm):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
@@ -116,7 +120,7 @@ class BestMarket(Market):
                             "ask_cluster": ask.cluster,
                             "energy": self.energy_unit,
                             "price": ask.adjusted_price,
-                            "grid_fee": ask.adjusted_price - ask.price
+                            "included_grid_fee": ask.adjusted_price - ask.price
                         })
                     # get next bid
                     try:
@@ -197,6 +201,7 @@ class BestMarket(Market):
         asks = orders[orders.type == 1]
         if not bids_mm.empty:
             # select bidding market maker by order ID, that has highest price
+            bids_mm['price'] += self.default_grid_fee
             bid_mm_id = bids_mm['price'].astype(float).idxmax()
             bid_mm = bids_mm.loc[bid_mm_id]
             asks = asks[asks["price"] <= bid_mm.price]
@@ -210,13 +215,15 @@ class BestMarket(Market):
                     "bid_cluster": bid_mm.cluster,
                     "ask_cluster": ask.cluster,
                     "energy": ask.energy,
-                    "price": bid_mm.price
+                    "price": bid_mm.price,
+                    "included_grid_fee": self.default_grid_fee
                 })
 
         # match bids only with ask market maker with lowest price
         bids = orders[orders.type == -1]
         if not asks_mm.empty:
             # select asking market maker by order ID, that has lowest price
+            asks_mm['price'] += self.default_grid_fee
             ask_mm_id = asks_mm['price'].astype(float).idxmin()
             ask_mm = asks_mm.loc[ask_mm_id]
             # indices of matched bids equal order IDs respectively
@@ -231,7 +238,8 @@ class BestMarket(Market):
                     "bid_cluster": bid.cluster,
                     "ask_cluster": ask_mm.cluster,
                     "energy": bid.energy,
-                    "price": ask_mm.price
+                    "price": ask_mm.price,
+                    "included_grid_fee": self.default_grid_fee
                 })
 
         if show:
