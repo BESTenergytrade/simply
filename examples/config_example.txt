@@ -5,8 +5,8 @@
 #--------------------------
 # path of scenario file to load and/or store
 path = examples/example_scenario
-# always create new scenario in given path
-update_scenario = False
+# load existing scenario
+load_scenario = True
 # possible data_formats: json, csv
 data_format = csv
 
