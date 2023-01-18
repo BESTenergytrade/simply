@@ -240,7 +240,7 @@ if __name__ == "__main__":
     config_json_path = dirname / Path('example_config.json')
     network_path = dirname / Path('example_network.json')
     config_path = dirname / Path('config.txt')
-    loads_dir_path = dirname / Path('loads_dir.csv')
+    loads_dir_path = dirname / Path('../config/loads_dir.csv')
     data_dirpath = Path("../sample")
 
     # Parse configuration files and directories paths as arguments
