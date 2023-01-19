@@ -1,6 +1,5 @@
 from simply import market, market_2pac, market_fair
 from simply.actor import Order
-from simply import power_network
 
 from argparse import ArgumentParser
 import json
@@ -66,8 +65,6 @@ class MatchingAlgorithm(ABC):
 
         for market_id, market_name in mycoDict.items():
             for time, orders in market_name.items():
-                actors = [bid["id"] for bid in orders["bids"]] + \
-                         [ask["id"] for ask in orders["offers"]]
 
                 m = market(time=time, grid_fee_matrix=grid_fee_matrix)
                 bids = {bid["id"]: bid for bid in orders["bids"]}

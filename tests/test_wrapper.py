@@ -322,7 +322,7 @@ class TestBestClusterPayAsClearMatchingAlgorithm:
         Test whether the matches from a list of offers and bids are the expected ones.
         Single bid and single offer with floating point tolerance
         """
-        grid_fee_matrix = [[0,0], [0, 0]]
+        grid_fee_matrix = [[0, 0], [0, 0]]
         data = {
             "market1": {
                 "2021-10-06T12:00": {
@@ -336,7 +336,8 @@ class TestBestClusterPayAsClearMatchingAlgorithm:
                 }
             }
         }
-        recommendations = BestClusterPayAsClearMatchingAlgorithm.get_matches_recommendations(data, grid_fee_matrix)
+        recommendations = BestClusterPayAsClearMatchingAlgorithm.get_matches_recommendations(
+            data, grid_fee_matrix)
         expected_recommendations = [
             {"market_id": "market1",
              "time_slot": "2021-10-06T12:00",
