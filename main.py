@@ -27,15 +27,19 @@ if __name__ == "__main__":
     cfg = Config(args.config)
     # Load scenario, if path exists with the correct format
     # otherwise remove all files in existing folder and create new scenario
+    # check if actor-files with correct format exist in cfg.path
     scenario_exists = len([False for i in cfg.path.glob(f"actor_*.{cfg.data_format}")]) != 0
 
-    if scenario_exists and not cfg.update_scenario:
-        sc = scenario.load(cfg.path, cfg.data_format)
-        print(f'Scenario loaded from {cfg.path}')
+    print(f'Scenario path: {cfg.path}')
+    # load existing scenario or else create randomized new one
+    if cfg.load_scenario:
+        if scenario_exists:
+            sc = scenario.load(cfg.path, cfg.data_format)
+        else:
+            raise Exception(f'Could not find actor data in path: {cfg.path} .')
     else:
         if cfg.path.exists():
-            raise Exception('The path: ' + str(cfg.path) +
-                            ' already exists with another file structure.'
+            raise Exception(f'The path: {cfg.path} already exists with another file structure. '
                             'Please remove or rename folder to avoid confusion and restart '
                             'simulation.')
         sc = scenario.create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
