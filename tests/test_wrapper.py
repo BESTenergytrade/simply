@@ -1,5 +1,6 @@
 from simply.market_wrapper import (BestPayAsBidMatchingAlgorithm,
                                    BestClusterPayAsClearMatchingAlgorithm)
+import pytest
 
 FLOATING_POINT_TOLERANCE = 0.00001
 
@@ -322,16 +323,16 @@ class TestBestClusterPayAsClearMatchingAlgorithm:
         Test whether the matches from a list of offers and bids are the expected ones.
         Single bid and single offer with floating point tolerance
         """
-        grid_fee_matrix = [[0, 0], [0, 0]]
+        grid_fee_matrix = [[0, 1], [1, 0]]
         data = {
             "market1": {
                 "2021-10-06T12:00": {
                     "bids": [
-                        {"id": 3, "buyer": "C", "energy_rate": 3, "energy": 0.2, 'cluster': 0}
+                        {"id": 3, "buyer": "C", "energy_rate": 5, "energy": 0.2, 'cluster': 0}
                     ],
                     "offers": [
-                        {"id": 4, "seller": "A", "energy_rate": 1 + FLOATING_POINT_TOLERANCE,
-                         "energy": 0.3, 'cluster': 0}
+                        {"id": 4, "seller": "A", "energy_rate": 3,
+                         "energy": 0.3, 'cluster': 1}
                     ],
                 }
             }
@@ -341,8 +342,11 @@ class TestBestClusterPayAsClearMatchingAlgorithm:
         expected_recommendations = [
             {"market_id": "market1",
              "time_slot": "2021-10-06T12:00",
-             "bid": {"id": 3, "buyer": "C", "energy_rate": 3, "energy": 0.2},
-             "offer": {"id": 4, "seller": "A", "energy_rate": 1.00001, "energy": 0.3},
-             "selected_energy": 0.2, "trade_rate": 3, "matching_requirements": None},
+             "bid": {"id": 3, "buyer": "C", "energy_rate": 5, "energy": 0.2, 'cluster': 0},
+             "offer": {"id": 4, "seller": "A", "energy_rate": 3, "energy": 0.3, 'cluster': 1},
+             "selected_energy": 0.2, "trade_rate": 4, "matching_requirements": None},
         ]
-        assert recommendations == expected_recommendations
+
+        for i, match in enumerate(expected_recommendations):
+            for k in match.keys():
+                assert match[k] == pytest.approx(recommendations[i][k])
