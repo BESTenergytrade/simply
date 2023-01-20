@@ -24,7 +24,12 @@ python -m pytest
 ```sh
 python main.py config.txt
 ```
-If `config.txt` or individual fields are not specified, default values are used as described in `simply/config.py`
+
+To run the example scenario, use the config file, `examples/config_example.txt`. Results can be 
+checked in the `example_scenario` folder.
+
+If `config.txt` or individual fields are not specified, default values are used as described in 
+`simply/config.py`.
 
 **gsy-e wrapper**
 In order to use the simply matching algrithms in gsy-e through the [myco API](https://github.com/gridsingularity/gsy-myco-sdk), the wrapper can be used to translate the json string of gsy-e orders to the simply market model as shown in `market_wrapper.py`.
