@@ -200,6 +200,33 @@ class TestPayAsBidMatchingAlgorithm:
             "market1": {
                 "2021-10-06T12:00": {
                     "bids": [
+                        {"id": 3, "buyer": "C", "energy_rate": 3, "energy": 20.01}
+                    ],
+                    "offers": [
+                        {"id": 4, "seller": "A", "energy_rate": 1.0, "energy": 25}
+                    ],
+                }
+            }
+        }
+        recommendations = BestPayAsBidMatchingAlgorithm.get_matches_recommendations(data)
+        expected_recommendations = [
+            {"market_id": "market1",
+             "time_slot": "2021-10-06T12:00",
+             "bid": {"id": 3, "buyer": "C", "energy_rate": 3, "energy": 20.01},
+             "offer": {"id": 4, "seller": "A", "energy_rate": 1, "energy": 25},
+             "selected_energy": 20.01, "trade_rate": 3, "matching_requirements": None},
+        ]
+        compare_dicts(expected_recommendations, recommendations)
+
+    @staticmethod
+    def test_energy_unit_bigger():
+        """
+        Test the granularity of energy is matched.
+        """
+        data = {
+            "market1": {
+                "2021-10-06T12:00": {
+                    "bids": [
                         {"id": 3, "buyer": "C", "energy_rate": 3, "energy": 20.001}
                     ],
                     "offers": [
@@ -214,9 +241,9 @@ class TestPayAsBidMatchingAlgorithm:
              "time_slot": "2021-10-06T12:00",
              "bid": {"id": 3, "buyer": "C", "energy_rate": 3, "energy": 20.001},
              "offer": {"id": 4, "seller": "A", "energy_rate": 1, "energy": 25},
-             "selected_energy": 20.001, "trade_rate": 3, "matching_requirements": None},
+             "selected_energy": 20.0, "trade_rate": 3, "matching_requirements": None},
         ]
-        assert recommendations == expected_recommendations
+        compare_dicts(expected_recommendations, recommendations)
 
     @staticmethod
     def test_perform_pay_as_bid_match_single_offer_bid():
@@ -346,7 +373,18 @@ class TestBestClusterPayAsClearMatchingAlgorithm:
              "offer": {"id": 4, "seller": "A", "energy_rate": 3, "energy": 0.3, 'cluster': 1},
              "selected_energy": 0.2, "trade_rate": 4, "matching_requirements": None},
         ]
+        compare_dicts(expected_recommendations, recommendations)
 
-        for i, match in enumerate(expected_recommendations):
-            for k in match.keys():
-                assert match[k] == pytest.approx(recommendations[i][k])
+
+def compare_dicts(expected, actual):
+    """
+    Comparing lists of Dicts with expected similar keys are each tested for approx. equal values.
+    If lists are not have the same order, it will result in an Error.
+
+    :param expected: List of Dicts that are expected
+    :param actual: List of Dicts that should be validated
+    :return:
+    """
+    for i, match in enumerate(expected):
+        for k in match.keys():
+            assert match[k] == pytest.approx(actual[i][k])
