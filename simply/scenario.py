@@ -78,6 +78,8 @@ class Scenario:
         # save map_actors
         dirpath.joinpath('map_actors.json').write_text(json.dumps(self.map_actors, indent=2))
 
+        self.power_network.to_image(dirpath)
+
     def concat_actor_data(self):
         """
         Create a list of all actor data DataFrames and concatenate them using multi-column keys
@@ -92,14 +94,17 @@ class Scenario:
         as well as the aggregated sum per asset.
         """
         actor_data = self.concat_actor_data()
-        fig, ax = plt.subplots(3)
+        fig, ax = plt.subplots(3, sharex=True)
         ax[0].set_title("PV")
         ax[1].set_title("Load")
         ax[2].set_title("Sum")
-        get_all_data(actor_data, "pv").plot(ax=ax[0], legend=False)
-        get_all_data(actor_data, "load").plot(ax=ax[1], legend=False)
-        get_all_data(actor_data, "pv").sum(axis=1).plot(ax=ax[2])
-        get_all_data(actor_data, "load").sum(axis=1).plot(ax=ax[2])
+        pv_df = get_all_data(actor_data, "pv")
+        load_df = get_all_data(actor_data, "load")
+        mask = load_df.apply(lambda x: abs(x) == 2 ** 63 - 1)
+        pv_df.plot(ax=ax[0], legend=False)
+        load_df[~mask].plot(ax=ax[1], legend=False)
+        pv_df.sum(axis=1).plot(ax=ax[2])
+        load_df[~mask].sum(axis=1).plot(ax=ax[2])
         ax[2].legend(["pv", "load"])
         plt.show()
 
@@ -131,18 +136,9 @@ def load(dirpath, data_format):
     meta = json.loads(meta_text)
     rng_seed = meta.get("rng_seed", None)
 
-    # read power network
-    network_text = next(dirpath.glob('network.*')).read_text()
-    network_json = json.loads(network_text)
-    network_name = list(network_json.keys())[0]
-    network_json = list(network_json.values())[0]
-    network = json_graph.node_link_graph(network_json,
-                                         directed=network_json.get("directed", False),
-                                         multigraph=network_json.get("multigraph", False))
-    pn = power_network.PowerNetwork(network_name, network)
+    pn = power_network.create_power_network_from_config(next(dirpath.glob('network.*')))
 
     # read actors
-
     actors = []
     if data_format == "csv":
         actors_file = next(dirpath.glob("actors.*"))
@@ -159,6 +155,11 @@ def load(dirpath, data_format):
             aj = json.loads(at)
             ai = [aj["id"], pd.read_json(aj["df"]), aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
             actors.append(actor.Actor(*ai))
+
+    # Give actors knowledge of the cluster they belong to
+    for aj in actors:
+        if aj.id in pn.node_to_cluster:
+            aj.cluster = pn.node_to_cluster[aj.id]
 
     # read map_actors
     map_actor_text = next(dirpath.glob('map_actors.*')).read_text()
@@ -193,5 +194,57 @@ def create_random2(num_nodes, num_actors):
 
     # TODO tbd if actors are already part of topology ore create additional nodes
     # pn.add_actors_map(map_actors)
+
+    return Scenario(pn, actors, map_actors)
+
+
+def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_hour=4, nb_ts=None):
+    """
+    Load csv files from path and randomly select num_actors to be randomly
+
+    :param dirpath: Path object
+    :param num_nodes: number of nodes in the network
+    :param num_actors: number of actors in the network
+    :param weight_factor: weight factor used to derive grid fees
+    :param ts_hour: number of time slot of equal length within one hour
+    :param nb_ts: number of time slots to be generated
+    """
+    # Create random nodes for power network
+    pn = power_network.create_random(num_nodes)
+
+    # Read all filenames from given directory
+    filenames = dirpath.glob("*.csv")
+    # Choose a random sample of files to read
+    filenames = random.sample(list(filenames), num_actors)
+
+    # Assign csv file to actor and save dictionary
+    household_type = {}
+    # create initial list of actors
+    actors = []
+
+    # iterate over list of files to be read to update actors
+    for i, filename in enumerate(filenames):
+        # save actor_id and data description in list
+        household_type.update({i: filename.stem})
+        print('actor_id: {} - household: {}'.format(i, household_type[i]))
+        # read file
+        a = actor.create_from_csv(
+            "H_" + str(i),
+            asset_dict={
+                "load": {"csv": filename, "col_index": 1},
+                "pv": {}
+            },
+            start_date="2021-01-01",
+            nb_ts=nb_ts,
+            ts_hour=ts_hour
+        )
+
+        actors.append(a)
+
+    map_actors = pn.add_actors_random(actors)
+
+    # Update shortest paths and the grid fee matrix
+    pn.update_shortest_paths()
+    pn.generate_grid_fee_matrix(weight_factor)
 
     return Scenario(pn, actors, map_actors)

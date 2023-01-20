@@ -123,6 +123,13 @@ BEST Matching Algorithm
 
 BEST Matching (found here: :ref:`best`)
 
+The BEST matching algorithm takes the network charge into account. In a first step, all clusters 
+are matched individually. (A cluster contains all nodes between which a network charge of 0 is defined). 
+For this purpose, the bids from the dedicated cluster and the asks from all clusters are considered. 
+If an ask is matched in more than one cluster, the match is only kept in the cluster where the network 
+charge is the lowest. The match is deleted from the other clusters. The clusters with deleted matches 
+are then subjected to a new matching procedure. This procedure continues until no more duplicate matches occur. 
+
 The tables below illustrate the internal steps during the matching of the :ref:`example_scenario`
 using BEST matching:
 
@@ -154,23 +161,21 @@ using BEST matching:
 | actor 0, order_id 2, price 10  | actor 3, order_id 3, price 7  | 7              |
 +--------------------------------+-------------------------------+----------------+
 
-
-**Matching Cluster 1 (Rematch Attempt):**
+**Matching Cluster 0 (Rematch Attempt):**
 
 +--------------------------------+-------------------------------+----------------+
 | Bids                           | Asks                          | Matched Price  |
 +================================+===============================+================+
-| actor 1, order_id 0, price 10  | actor 3, order_id 4, price 4  | 4              |
+| actor 0, order_id 2, price 10  |                               |                |
 +--------------------------------+-------------------------------+----------------+
-| actor 1, order_id 1, price 7   |                               |                |
-+--------------------------------+-------------------------------+----------------+
+
 
 **Final Matches (Output):**
 
 +--------------------------------+-------------------------------+----------------+
 | Bids                           | Asks                          | Matched Price  |
 +================================+===============================+================+
-| actor 0, order_id 2, price 10  | actor 3, order_id 3, price 7  | 7              |
+| actor 1, order_id 0, price 10  | actor 3, order_id 4, price 4  | 6              |
 +--------------------------------+-------------------------------+----------------+
-| actor 1, order_id 0, price 10  | actor 3, order_id 4, price 4  | 4              |
+| actor 1, order_id 1, price 7   | actor 3, order_id 3, price 6  | 6              |
 +--------------------------------+-------------------------------+----------------+

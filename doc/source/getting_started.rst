@@ -58,6 +58,38 @@ Or use the market wrapper to communicate order information directly to the marke
     ./market_wrapper.py orders.json
 
 
+Create your own scenario 
+========================
+
+Under `config/` you will find two files (.json), which represent an example of how you can design your own scenario.  
+The `example_config.json` file represents a template for setting up a market community consisting of the market maker 
+and other market participants. For each market actor, the following must be specified, analogous to the example file: 
+
+#. The name of the market actor, e.g. "residential_1".
+#. The market actor type, i.e. "market_maker", "residential", "industrial" or "business". 
+#. The location of the actor in the community network, i.e. the network node at which the prosumer is located. 
+#. The information about power consumption and power devices (if any): 
+    
+* The device type, i.e. "load", "solar" or "battery". 
+* The device ID: here is the name of a file (.json or .csv), which is to be stored under /sample and contains the load curve for the respective power consumption or the respective power device. 
+ 
+The file `example_network.json` represents a template for the construction of a market community network. Under "nodes" 
+the names of the individual nodes are listed (e.g. N01, N02). The market maker represents a separate node.  
+Under "links" the network charge is defined for each combination of two nodes. Nodes between which there is a network 
+charge of 0 represent a common cluster (see BEST Matching Algorithm). 
+
+In the configuration file `config/config.txt` the correct settings regarding the scenario must be made. It can be set 
+where the created scenario should be stored. The number of market actors must match the specifications in the `config.json` file. 
+The number of nodes must match the information in `network.json`. 
+
+
+After the network and the community have been created, `build_simulation.py` can be executed. The appropriate scenario 
+is created and saved to the location specified in the configuration file. The scenario contains a time series for each actor
+with power generation, power consumption, and market demand or supply (including bid price). 
+
+
+
+
 License
 =======
 

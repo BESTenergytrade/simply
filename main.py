@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from simply import scenario, market, market_2pac, market_fair
 from simply.config import Config
 from simply.util import summerize_actor_trading
+from numpy import linspace
 
 
 """
@@ -26,18 +27,23 @@ if __name__ == "__main__":
     cfg = Config(args.config)
     # Load scenario, if path exists with the correct format
     # otherwise remove all files in existing folder and create new scenario
+    # check if actor-files with correct format exist in cfg.path
     scenario_exists = len([False for i in cfg.path.glob(f"actor_*.{cfg.data_format}")]) != 0
-    if scenario_exists and not cfg.update_scenario:
-        sc = scenario.load(cfg.path, cfg.data_format)
+
+    print(f'Scenario path: {cfg.path}')
+    # load existing scenario or else create randomized new one
+    if cfg.load_scenario:
+        if scenario_exists:
+            sc = scenario.load(cfg.path, cfg.data_format)
+        else:
+            raise Exception(f'Could not find actor data in path: {cfg.path} .')
     else:
         if cfg.path.exists():
-            raise Exception('The path: ' + str(cfg.path) +
-                            ' already exists with another file structure.'
+            raise Exception(f'The path: {cfg.path} already exists with another file structure. '
                             'Please remove or rename folder to avoid confusion and restart '
                             'simulation.')
         sc = scenario.create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.path, cfg.data_format)
-    # TODO output folder: add plots files
 
     if cfg.show_plots:
         sc.power_network.plot()
@@ -49,19 +55,20 @@ if __name__ == "__main__":
 
     # generate requested market
     if "pac" in cfg.market_type:
-        m = market_2pac.TwoSidedPayAsClear(0)
+        m = market_2pac.TwoSidedPayAsClear(0, network=sc.power_network)
     elif cfg.market_type in ["fair", "merit"]:
         m = market_fair.BestMarket(0, sc.power_network)
     else:
         # default
-        m = market.Market(0)
+        m = market.Market(0, network=sc.power_network)
 
-    for t in cfg.list_ts:
+    list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
+    for t in list_ts:
         m.t = t
         for a in sc.actors:
-            # TODO concurrent bidding of actors
             order = a.generate_order()
-            m.accept_order(order, callback=a.receive_market_results)
+            if order:
+                m.accept_order(order, callback=a.receive_market_results)
 
         m.clear(reset=cfg.reset_market)
         if cfg.show_prints:

@@ -7,6 +7,7 @@ def gaussian_pv(ts_hour, std):
     # and a gaussian curve defined by standard deviation
     x = np.linspace(0, 24 * ts_hour, 24 * ts_hour)
     mean = 12 * ts_hour
+    std = std * ts_hour
     return np.exp(-((x - mean) ** 2) / (2 * std ** 2))
 
 
@@ -16,12 +17,18 @@ def daily(df, daily_ts=24):
 
 
 def summerize_actor_trading(sc):
-    return (
-        pd.DataFrame.from_dict([a.traded for a in sc.actors])
-        .unstack()
-        .apply(pd.Series)
-        .rename({0: "energy", 1: "avg_price"}, axis=1)
-    )
+    # Check if at least one trade has happened
+    empty = True
+    for i in [a.traded for a in sc.actors]:
+        if len(i) != 0:
+            empty = False
+    if not empty:
+        return (
+            pd.DataFrame.from_dict([a.traded for a in sc.actors])
+            .unstack()
+            .apply(pd.Series)
+            .rename({0: "energy", 1: "avg_price"}, axis=1)
+        )
 
 
 def get_all_data(df, col="pv"):

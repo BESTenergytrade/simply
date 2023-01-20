@@ -67,7 +67,8 @@ class Actor:
         Dictionary of received trading results per time slot including matched energy and clearing
         prices
     """
-    def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}):
+
+    def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}, cluster=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -76,8 +77,9 @@ class Actor:
         # TODO add battery component
         self.id = actor_id
         self.grid_id = None
-        self.t = 0
-        self.horizon = cfg.parser.get("actor", "horizon", fallback=24)
+        self.cluster = cluster
+        self.t = cfg.parser.getint("default", "start", fallback=0)
+        self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
 
         self.load_scale = ls
         self.pv_scale = ps
@@ -85,25 +87,20 @@ class Actor:
         self.battery = None
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
+        self.pm = pd.DataFrame()
         if csv is not None:
             self.csv_file = csv
         else:
             self.csv_file = f'actor_{actor_id}.csv'
-        for column, scale in [("load", ls), ("pv", ps), ("prices", 1)]:
+        for column, scale in [("load", ls), ("pv", ps), ("prices", 1), ("schedule", 1)]:
             self.data[column] = scale * df[column]
             try:
-                prediction_multiplier = np.array(pm[column])
+                self.pm[column] = np.array(pm[column])
             except KeyError:
                 prediction_multiplier = self.error_scale * np.random.rand(self.horizon)
-                pm[column] = prediction_multiplier.tolist()
-            self.pred[column] = self.data[column].iloc[self.t: self.t + self.horizon] \
-                + prediction_multiplier
+                self.pm[column] = prediction_multiplier.tolist()
 
-        if "schedule" in df.columns:
-            self.pred["schedule"] = df["schedule"]
-        else:
-            # perfect foresight
-            self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
+        self.update()
         self.orders = []
         self.traded = {}
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
@@ -120,6 +117,17 @@ class Actor:
         ).plot()
         plt.show()
 
+    def update(self):
+        for column in ["load", "pv", "prices", "schedule"]:
+            if column in self.data.columns:
+                self.pred[column] = \
+                    self.data[column].iloc[self.t: self.t + self.horizon].reset_index(drop=True) \
+                    + self.pm[column]
+        if "schedule" not in self.data.columns:
+            self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
+
+        # if self.battery:
+
     def generate_order(self):
         """
         Generate new order for current time slot according to predicted schedule
@@ -129,15 +137,19 @@ class Actor:
         :rtype: Order
         """
         # TODO calculate amount of energy to fulfil personal schedule
-        energy = self.pred["schedule"][self.t]
+        energy = self.pred["schedule"][0]
+        if energy == 0:
+            return None
         # TODO simulate strategy: manipulation, etc.
-        price = self.pred["prices"][self.t]
+        price = self.pred["prices"][0]
         # TODO take flexibility into account to generate the bid
 
         # TODO replace order type by enum
-        new = Order(np.sign(energy), self.t, self.id, None, abs(energy), price)
+        new = Order(np.sign(energy), self.t, self.id, self.cluster, abs(energy), price)
         self.orders.append(new)
+        # update schedule for next time step
         self.t += 1
+        self.update()
 
         return new
 
@@ -189,8 +201,7 @@ class Actor:
         #  also errors need to be saved
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
-        save_df = pd.concat([self.data[["load", "pv"]],
-                             self.pred[["schedule", "prices"]]], axis=1)
+        save_df = self.data[["load", "pv", "schedule", "prices"]]
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
@@ -206,7 +217,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     :return: generated Actor object
     :rtype: Actor
     """
-    time_idx = pd.date_range(start_date, freq="{}min".format(int(60/ts_hour)), periods=nb_ts)
+    time_idx = pd.date_range(start_date, freq="{}min".format(int(60 / ts_hour)), periods=nb_ts)
     cols = ["load", "pv", "schedule", "prices"]
     values = np.random.rand(nb_ts, len(cols))
     df = pd.DataFrame(values, columns=cols, index=time_idx)
@@ -220,16 +231,94 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     ps = random.uniform(1, 7)
     # Probability of an actor to possess a PV, here 40%
     pv_prob = 0.4
-    ps = random.choices([0, ps], [1-pv_prob, pv_prob], k=1)
+    ps = random.choices([0, ps], [1 - pv_prob, pv_prob], k=1)
     df["schedule"] = ps * df["pv"] - ls * df["load"]
     max_price = 0.3
     df["prices"] *= max_price
     # Adapt order price by a factor to compensate net pricing of ask orders
     # (i.e. positive power) Bids however include network charges
     net_price_factor = 0.7
-    df["prices"] = df.apply(
-        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor
-        * slot["prices"], axis=1
-    )
-
+    df["prices"] = df.apply(lambda slot: slot["prices"] - (slot["schedule"] > 0)
+                            * net_price_factor * slot["prices"], axis=1)
     return Actor(actor_id, df, ls=ls, ps=ps)
+
+
+def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
+                    override_scaling=False):
+    """
+    Create actor instance with random asset time series and random scaling factors. Replace
+
+    :param str actor_id: unique actor identifier
+    :param Dict asset_dict: nested dictionary specifying 'csv' filename and column ('col_index')
+        per asset or the time series index ('index') of the Actor
+    :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
+        asset time series
+    :param int nb_ts: number of time slots that should be generated, derived from csv if None
+    :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
+    :param override_scaling: if True the predefined scaling factors are overridden by the peak value
+        of each csv file
+    :return: generated Actor object
+    :rtype: Actor
+    """
+    # Random scale factor generation, load and price time series in boundaries
+    peak = {
+        "load": random.uniform(0.8, 1.3) / ts_hour,
+        "pv": random.uniform(1, 7) / ts_hour
+    }
+    # Probability of an actor to possess a PV, here 40%
+    pv_prob = 0.4
+    peak["pv"] = random.choices([0, peak["pv"]], [1 - pv_prob, pv_prob], k=1)
+
+    # Initialize DataFrame
+    cols = ["load", "pv", "schedule", "prices"]
+    df = pd.DataFrame([], columns=cols)
+
+    # Read csv files for each asset
+    for col, csv_dict in asset_dict.items():
+        # if csv_dict is empty
+        if not csv_dict:
+            continue
+        csv_df = pd.read_csv(
+            csv_dict["csv"],
+            sep=',',
+            parse_dates=['Time'],
+            dayfirst=True
+        )
+        # Rename column and insert data based on dictionary
+        df.loc[:, col] = csv_df.iloc[:nb_ts, csv_dict["col_index"]]
+        # Override scaling factor by peak value (if True)
+        if override_scaling:
+            peak[col] = df[col].max()
+        # Normalize time series
+        df[col] = df[col] / df[col].max()
+    # Set new index, in case it was not read in via asset_dict, it is generated
+    if "index" not in df.columns:
+        df["index"] = pd.date_range(
+            start_date,
+            freq="{}min".format(int(60 / ts_hour)),
+            periods=nb_ts
+        )
+    df = df.set_index("index")
+
+    # If pv asset key is present but dictionary does not contain a filename
+    if "pv" in asset_dict.keys() and not asset_dict["pv"].get("filename"):
+        # Initialize PV with random noise
+        df["pv"] = np.random.rand(nb_ts, 1)
+        # Multiply random generation signal with gaussian/PV-like characteristic per day
+        for day in daily(df, 24 * ts_hour):
+            day["pv"] *= gaussian_pv(ts_hour, 3)
+
+    # Dummy-Strategy:
+    # Predefined energy management, energy volume and price for trades due to no flexibility
+    df["schedule"] = peak["pv"] * df["pv"] - peak["load"] * df["load"]
+    max_price = 0.3
+    df["prices"] = np.random.rand(nb_ts, 1)
+    df["prices"] *= max_price
+    # Adapt order price by a factor to compensate net pricing of ask orders
+    # (i.e. positive power) Bids however include network charges
+    net_price_factor = 0.7
+    df["prices"] = df.apply(
+        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor * slot["prices"],
+        axis=1)
+
+    return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
