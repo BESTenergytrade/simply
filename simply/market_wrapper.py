@@ -10,7 +10,7 @@ from simply.config import Config
 # default config
 Config('')
 
-ENERGY_UNIT_CONVERSION_FACTOR = 1000  # simply: kW, D3A: MW
+ENERGY_UNIT_CONVERSION_FACTOR = 1  # simply: kW
 
 
 def accept_orders(market, time, orders):
