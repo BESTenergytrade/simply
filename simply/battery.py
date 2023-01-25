@@ -15,17 +15,6 @@ class Battery:
     def get_energy(self, energy):
         self.soc += energy/self.capacity
 
-
-
-
-
-
-
-
-
-
-
-
     # def update_charge_level(self, energy):
     #
     #
