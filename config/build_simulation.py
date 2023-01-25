@@ -231,7 +231,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 if __name__ == "__main__":
     # Store default configuration files and directories paths
     dirname = Path(__file__).parent
-    config_json_path = dirname / Path('community_config.json')
+    config_json_path = dirname / Path('example_config.json')
     network_path = dirname / Path('example_network.json')
     config_path = dirname / Path('config.txt')
     loads_dir_path = dirname / Path('loads_dir.csv')
