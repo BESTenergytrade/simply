@@ -6,9 +6,9 @@ from collections import namedtuple
 import matplotlib.pyplot as plt
 
 from simply.util import daily, gaussian_pv
-from simply.battery import Battery
 import simply.config as cfg
 
+EPS = 1e-6
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
 Struct to hold order
@@ -69,7 +69,7 @@ class Actor:
         prices
     """
 
-    def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}, cluster=None):
+    def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1.5, pm={}, cluster=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -85,7 +85,7 @@ class Actor:
         self.load_scale = ls
         self.pv_scale = ps
         self.error_scale = 0
-        self.battery = Battery
+        self.battery = battery
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -205,6 +205,41 @@ class Actor:
         save_df = self.data[["load", "pv", "schedule", "prices"]]
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
+    def plan_global_supply(self):
+        # cumulated energy for the time horizon
+        # cum_energy_demand =[sum(self.pred.schedule[:i+1]) for i in range(len(self.pred.schedule))]
+        # optimal price for each timestep
+        # plan of buying energy for the time horizon. Initialization with buying nothing
+        self.global_market_buying_plan = np.array([0] * len(self.pred.schedule)).astype(float)
+
+        # Soc in the future is current soc
+        soc_prediction = np.array([self.battery.soc] * len(self.pred.schedule))
+
+        # plus the lifts through self production
+        soc_lifts = np.zeros(len(self.pred.schedule))
+        soc_lifts[self.pred.schedule > 0] = self.pred.schedule[self.pred.schedule > 0]
+        cum_energy_lift_through_production = np.cumsum(soc_lifts)
+
+        for i, energy in enumerate(self.pred.schedule_after_buying):
+            energy_before_prod = energy
+            # energy needs are reduced by self production
+            energy += min(cum_energy_lift_through_production[i], -energy)
+            # cum energy lift is therefore reduced for further time steps
+            cum_energy_lift_through_production[i:] += energy_before_prod - energy
+
+            # Energy is needed, therefore we need to buy it in the time span from now to then.
+            while energy < 0:
+                # Where is the lowest price in between now and when I will need some energy
+                # Only check prices where I dont expect a full soc already or
+                # the time where the energy is needed
+
+                possible_global_prices = np.ones(len(self.pred.schedule)) * float('inf')
+                # prices are set where the soc is not full yet
+                possible_global_prices[soc_prediction < 1 - EPS] = self.pred.global_price[
+                    soc_prediction < 1 - EPS]
+
+
+
 
 def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     """
@@ -323,3 +358,4 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
         axis=1)
 
     return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
+

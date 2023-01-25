@@ -1,8 +1,10 @@
-from simply.actor import Order
+from simply.actor import Order, Actor
+from simply.battery import Battery
 from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD
 from simply.power_network import PowerNetwork
 import networkx as nx
 import pytest
+import pandas as pd
 
 
 class TestBestMarket:
@@ -308,3 +310,26 @@ class TestBestMarket:
         m.accept_order(Order(1, 0, 3, 1, 0.1, 4))
         matches = m.match()
         assert len(matches) == 2
+
+    def test_strategy_1(self):
+        prices = [0.2116079447, 0.1473127859, 0.22184087530000002, 0.11761082760000001,
+                  0.2463169965,
+                  0.2020745841, 0.0613031114, 0.24701460990000002, 0.12690570210000002,
+                  0.1467477666,
+                  0.0910571313, 0.1510937983, 0.0961995166, 0.16232426160000002, 0.1911430976,
+                  0.2395885052,
+                  0.1161007245, 0.1912644558, 0.08394693780000001, 0.031559975000000004,
+                  0.07516904740000001, 0.0839614066, 0.1340712662, 0.1921131123]
+        schedule = [-0.2278688066, -0.4956801147, -0.5660800508, -0.4605807878, -0.7235523078,
+                    -0.41539310830000004, -0.0517064662, -0.4741886065, -0.253179973,
+                    -0.7055324580000001,
+                    -0.0665372924, -0.33647962400000003, -0.3992714075, -0.4354996278, -0.625752089,
+                    -0.30241824170000003, -0.23024240310000002, -0.6122942333, -0.1880810302,
+                    -0.1261036003,
+                    -0.18803270630000002, -0.2284269156, -0.7287319187, -0.0596583833]
+
+        df = pd.DataFrame(list(zip(schedule, prices)),
+               columns =['schedule', 'prices'])
+        battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
+        actor = Actor(0, df, battery=battery)
+        actor.
