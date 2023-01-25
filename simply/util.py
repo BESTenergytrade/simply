@@ -5,7 +5,8 @@ import pandas as pd
 def gaussian_pv(ts_hour, std):
     # One day (24h) time series with peak at noon (12h)
     # and a gaussian curve defined by standard deviation
-    x = np.linspace(0, 24 * ts_hour, 24 * ts_hour)
+    # todo fix to 24 hours
+    x = np.linspace(0, 24 * ts_hour-1, 24 * ts_hour)
     mean = 12 * ts_hour
     std = std * ts_hour
     return np.exp(-((x - mean) ** 2) / (2 * std ** 2))
