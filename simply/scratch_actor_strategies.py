@@ -67,9 +67,6 @@ class Battery:
     def get_energy(self, energy):
         self.soc += energy / self.capacity
 
-        # if self.soc>1:
-        #     print("SOC lost:" , self.soc-1)
-        self.soc = max(min(1, self.soc), 0)
 
         # delta_soc_needed= energy/self.capacity
         # # Energy can only charge battery up to 1 and load can only discharge battery to 0
@@ -130,7 +127,6 @@ class Actor:
         self.cost -= order_amount * order_price
         if not local:
             self.bought_energy_from_global_market.append(order_amount)
-            self.bought_energy_from_local_market.append(0)
             self.bought_energy_from_local_market.append(0)
         else:
             self.bought_energy_from_global_market.append(0)
@@ -510,7 +506,8 @@ time_steps_per_hour = 1
 prices = [p for price in prices for p in [price] * time_steps_per_hour]
 schedule = np.array(
     [s for sched in schedule for s in [sched / time_steps_per_hour] * time_steps_per_hour])
-schedule[5:15] += 2
+schedule[5:10] += 2
+schedule[18:22] += 2
 pred = Prediction(prices, schedule)
 pred.next_timestep()
 pred.next_timestep()
@@ -523,13 +520,12 @@ for _ in range(30):
     actor.plan_selling_strategy()
     order_amount, order_price, order_index = actor.create_order()
     actor.order = (order_amount, order_price, order_index)
-    # market.make_matches()
-    # actor.planned_energy -=market.matched_energy()
     if order_amount != 0:
+
         if (order_amount > 0 and
                 (order_price >= actor.pred.global_price[0] - EPS) or
                 (order_amount < 0) and
-                (order_price <= actor.pred.global_price[0] + EPS)):
+                (order_price <= actor.pred.selling_price[0] + EPS)):
             assert order_index == 0
             actor.buy_order(local=False)
         elif random.random() > 0.5:
