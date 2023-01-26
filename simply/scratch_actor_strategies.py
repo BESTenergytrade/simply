@@ -33,7 +33,7 @@ matplotlib.use("TkAgg")
 
 ## init of environment
 prices = [0.2116079447, 0.1473127859, 0.22184087530000002, 0.11761082760000001, 0.2463169965,
-          0.2020745841, 0.0613031114, 0.24701460990000002, 0.12690570210000002, 0.1467477666,
+          0.2020745841, 0.0113031114, 0.24701460990000002, 0.12690570210000002, 0.1467477666,
           0.0910571313, 0.1510937983, 0.0961995166, 0.16232426160000002, 0.1911430976, 0.2395885052,
           0.1161007245, 0.1912644558, 0.08394693780000001, 0.031559975000000004,
           0.07516904740000001, 0.0839614066, 0.1340712662, 0.1921131123]
@@ -148,10 +148,8 @@ class Actor:
         # 1 ----- x-------------  x-
         #      x         o
         #   x
-        # we want to find (x) as highest potential energy sell
-        soc_diff = np.diff(self.predicted_soc, append=self.predicted_soc[-1])
         cum_energy_demand = self.pred.schedule.cumsum() + self.global_market_buying_plan.cumsum() + self.battery.soc * self.battery.capacity
-        soc_prediction = np.ones(len(self.pred.schedule)) * self.battery.soc \
+        soc_prediction = np.ones(TIMEHORIZON) * self.battery.soc \
                          + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
                          self.battery.capacity
         for i, energy in enumerate(cum_energy_demand):
@@ -174,37 +172,35 @@ class Actor:
                     self.global_market_buying_plan[i] -= overcharge
                     cum_energy_demand[i:] -= overcharge
                     break
-                current_soc_after_schedule=((self.battery.soc*self.battery.capacity)
-                                            +self.pred.schedule[0]+self.global_market_buying_plan[0])/self.battery.capacity
+                # current_soc_after_schedule=((self.battery.soc*self.battery.capacity)
+                #                             +self.pred.schedule[0]+self.global_market_buying_plan[0])/self.battery.capacity
                 soc_to_zero = min(np.min(soc_prediction[highest_price_index:i + 1]), 1)
-                # possible_soc=min(current_soc_after_schedule,soc_to_zero)
                 energy_to_zero = soc_to_zero * self.battery.capacity
                 sellable_energy = min(energy_to_zero, overcharge)
                 self.global_market_buying_plan[highest_price_index] -= sellable_energy
                 cum_energy_demand[highest_price_index:] -= sellable_energy
                 overcharge -= sellable_energy
-                soc_prediction = np.ones(len(self.pred.schedule)) * self.battery.soc \
+                soc_prediction = np.ones(TIMEHORIZON) * self.battery.soc \
                                  + (cum_energy_demand - self.battery.soc * self.battery.capacity) \
                                  / self.battery.capacity
 
-        soc_prediction = np.ones(len(self.pred.schedule)) * self.battery.soc \
+        soc_prediction = np.ones(TIMEHORIZON) * self.battery.soc \
                          + (cum_energy_demand - self.battery.soc * self.battery.capacity) \
                          / self.battery.capacity
         self.predicted_soc = soc_prediction
 
     def plan_global_supply(self):
         cum_energy = self.pred.schedule.cumsum() + self.battery.soc * self.battery.capacity
-        self.global_market_buying_plan = np.array([0] * len(self.pred.schedule)).astype(float)
+        self.global_market_buying_plan = np.array([0] * TIMEHORIZON).astype(float)
         # Go through the cumulated demands, deducting the demand if we plan on buying energy
         for i, energy in enumerate(cum_energy):
             while energy < 0:
-                soc_prediction = np.ones(len(self.pred.schedule)) * self.battery.soc \
-                                 + (
-                                             cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
+                soc_prediction = np.ones(TIMEHORIZON) * self.battery.soc \
+                                 + (cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
                 # Where is the lowest price in between now and when I will need some energy
                 # Only check prices where I dont expect a full soc already or
                 # the time where the energy is needed
-                possible_global_prices = np.ones(len(self.pred.schedule)) * float('inf')
+                possible_global_prices = np.ones(TIMEHORIZON) * float('inf')
                 # prices are set where the soc in not full yet
                 # possible_global_prices[(0- EPS<=soc_prediction )* (soc_prediction < 1 + EPS)] = \
                 #     self.pred.global_price[(0 -EPS<soc_prediction )* (soc_prediction < 1 + EPS)]
@@ -248,23 +244,22 @@ class Actor:
                 # will use the reduced demand for the timesteps afterwards
                 cum_energy[min_price_index:] += stored_energy
 
-        soc_prediction = np.ones(len(self.pred.schedule)) * self.battery.soc \
-                         + (
-                                     cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
+        soc_prediction = np.ones(TIMEHORIZON) * self.battery.soc \
+                         + (cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
         self.predicted_soc = soc_prediction
 
     def plan_global_supply_(self):
         # cumulated energy for the time horizon
-        # cum_energy_demand =[sum(self.pred.schedule[:i+1]) for i in range(len(self.pred.schedule))]
+        # cum_energy_demand =[sum(self.pred.schedule[:i+1]) for i in range(TIMEHORIZON)]
         # optimal price for each timestep
         # plan of buying energy for the time horizon. Initialization with buying nothing
-        self.global_market_buying_plan = np.array([0] * len(self.pred.schedule)).astype(float)
+        self.global_market_buying_plan = np.array([0] * TIMEHORIZON).astype(float)
 
         # Soc in the future of current soc
-        soc_prediction = np.array([self.battery.soc] * len(self.pred.schedule))
+        soc_prediction = np.array([self.battery.soc] * TIMEHORIZON)
 
         # plus the lifts through self production
-        soc_lifts = np.zeros(len(self.pred.schedule))
+        soc_lifts = np.zeros(TIMEHORIZON)
         soc_lifts[self.pred.schedule > 0] = self.pred.schedule[self.pred.schedule > 0]
         cum_energy_lift_through_production = np.cumsum(soc_lifts)
 
@@ -281,7 +276,7 @@ class Actor:
                 # Only check prices where I dont expect a full soc already or
                 # the time where the energy is needed
 
-                possible_global_prices = np.ones(len(self.pred.schedule)) * float('inf')
+                possible_global_prices = np.ones(TIMEHORIZON) * float('inf')
                 # prices are set where the soc in not full yet
                 possible_global_prices[soc_prediction < 1 - EPS] = self.pred.global_price[
                     soc_prediction < 1 - EPS]
@@ -390,8 +385,7 @@ class Actor:
             if next_global_buy !=0:
                 max_battery_soc=max(max_battery_soc,np.max(self.predicted_soc[0:next_global_buy + 1]))
             order_amount = min(next_amount,
-                               (1 - max_battery_soc) * self.battery.capacity, self.battery.capacity
-                               * self.battery.max_c_rate / time_steps_per_hour)
+                               (1 - max_battery_soc) * self.battery.capacity)
             order_price = scale_price(next_price, next_global_buy)
         else:
             next_price = self.pred.selling_price[next_global_buy]
@@ -402,8 +396,7 @@ class Actor:
             # todo higher orders than bat max charge/discharge could be allowed, since
             # production could go directly into the network
             order_amount = max(next_amount,
-                               -min_battery_soc * self.battery.capacity, -self.battery.capacity
-                               * self.battery.max_c_rate / time_steps_per_hour)
+                               -min_battery_soc * self.battery.capacity)
             order_price = scale_price(next_price, -next_global_buy)
 
 
@@ -460,8 +453,6 @@ for _ in range(30):
     actor.plan_global_supply()
     order_amount, order_price, order_index = actor.create_order()
     actor.order = (order_amount, order_price, order_index)
-    # market.make_matches()
-    # actor.planned_energy -=market.matched_energy()
     if order_amount != 0:
         if order_price >= actor.pred.global_price[0] - EPS:
             assert order_index == 0
