@@ -37,8 +37,6 @@ prices = [0.2116079447, 0.1473127859, 0.22184087530000002, 0.11761082760000001, 
           0.0910571313, 0.1510937983, 0.0961995166, 0.16232426160000002, 0.1911430976, 0.2395885052,
           0.1161007245, 0.1912644558, 0.08394693780000001, 0.031559975000000004,
           0.07516904740000001, 0.0839614066, 0.1340712662, 0.1921131123]
-const_grid_fee = 0.05
-taxes_percent = 0.1
 
 schedule = [-0.2278688066, -0.4956801147, -0.5660800508, -0.4605807878, -0.7235523078,
             -0.41539310830000004, -0.0517064662, -0.4741886065, -0.253179973, -0.7055324580000001,
@@ -46,13 +44,18 @@ schedule = [-0.2278688066, -0.4956801147, -0.5660800508, -0.4605807878, -0.72355
             -0.30241824170000003, -0.23024240310000002, -0.6122942333, -0.1880810302, -0.1261036003,
             -0.18803270630000002, -0.2284269156, -0.7287319187, -0.0596583833]
 
-EPS = 1e-6
-TIMEHORIZON = 24
-
 schedule[7] += 2
 schedule[15] -= schedule[15] * 4
 schedule[19] -= schedule[19] * 4
 schedule[20] -= schedule[20] * 3
+
+const_grid_fee = 0.05
+taxes_percent = 0.1
+
+
+EPS = 1e-6
+TIMEHORIZON = 24
+
 
 
 class Battery:
@@ -67,7 +70,6 @@ class Battery:
     def get_energy(self, energy):
         self.soc += energy / self.capacity
 
-
         # delta_soc_needed= energy/self.capacity
         # # Energy can only charge battery up to 1 and load can only discharge battery to 0
         # delta_soc_possible = max(min(delta_soc_needed,1-self.soc),-self.soc)
@@ -81,7 +83,8 @@ class Prediction:
         self.global_price = np.array(prices)
         self.schedule = np.array(schedule)
         self.selling_price = (np.array(prices) - const_grid_fee) * (1 - taxes_percent)
-        self.selling_price[self.selling_price<0]=0.01
+        # self.selling_price[self.selling_price < 0] = 0.01
+
     def next_timestep(self):
         # Roll data to act like a new timestep
         for data in [self.global_price, self.schedule, self.selling_price]:
@@ -98,6 +101,7 @@ class Prediction:
 
 class Actor:
     def __init__(self, prediction: Prediction, battery: Battery):
+        self.global_sell_price = []
         self.pred = prediction
         self.battery = battery
         self.cost = 0
@@ -135,6 +139,7 @@ class Actor:
     def write_data(self):
         self.schedule.append(self.pred.schedule[0])
         self.global_price.append(self.pred.global_price[0])
+        self.global_sell_price.append(self.pred.selling_price[0])
         self.global_buy.append(self.global_market_buying_plan[0])
         self.battery.get_energy(self.pred.schedule[0])
         self.socs.append(self.battery.soc)
@@ -153,7 +158,7 @@ class Actor:
                          + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
                          self.battery.capacity
         for i, energy in enumerate(cum_energy_demand):
-            overcharge=energy-self.battery.capacity
+            overcharge = energy - self.battery.capacity
             while overcharge > 0:
                 possible_prices = self.pred.selling_price.copy()
                 possible_prices[soc_prediction < 0 + EPS] = float('-inf')
@@ -189,14 +194,15 @@ class Actor:
                          / self.battery.capacity
         self.predicted_soc = soc_prediction
 
-    def plan_global_supply(self):
+    def plan_global_self_supply(self):
         cum_energy = self.pred.schedule.cumsum() + self.battery.soc * self.battery.capacity
         self.global_market_buying_plan = np.array([0] * TIMEHORIZON).astype(float)
         # Go through the cumulated demands, deducting the demand if we plan on buying energy
         for i, energy in enumerate(cum_energy):
             while energy < 0:
                 soc_prediction = np.ones(TIMEHORIZON) * self.battery.soc \
-                                 + (cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
+                                 + (
+                                             cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
                 # Where is the lowest price in between now and when I will need some energy
                 # Only check prices where I dont expect a full soc already or
                 # the time where the energy is needed
@@ -245,7 +251,8 @@ class Actor:
                 cum_energy[min_price_index:] += stored_energy
 
         soc_prediction = np.ones(TIMEHORIZON) * self.battery.soc \
-                         + (cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
+                         + (
+                                     cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
         self.predicted_soc = soc_prediction
 
     def plan_global_supply_(self):
@@ -360,7 +367,7 @@ class Actor:
         # order_price = scale_price(price=pred.global_price[4],timesteps=3)
         # order =Order(price = gm_threshold* pred.global_price[0], amount=order_amount))
         # for example
-        gm_threshold = 0.2
+        gm_threshold = 0.9
 
         def scale_price(price, timesteps):
             if timesteps == 0:
@@ -378,29 +385,203 @@ class Actor:
         # Buying prices below current global selling price as well as selling prices above current
         # global buying prices dont make sense since they will never be fullfilles in a proper
         # market. Implementation does not seem to be mandatory though
-        if next_amount>0:
+        if next_amount > 0:
             next_price = self.pred.global_price[next_global_buy]
 
-            max_battery_soc = self.battery.soc+self.pred.schedule[0]/self.battery.capacity
-            if next_global_buy !=0:
-                max_battery_soc=max(max_battery_soc,np.max(self.predicted_soc[0:next_global_buy + 1]))
+            max_battery_soc = self.battery.soc + self.pred.schedule[0] / self.battery.capacity
+            if next_global_buy != 0:
+                max_battery_soc = max(max_battery_soc,
+                                      np.max(self.predicted_soc[0:next_global_buy + 1]))
             order_amount = min(next_amount,
                                (1 - max_battery_soc) * self.battery.capacity)
             order_price = scale_price(next_price, next_global_buy)
         else:
             next_price = self.pred.selling_price[next_global_buy]
 
-            min_battery_soc = self.battery.soc+self.pred.schedule[0]/self.battery.capacity
-            if next_global_buy !=0:
-                min_battery_soc=min(min_battery_soc,np.min(self.predicted_soc[0:next_global_buy + 1]))
+            min_battery_soc = self.battery.soc + self.pred.schedule[0] / self.battery.capacity
+            if next_global_buy != 0:
+                min_battery_soc = min(min_battery_soc,
+                                      np.min(self.predicted_soc[0:next_global_buy + 1]))
             # todo higher orders than bat max charge/discharge could be allowed, since
             # production could go directly into the network
             order_amount = max(next_amount,
                                -min_battery_soc * self.battery.capacity)
             order_price = scale_price(next_price, -next_global_buy)
-
-
         return order_amount, order_price, next_global_buy
+
+    def plan_global_trading_supply(self):
+        """ Strategy to buy energy when profit is predicted by selling the energy later on
+        when the flexibility is given"""
+        cum_energy_demand = self.pred.schedule.cumsum() + self.global_market_buying_plan.cumsum() +\
+                            self.battery.soc * self.battery.capacity
+        soc_prediction = np.ones(TIMEHORIZON) * self.battery.soc \
+                         + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
+                         self.battery.capacity
+
+        # +++++++++++++++++++++++++=
+        # handle stored amount
+        buy_index=0
+        buying_price = 0
+        sellable_amount_of_stored_energy=min(soc_prediction)*self.battery.capacity
+        possible_prices = self.pred.selling_price.copy()
+        possible_prices[:buy_index] = float("-inf")
+        sell_indicies = np.argwhere(possible_prices > buying_price)
+        if sell_indicies.size > 0:
+            sell_indicies = sell_indicies.squeeze(axis=1)
+        # If there are possible selling points of energy and there is the possibility of
+        # storing energy in between, i.e soc<1
+        while sellable_amount_of_stored_energy>0:
+
+            found_sell_index = None
+            for sell_index in sell_indicies:
+                sell_price = possible_prices[sell_index]
+                higher_sell_price_indicies = np.argwhere(
+                    possible_prices[sell_index + 1:] >= sell_price)
+                # highest price found
+                if len(higher_sell_price_indicies) == 0:
+                    found_sell_index = sell_index
+                    break
+                else:
+                    # there are higher prices. choose the left most higher price index
+                    higher_sell_price_index = higher_sell_price_indicies.min()
+                lower_buy_price_indicies = np.argwhere(
+                    self.pred.global_price[sell_index + 1:] <= sell_price)
+                # No buy dips but still higher selling prices
+                if len(lower_buy_price_indicies) == 0:
+                    continue
+                else:
+                    # there are lower buy prices onward. choose the left most lower price index
+                    lower_buy_price_index = lower_buy_price_indicies.min()
+                # There are better selling points in the future
+                if higher_sell_price_index < lower_buy_price_index:
+                    continue
+                # if not then we have the best selling point
+                else:
+                    found_sell_index = sell_index
+                    break
+            # find how much energy can be stored in between buying and selling
+            storable_energy = max(
+                soc_prediction[buy_index:found_sell_index + 1].max() * self.battery.capacity,
+                self.battery.capacity)
+            assert storable_energy > 0
+            self.global_market_buying_plan[found_sell_index] -= sellable_amount_of_stored_energy
+            cum_energy_demand[found_sell_index:] -= sellable_amount_of_stored_energy
+            soc_prediction = np.ones(TIMEHORIZON) * self.battery.soc \
+                             + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
+                             self.battery.capacity
+            sellable_amount_of_stored_energy=min(soc_prediction)*self.battery.capacity
+
+
+        # ++++++++++++++++++++
+        sorted_buy_indexes= np.argsort(self.pred.global_price)
+        for buy_index in sorted_buy_indexes:
+            buying_price = self.pred.global_price[buy_index]
+            possible_prices = self.pred.selling_price.copy()
+            possible_prices[:buy_index+1] = float("-inf")
+            sell_indicies = np.argwhere(possible_prices>buying_price)
+            if sell_indicies.size>0:
+                sell_indicies=sell_indicies.squeeze(axis=1)
+            # If there are possible selling points of energy and there is the possibility of
+            # storing energy in between, i.e soc<1
+            while sell_indicies.size>0 and soc_prediction[buy_index:sell_indicies[0]].max()<1-EPS:
+
+                found_sell_index=None
+                for sell_index in sell_indicies:
+                    sell_price=possible_prices[sell_index]
+                    higher_sell_price_indicies=np.argwhere(possible_prices[sell_index+1:]>=sell_price)
+                    # highest price found
+                    if len(higher_sell_price_indicies)==0:
+                        found_sell_index=sell_index
+                        break
+                    else:
+                        # there are higher prices. choose the left most higher price index
+                        higher_sell_price_index= higher_sell_price_indicies.min()
+                    lower_buy_price_indicies=np.argwhere(self.pred.global_price[sell_index+1:]<=sell_price)
+                    # No buy dips but still higher selling prices
+                    if len(lower_buy_price_indicies)==0:
+                        continue
+                    else:
+                        # there are lower buy prices onward. choose the left most lower price index
+                        lower_buy_price_index= higher_sell_price_indicies.min()
+                    # There are better selling points in the future
+                    if higher_sell_price_index<lower_buy_price_index:
+                        continue
+                    # if not then we have the best selling point
+                    else:
+                        found_sell_index = sell_index
+                        break
+                #find how much energy can be stored in between buying and selling
+                storable_energy = max(soc_prediction[buy_index:found_sell_index+1].max()*self.battery.capacity, self.battery.capacity)
+                assert storable_energy>0
+                self.global_market_buying_plan[buy_index] +=storable_energy
+                self.global_market_buying_plan[found_sell_index] -= storable_energy
+                cum_energy_demand[buy_index:] +=storable_energy
+                cum_energy_demand[found_sell_index:] -=storable_energy
+                soc_prediction = np.ones(TIMEHORIZON) * self.battery.soc \
+                                 + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
+                                 self.battery.capacity
+
+time_steps_per_hour = 1
+prices = [p for price in prices for p in [price] * time_steps_per_hour]
+schedule = np.array(
+    [s for sched in schedule for s in [sched / time_steps_per_hour] * time_steps_per_hour])
+schedule[5:10] += 2
+schedule[18:22] += 2
+schedule=np.array(schedule)*0
+pred = Prediction(prices, schedule)
+pred.next_timestep()
+pred.next_timestep()
+
+battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
+actor = Actor(pred, battery)
+
+for _ in range(30):
+    actor.plan_global_self_supply()
+    actor.plan_selling_strategy()
+    actor.plan_global_trading_supply()
+    actor.plan_selling_strategy()
+    order_amount, order_price, order_index = actor.create_order()
+    actor.order = (order_amount, order_price, order_index)
+    if order_amount != 0:
+
+        if (order_amount > 0 and
+                (order_price >= actor.pred.global_price[0] - EPS) or
+                (order_amount < 0) and
+                (order_price <= actor.pred.selling_price[0] + EPS)):
+            actor.buy_order(local=False)
+        elif random.random() > 1.5:
+            actor.buy_order(local=True)
+        else:
+            actor.bought_energy_from_local_market.append(0)
+            actor.bought_energy_from_global_market.append(0)
+    else:
+        actor.bought_energy_from_local_market.append(0)
+        actor.bought_energy_from_global_market.append(0)
+
+    actor.write_data()
+    pred.next_timestep()
+
+f, ax = plt.subplots()
+ax.plot(actor.bought_energy_from_global_market, label="Energy from GM")
+ax.plot(actor.schedule, label="Schedule")
+ax2= ax.twinx()
+ax2.plot(actor.global_price,"k", label="Buy Price")
+ax2.plot(actor.global_sell_price, linewidth=1, label="Sell Price")
+ax.plot(actor.socs, label="SOC")
+ax.plot(actor.bought_energy_from_local_market, label="Energy from LM")
+ax.plot(actor.global_buy, "k--", linewidth=1, label="Planed Buy")
+
+print("Actor 1 had costs of: ", actor.cost)
+print("Actor 1 bought from GM", sum(actor.bought_energy_from_global_market))
+print("Actor 1 bought from LM", sum(actor.bought_energy_from_local_market))
+print("Actor 1 bought from TOTAL",
+      sum(actor.bought_energy_from_global_market) + sum(actor.bought_energy_from_local_market))
+print("~~~~~~~~~~~~~")
+ax.legend()
+ax2.legend()
+plt.show()
+a = 2
+
 
 
 # optimal soc initial is 0 in this case, since we want a stationary battery level over the time-horizon
@@ -418,7 +599,7 @@ battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
 actor = Actor(pred, battery)
 
 for _ in range(30):
-    actor.plan_global_supply()
+    actor.plan_global_self_supply()
     actor.buy_planed_energy_from_global_market()
     pred.next_timestep()
 
@@ -450,7 +631,7 @@ battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
 actor = Actor(pred, battery)
 
 for _ in range(30):
-    actor.plan_global_supply()
+    actor.plan_global_self_supply()
     order_amount, order_price, order_index = actor.create_order()
     actor.order = (order_amount, order_price, order_index)
     if order_amount != 0:
@@ -507,7 +688,7 @@ battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
 actor = Actor(pred, battery)
 
 for _ in range(30):
-    actor.plan_global_supply()
+    actor.plan_global_self_supply()
     actor.plan_selling_strategy()
     order_amount, order_price, order_index = actor.create_order()
     actor.order = (order_amount, order_price, order_index)
@@ -531,6 +712,7 @@ for _ in range(30):
     actor.write_data()
     pred.next_timestep()
 
+
 f, ax = plt.subplots()
 ax.plot(actor.bought_energy_from_global_market, label="Energy from GM")
 ax.plot(actor.schedule, label="Schedule")
@@ -548,3 +730,74 @@ ax.legend()
 
 plt.show()
 a = 2
+
+## Thoughts on further strategies.
+## So far the strategies are all somewhat conservative. They could be made better by:
+## Making orders not just according to the current next buy/sell but all the next sales, if enough
+## flexibility is in the soc and the order prices are lower for both the next and the buy after that
+## or the selling price is higher than the next optimal sell and the sell after that.
+## The status of the local market is not taken into account as well.
+## One easy way of taking the status of the local market into consideration would be an analysis
+## of the summed up schedule of all the schedules. In simple terms . The more production there is,
+## the greedier the price handling can be. Prices should still never exceed the global market
+# boundary prices. Since there is no way of looking at production specificly the net of
+# production and consumption has to be used. If we had some form of production curve, it would
+# make sense to scale the price according to the sum of available production of energy in between
+# the current timestep and the time where we buy theenergy from the global market.
+# E.g. we use some random fitting value (fv=10) and the local market will produce 35 energy
+# in between now, and when we buy the energy we could scale the price by some
+# function like gm_price*(10/35)). As we get closer to the point of buying from the global market,
+# price increases up the global market price.
+# To achieve something similar we can use sum(arctan(net_energy/fv)+pi/2)
+#
+## make use of global market fluctuations. The strategy can be further improved by making use
+## of global market fluctuations. Eg the buying price is cheaper than a selling price in the future.
+#
+#
+#
+#
+#    ºBuying Price
+#    •Selling Price                                         ○
+#                                                        ○○
+#                                                      ○
+#                                              ○     ○      •• Highest Selling Price
+#                                            ○  ○○○       •••
+#                                           ○            •••
+#                                          ○    ••   • ••
+#         ○○○     ○○     ○○○           ○    ••• •••
+#        ○    ○○○○  ○○○○    ○○○     ○○   •••
+#      ○○    ○○                   ○ ○○    •••
+#      ────────────────────────────────•─ ── ─ ── ─────────── Lowest buying price
+#              ••       ••         •••
+#           ••••••••••••••••    ••••
+#      ••••• •             ••••••
+## or more complicated. Here the optimal Strategy wouldnt be to buy at the start and sell everything
+# at the end but to buy at the start. sell at the first high peak. buy at the low peak and sell
+# again at the end
+#                                         ○○○○○○○○○○
+#                                        ○○            ○○
+#                                        ○○  ••••••••••
+#                                       ○   ••
+#                                      ○  •••
+#                                    ○○    ••
+#          ○○○○○○○○○○            ○○ ••
+#        ○○           ○○○       ○○   •••
+#      ○○○     ••••    ○○○   ○○   •••
+#    ○○     •••    •••   ○○○○○  •••
+#  ○○    ••••        ••••••   •••
+# ○○▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬ ▬▬▬▬▬ ▬▬▬▬▬▬▬▬▬▬▬▬▬  ▬  ▬▬ ▬
+#    •••
+#  •••
+# Algorithm for buying energy to sell it later on. The selling strategy should take
+# care of selling the energy at the lowest
+# price already.
+#
+# For each buying price from now to the future where the predicted soc is below 1
+#   Get selling Prices (SPH) which are higher
+#   For each SPH check whats in the closer future. A higher SPH OR A lower buying price
+#      if a lower buying price
+#           found best point of selling with index (best_sell_index)
+#           break
+#   Get the possible amount you can buy for as 1-max(predicted_soc[buy_index:sell_index)
+#   If the amount is bigger than 0 buy it--> predict the soc again
+
