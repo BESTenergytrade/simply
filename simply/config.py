@@ -63,8 +63,8 @@ class Config:
         self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
         # number of nodes in simulation
         self.nb_nodes = parser.getint('default', 'nb_nodes', fallback=4)
-        # interval between simulation timesteps
-        self.step_size = parser.getint("default", "step_size", fallback=1)
+        # number of timesteps per hour
+        self.time_steps_per_hour = parser.getint("default", "time_steps_per_hour", fallback=1)
         # list of timesteps in simulation
         # not read from file but created from above information
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)

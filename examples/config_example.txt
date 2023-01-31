@@ -25,8 +25,8 @@ weight_factor = 0.1
 start = 1
 # number of timesteps in simulation
 nb_ts = 12
-# interval between simulation timesteps
-step_size = 1
+# number of timesteps per hour
+time_steps_per_hour = 1
 # which market type to use? fair, merit, pac
 market_type = fair
 # ? not in config py
