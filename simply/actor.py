@@ -83,6 +83,7 @@ class Actor:
         self.t = cfg.parser.getint("default", "start", fallback=0)
         self.time_steps_per_hour = 1
         self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
+        self.time_steps_per_hour = cfg.parser.getint("default", "time_steps_per_hour", fallback=1)
 
         self.load_scale = ls
         self.pv_scale = ps
@@ -90,6 +91,7 @@ class Actor:
         self.battery = battery
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
+        self.socs = []
         self.pm = pd.DataFrame()
         if csv is not None:
             self.csv_file = csv
@@ -121,6 +123,9 @@ class Actor:
         plt.show()
 
     def update(self):
+        if self.battery and not self.pred.empty:
+            self.battery.get_energy(self.pred.schedule[0] + self.global_market_buying_plan[0])
+            self.socs.append(self.battery.soc)
         for column in ["load", "pv", "prices", "schedule"]:
             if column in self.data.columns:
                 self.pred[column] = \
@@ -213,6 +218,69 @@ class Actor:
         self.battery.get_energy(self.pred.schedule[0] + bought_energy)
         self.socs.append(self.battery.soc)
         self.cost -= bought_energy * self.pred.global_price[0]
+
+    def new_update(self):
+        ...
+
+    def plan_global_self_supply(self):
+        cum_energy = self.pred.schedule.cumsum() + self.battery.soc * self.battery.capacity
+        self.global_market_buying_plan = np.array([0] * self.horizon).astype(float)
+        # Go through the cumulated demands, deducting the demand if we plan on buying energy
+        for i, energy in enumerate(cum_energy):
+            while energy < 0:
+                soc_prediction = np.ones(self.horizon) * self.battery.soc \
+                                 + (cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
+                # Where is the lowest price in between now and when I will need some energy
+                # Only check prices where I dont expect a full soc already or
+                # the time where the energy is needed
+                possible_global_prices = np.ones(self.horizon) * float('inf')
+                # prices are set where the soc in not full yet
+                # possible_global_prices[(0- EPS<=soc_prediction )* (soc_prediction < 1 + EPS)] = \
+                #     self.pred.global_price[(0 -EPS<soc_prediction )* (soc_prediction < 1 + EPS)]
+                possible_global_prices[(soc_prediction < 1 - EPS)] = \
+                    self.pred.prices[(soc_prediction < 1 - EPS)]
+
+                # index for the last inf value between now and energy demand
+                last_inf_index = np.argwhere(possible_global_prices[:i + 1] >= float('inf'))
+                if len(last_inf_index) == 0:
+                    last_inf_index = 0
+                else:
+                    last_inf_index = last_inf_index.max()
+                possible_global_prices[0:last_inf_index] = float('inf')
+                # storing energy before that is not possible. only look at prices afterwards
+                min_price_index = np.argmin(possible_global_prices[:i + 1])
+
+                # cheapest price for the energy is when the energy is needed --> no storage is needed
+                if min_price_index == i or last_inf_index >= i:
+                    self.global_market_buying_plan[i] -= energy
+                    cum_energy[i:] -= energy
+                    break
+
+                # cheapest price is some time before the energy is needed. Check the storage
+                # how much energy can be stored in the battery
+                max_soc = min(1, max(0, np.max(soc_prediction[min_price_index:i])))
+                max_storable_energy = (1 - max_soc) * self.battery.capacity
+
+                # how much energy can be stored in the battery per time step via c-rate
+                max_storable_energy = min(max_storable_energy, self.battery.capacity
+                                          * self.battery.max_c_rate / self.time_steps_per_hour)
+
+                # how much energy do i need to store. Energy needs are negative
+                stored_energy = min(max_storable_energy, -energy)
+                # Reduce the energy needs for the current time step
+                energy += stored_energy
+
+                # fix the soc prediction for the time span between buying and consumption
+                # soc_prediction[min_price_index:i] += stored_energy / self.battery.capacity
+                self.global_market_buying_plan[min_price_index] += stored_energy
+                # Energy will be bought this timestep. Predictions in the future, eg after this timestep
+                # will use the reduced demand for the timesteps afterwards
+                cum_energy[min_price_index:] += stored_energy
+
+        soc_prediction = np.ones(self.horizon) * self.battery.soc \
+                         + (
+                                 cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
+        self.predicted_soc = soc_prediction
 
 
 def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
