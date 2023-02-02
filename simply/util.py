@@ -16,6 +16,12 @@ def daily(df, daily_ts=24):
         yield df.iloc[i:i + daily_ts]
 
 
+def scale_price(price, timesteps):
+    if timesteps == 0:
+        return price
+    return price * gm_threshold ** timesteps
+
+
 def summerize_actor_trading(sc):
     # Check if at least one trade has happened
     empty = True

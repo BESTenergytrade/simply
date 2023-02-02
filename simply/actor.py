@@ -5,7 +5,7 @@ import pandas as pd
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
-from simply.util import daily, gaussian_pv
+from simply.util import daily, gaussian_pv, scale_price
 from simply.battery import Battery
 import simply.config as cfg
 
@@ -92,6 +92,7 @@ class Actor:
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.socs = []
+        self.gm_threshold = 0.9
         self.pm = pd.DataFrame()
         if csv is not None:
             self.csv_file = csv
@@ -134,6 +135,19 @@ class Actor:
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
+    def find_amount(self, next_amount, next_global_buy):
+        if next_amount > 0:
+        next_price = self.pred.global_price[next_global_buy]
+
+        max_battery_soc = self.battery.soc + self.pred.schedule[0] / self.battery.capacity
+        if next_global_buy != 0:
+            max_battery_soc = max(max_battery_soc,
+                                  np.max(self.predicted_soc[0:next_global_buy + 1]))
+        order_amount = min(next_amount,
+                           (1 - max_battery_soc) * self.battery.capacity)
+        order_price = scale_price(next_price, next_global_buy)
+
+
     def generate_order(self):
         """
         Generate new order for current time slot according to predicted schedule
@@ -142,6 +156,23 @@ class Actor:
         :return: generated new order
         :rtype: Order
         """
+
+        next_global_buy = np.argwhere(self.global_market_buying_plan != 0)
+        if len(next_global_buy) == 0:
+            raise Exception('No next global buy.')
+
+        next_global_buy = np.squeeze(next_global_buy).min()
+        next_amount = self.global_market_buying_plan[next_global_buy]
+
+        if next_amount > 0:
+            order_amount, order_price = self.find_amount('buy', next_amount, next_global_buy)
+        else:
+            order_amount, order_price = self.find_amount('sell', next_amount, next_global_buy)
+        return order_amount, order_price, next_global_buy
+
+
+
+
         # TODO calculate amount of energy to fulfil personal schedule
         energy = self.pred["schedule"][0]
         if energy == 0:
@@ -158,6 +189,10 @@ class Actor:
         self.update()
 
         return new
+
+    def create_order(self):
+
+
 
     def receive_market_results(self, time, sign, energy, price):
         """
@@ -218,9 +253,6 @@ class Actor:
         self.battery.get_energy(self.pred.schedule[0] + bought_energy)
         self.socs.append(self.battery.soc)
         self.cost -= bought_energy * self.pred.global_price[0]
-
-    def new_update(self):
-        ...
 
     def plan_global_self_supply(self):
         cum_energy = self.pred.schedule.cumsum() + self.battery.soc * self.battery.capacity

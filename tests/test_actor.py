@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from simply.actor import Actor, create_random,Order
+from simply.actor import Actor, create_random, Order
 from simply.battery import Battery
 from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD
 from simply.power_network import PowerNetwork
@@ -13,6 +13,19 @@ class TestActor:
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
+    test_prices = [0.2116079447, 0.1473127859, 0.22184087530000002, 0.11761082760000001,
+                   0.2463169965, 0.2020745841, 0.0613031114, 0.24701460990000002,
+                   0.12690570210000002, 0.1467477666, 0.0910571313, 0.1510937983, 0.0961995166,
+                   0.16232426160000002, 0.1911430976, 0.2395885052, 0.1161007245, 0.1912644558,
+                   0.08394693780000001, 0.031559975000000004, 0.07516904740000001, 0.0839614066,
+                   0.1340712662, 0.1921131123]
+
+    test_schedule = [-0.2278688066, -0.4956801147, -0.5660800508, -0.4605807878, -0.7235523078,
+                     -0.41539310830000004, -0.0517064662, -0.4741886065, -0.253179973,
+                     -0.7055324580000001, -0.0665372924, -0.33647962400000003, -0.3992714075,
+                     -0.4354996278, -0.625752089, -0.30241824170000003, -0.23024240310000002,
+                     -0.6122942333, -0.1880810302, -0.1261036003, -0.18803270630000002,
+                     -0.2284269156, -0.7287319187, -0.0596583833]
 
     def test_init(self):
         # actor_id, dataframe, load_scale, power_scale, pm (?)
@@ -55,22 +68,9 @@ class TestActor:
         assert a.data.index[0].date() != a.data.index[-1].date()
 
     def test_rule_based_strategy_1(self):
-        prices = [0.2116079447, 0.1473127859, 0.22184087530000002, 0.11761082760000001,
-                  0.2463169965, 0.2020745841, 0.0613031114, 0.24701460990000002,
-                  0.12690570210000002, 0.1467477666, 0.0910571313, 0.1510937983, 0.0961995166,
-                  0.16232426160000002, 0.1911430976, 0.2395885052, 0.1161007245, 0.1912644558,
-                  0.08394693780000001, 0.031559975000000004, 0.07516904740000001, 0.0839614066,
-                  0.1340712662, 0.1921131123]
-
-        schedule = [-0.2278688066, -0.4956801147, -0.5660800508, -0.4605807878, -0.7235523078,
-                    -0.41539310830000004, -0.0517064662, -0.4741886065, -0.253179973,
-                    -0.7055324580000001, -0.0665372924, -0.33647962400000003, -0.3992714075,
-                    -0.4354996278, -0.625752089, -0.30241824170000003, -0.23024240310000002,
-                    -0.6122942333, -0.1880810302, -0.1261036003, -0.18803270630000002,
-                    -0.2284269156, -0.7287319187, -0.0596583833]
-
-        df = pd.DataFrame(list(zip([abs(num) for num in schedule], [0 for i in range(len(
-            schedule))], schedule, prices)), columns=['load', 'pv', 'schedule', 'prices'])
+        df = pd.DataFrame(list(zip([abs(num) for num in self.test_schedule],
+                                   [0 for i in range(len(self.test_schedule))], self.test_schedule,
+                                   self.test_prices)), columns=['load', 'pv', 'schedule', 'prices'])
         battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, df, battery=battery)
         m = BestMarket(0, self.pn)
@@ -82,8 +82,7 @@ class TestActor:
             # Generate market maker order
             m.accept_order(order)
             # Generate market maker order
-            m.accept_order(Order(1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD,
-                                 order.price))
+            m.accept_order(Order(1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD, order.price))
             m.clear()
         assert len(m.matches) == 24
 
@@ -94,21 +93,20 @@ class TestActor:
         # It will not be greedy and use strategy as upper bound. Therefore it should not be able to have
         # higher costs than strategy 1. This means it wont greedly hope for better prices after energy buys
         # are planned by  strat. 1
-        time_steps_per_hour = 1
-        prices = [p for price in prices for p in [price] * time_steps_per_hour]
-        schedule = [s for sched in schedule for s in
-                    [sched / time_steps_per_hour] * time_steps_per_hour]
-        pred = Prediction(prices, schedule)
-        pred.next_timestep()
-        pred.next_timestep()
-
+        df = pd.DataFrame(list(zip([abs(num) for num in self.test_schedule],
+                                   [0 for i in range(len(self.test_schedule))], self.test_schedule,
+                                   self.test_prices)), columns=['load', 'pv', 'schedule', 'prices'])
         battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
-        actor = Actor(pred, battery)
-
-        for _ in range(30):
+        actor = Actor(0, df, battery=battery)
+        m = BestMarket(0, self.pn)
+        # Iterate through timesteps
+        for t in range(24):
             actor.plan_global_self_supply()
             order_amount, order_price, order_index = actor.create_order()
             actor.order = (order_amount, order_price, order_index)
+            order = actor.generate_order()
+
+
             if order_amount != 0:
                 if order_price >= actor.pred.global_price[0] - EPS:
                     assert order_index == 0
