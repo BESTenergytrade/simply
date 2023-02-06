@@ -140,9 +140,20 @@ class TestActor:
             pred.next_timestep()
 
     def test_rule_based_strategy_3(self):
+        bat = Battery(2, soc_initial=0)
+        a = Actor(0, self.df, battery=bat)
+        a.data.selling_price *= 0.8
+        a.create_prediction()
+        a.market_schedule *= 0
+        a.generate_market_schedule(strategy=1)
+        assert a.market_schedule.__abs__().sum() == 0
+        a.generate_market_schedule(strategy=3)
+        assert a.market_schedule.__abs__().sum()> 0
 
+        o = a.generate_order()
+        assert len(a.orders) == 1
+        assert o.actor_id == 0
 
-        pass
 
 t=TestActor()
-t.test_generate_orders()
+t.test_rule_based_strategy_3()
