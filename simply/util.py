@@ -16,7 +16,7 @@ def daily(df, daily_ts=24):
         yield df.iloc[i:i + daily_ts]
 
 
-def scale_price(price, timesteps):
+def scale_price(price, timesteps, gm_threshold=0.99):
     if timesteps == 0:
         return price
     return price * gm_threshold ** timesteps
