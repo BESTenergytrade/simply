@@ -46,3 +46,9 @@ def get_all_data(df, col="pv"):
     :return: DataFrame with single column level comprising all columns of equal sub-column name col
     """
     return df.iloc[:, df.columns.get_level_values(1) == col]
+
+
+class NoNextBuyException(Exception):
+    """ Exception which is raised if an actor without any planned buys or sells
+    is expected to generate an order"""
+    pass

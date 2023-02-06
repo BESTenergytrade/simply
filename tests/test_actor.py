@@ -1,15 +1,17 @@
 import pandas as pd
 import numpy as np
 
+from simply.util import NoNextBuyException
 from simply.actor import Actor, create_random, Order
 from simply.battery import Battery
 from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD
 from simply.power_network import PowerNetwork
+import simply.config as cfg
 import networkx as nx
-
 
 class TestActor:
     df = pd.DataFrame(np.random.rand(24, 4), columns=["load", "pv", "prices", "schedule"])
+    cfg.Config("")
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
@@ -29,11 +31,25 @@ class TestActor:
 
     def test_init(self):
         # actor_id, dataframe, load_scale, power_scale, pm (?)
+        assert 0
         a = Actor(0, self.df)
         assert a is not None
 
     def test_generate_orders(self):
-        a = Actor(0, self.df)
+        bat = Battery(2, soc_initial=0)
+        a = Actor(0, self.df, battery=bat)
+        a.market_schedule *= 0
+        try:
+            o = a.generate_order()
+        except NoNextBuyException:
+            pass
+        else:
+            raise Exception("Order was generated although no market schedule is only Zeros")
+
+        # Make sure there is load in the schedule so buying power is necessary
+        a.data.loc[0:5, "schedule"] = -a.data.loc[0:5, "schedule"].abs()
+        a.update()
+        a.generate_market_schedule(strategy=1)
         o = a.generate_order()
         assert len(a.orders) == 1
         assert o.actor_id == 0
@@ -124,4 +140,9 @@ class TestActor:
             pred.next_timestep()
 
     def test_rule_based_strategy_3(self):
+
+
         pass
+
+t=TestActor()
+t.test_generate_orders()
