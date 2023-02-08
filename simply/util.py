@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 
 
+def update_timesteps(*args):
+    for arg in args:
+        arg.t += 1
+
 def gaussian_pv(ts_hour, std):
     # One day (24h) time series with peak at noon (12h)
     # and a gaussian curve defined by standard deviation
