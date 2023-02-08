@@ -6,7 +6,6 @@ from collections import namedtuple
 import matplotlib.pyplot as plt
 
 from simply.util import daily, gaussian_pv, scale_price, NoNextBuyException
-from simply.battery import Battery
 import simply.config as cfg
 
 EPS = 1e-6
@@ -112,7 +111,6 @@ class Actor:
 
         self.market_schedule = self.get_default_market_schedule()
 
-
         self.orders = []
         self.traded = {}
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
@@ -139,23 +137,35 @@ class Actor:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
     def update(self):
-        self.create_prediction()
         if self.battery and not self.pred.empty:
             self.battery.get_energy(self.pred.schedule[0] + self.market_schedule[0])
             self.socs.append(self.battery.soc)
+        self.create_prediction()
 
-
-    def find_amount(self, next_amount, next_global_buy):
-        if next_amount > 0:
+    def find_amount(self, type, next_amount, next_global_buy):
+        if type == 'buy':
             next_price = self.pred.prices[next_global_buy]
 
-        max_battery_soc = self.battery.soc + self.pred.schedule[0] / self.battery.capacity
-        if next_global_buy != 0:
-            max_battery_soc = max(max_battery_soc,
-                                  np.max(self.predicted_soc[0:next_global_buy + 1]))
-        order_amount = min(next_amount,
-                           (1 - max_battery_soc) * self.battery.capacity)
-        order_price = scale_price(next_price, next_global_buy)
+            max_battery_soc = self.battery.soc + self.pred.schedule[0] / self.battery.capacity
+            if next_global_buy != 0:
+                max_battery_soc = max(max_battery_soc,
+                                      np.max(self.predicted_soc[0:next_global_buy + 1]))
+            order_amount = min(next_amount,
+                               (1 - max_battery_soc) * self.battery.capacity)
+            order_price = scale_price(next_price, next_global_buy)
+        if type == 'sell':
+            next_price = self.pred.selling_price[next_global_buy]
+
+            min_battery_soc = self.battery.soc + self.pred.schedule[0] / self.battery.capacity
+            if next_global_buy != 0:
+                min_battery_soc = min(min_battery_soc,
+                                      np.min(self.predicted_soc[0:next_global_buy + 1]))
+            # todo higher orders than bat max charge/discharge could be allowed, since
+            # production could go directly into the network
+            order_amount = max(next_amount,
+                               -min_battery_soc * self.battery.capacity)
+            order_price = scale_price(next_price, -next_global_buy)
+        return order_amount, order_price, next_global_buy
 
     def get_default_market_schedule(self):
         return np.array(self.data["schedule"].values)
@@ -177,34 +187,26 @@ class Actor:
         next_amount = self.market_schedule[next_global_buy]
 
         if next_amount > 0:
-            order_amount, order_price = self.find_amount('buy', next_amount, next_global_buy)
+            order_amount, order_price, next_global_buy = self.find_amount('buy', next_amount,
+                                                                          next_global_buy)
+            order = Order(-1, self.t, self.id, self.cluster, order_amount, order_price)
+            self.orders.append(order)
+            # update schedule for next time step
+            self.t += 1
+            self.update()
+            return order
         else:
-            order_amount, order_price = self.find_amount('sell', next_amount, next_global_buy)
-        return order_amount, order_price, next_global_buy
-
-
-
-
-        # TODO calculate amount of energy to fulfil personal schedule
-        energy = self.pred["schedule"][0]
-        if energy == 0:
-            return None
-        # TODO simulate strategy: manipulation, etc.
-        price = self.pred["prices"][0]
-        # TODO take flexibility into account to generate the bid
-
-        # TODO replace order type by enum
-        new = Order(np.sign(energy), self.t, self.id, self.cluster, abs(energy), price)
-        self.orders.append(new)
-        # update schedule for next time step
-        self.t += 1
-        self.update()
-
-        return new
+            order_amount, order_price, next_global_buy = self.find_amount('sell', next_amount,
+                                                                          next_global_buy)
+            order = Order(1, self.t, self.id, self.cluster, order_amount, order_price)
+            self.orders.append(order)
+            # update schedule for next time step
+            self.t += 1
+            self.update()
+            return order
 
     def create_order(self):
         pass
-
 
     def receive_market_results(self, time, sign, energy, price):
         """
@@ -302,7 +304,8 @@ class Actor:
         for i, energy in enumerate(cum_energy):
             while energy < 0:
                 soc_prediction = np.ones(self.horizon) * self.battery.soc \
-                                 + (cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
+                                 + (cum_energy - self.battery.soc * self.battery.capacity) \
+                                 / self.battery.capacity
                 # Where is the lowest price in between now and when I will need some energy
                 # Only check prices where I dont expect a full soc already or
                 # the time where the energy is needed
@@ -335,8 +338,8 @@ class Actor:
                 max_storable_energy = (1 - max_soc) * self.battery.capacity
 
                 # how much energy can be stored in the battery per time step via c-rate
-                max_storable_energy = min(max_storable_energy, self.battery.capacity
-                                          * self.battery.max_c_rate / self.time_steps_per_hour)
+                max_storable_energy = min(max_storable_energy, self.battery.capacity *
+                                          self.battery.max_c_rate / self.time_steps_per_hour)
 
                 # how much energy do i need to store. Energy needs are negative
                 stored_energy = min(max_storable_energy, -energy)
@@ -351,8 +354,8 @@ class Actor:
                 cum_energy[min_price_index:] += stored_energy
 
         soc_prediction = np.ones(self.horizon) * self.battery.soc \
-                         + (
-                                 cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
+                         + (cum_energy - self.battery.soc * self.battery.capacity) \
+                         / self.battery.capacity
         self.predicted_soc = soc_prediction
 
     def plan_global_trading(self):
@@ -470,8 +473,8 @@ class Actor:
                 cum_energy_demand[buy_index:] += storable_energy
                 cum_energy_demand[found_sell_index:] -= storable_energy
                 soc_prediction = np.ones(self.horizon) * self.battery.soc \
-                                 + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
-                                 self.battery.capacity
+                                 + (cum_energy_demand - self.battery.soc * self.battery.capacity) \
+                                 / self.battery.capacity
 
 
 def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
@@ -508,7 +511,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     # (i.e. positive power) Bids however include network charges
     net_price_factor = 0.7
     df["prices"] = df.apply(lambda slot: slot["prices"] - (slot["schedule"] > 0)
-                            * net_price_factor * slot["prices"], axis=1)
+                                         * net_price_factor * slot["prices"], axis=1)
     return Actor(actor_id, df, ls=ls, ps=ps)
 
 
@@ -591,4 +594,3 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
         axis=1)
 
     return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
-
