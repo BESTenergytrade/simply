@@ -333,9 +333,6 @@ class Actor:
                          / self.battery.capacity
         self.predicted_soc = soc_prediction
 
-    def plan_global_trading(self):
-        pass
-
     def buy_planed_energy_from_global_market(self):
         bought_energy = self.market_schedule[0]
         self.schedule.append(self.pred.schedule[0])
