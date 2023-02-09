@@ -283,7 +283,55 @@ class Actor:
         return self.market_schedule
 
     def plan_selling_strategy(self):
-        pass
+        # Find peaks of SOCs above 1.
+        #                                 x
+        #             (x)               x   x
+        #                   x         x      x
+        #           x    x     x    x
+        # 1 ----- x-------------  x-
+        #      x         o
+        #   x
+        cum_energy_demand = self.pred.schedule.cumsum() + self.market_schedule.cumsum() + self.battery.soc * \
+                            self.battery.capacity
+        soc_prediction = np.ones(self.horizon) * self.battery.soc \
+                         + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
+                         self.battery.capacity
+        for i, energy in enumerate(cum_energy_demand):
+            overcharge = energy - self.battery.capacity
+            while overcharge > 0:
+                possible_prices = self.pred.selling_price.copy()
+                possible_prices[soc_prediction < 0 + EPS] = float('-inf')
+                # in between now and the peak, the right most/latest Zero soc does not allow
+                # reducing the soc before. Energy most be sold afterwards
+                zero_soc_indicies = np.where(soc_prediction[:i] < 0 + EPS)
+                if np.any(zero_soc_indicies):
+                    right_most_peak = np.max(zero_soc_indicies)
+                else:
+                    right_most_peak = 0
+                possible_prices[:right_most_peak] = float('-inf')
+                highest_price_index = np.argmax(possible_prices[:i + 1])
+
+                # If the energy is sold at the time of production no storage is needed
+                if highest_price_index == i:
+                    self.market_schedule[i] -= overcharge
+                    cum_energy_demand[i:] -= overcharge
+                    break
+                # current_soc_after_schedule=((self.battery.soc*self.battery.capacity)
+                #                             +self.pred.schedule[0]+self.global_market_buying_plan[0])/self.battery.capacity
+                soc_to_zero = min(np.min(soc_prediction[highest_price_index:i + 1]), 1)
+                energy_to_zero = soc_to_zero * self.battery.capacity
+                sellable_energy = min(energy_to_zero, overcharge)
+                self.market_schedule[highest_price_index] -= sellable_energy
+                cum_energy_demand[highest_price_index:] -= sellable_energy
+                overcharge -= sellable_energy
+                soc_prediction = np.ones(self.horizon) * self.battery.soc \
+                                 + (cum_energy_demand - self.battery.soc * self.battery.capacity) \
+                                 / self.battery.capacity
+
+        soc_prediction = np.ones(self.horizon) * self.battery.soc \
+                         + (cum_energy_demand - self.battery.soc * self.battery.capacity) \
+                         / self.battery.capacity
+        self.predicted_soc = soc_prediction
 
     def plan_global_trading(self):
         pass
