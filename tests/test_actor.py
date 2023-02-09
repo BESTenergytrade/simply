@@ -29,6 +29,10 @@ class TestActor:
                      -0.4354996278, -0.625752089, -0.30241824170000003, -0.23024240310000002,
                      -0.6122942333, -0.1880810302, -0.1261036003, -0.18803270630000002,
                      -0.2284269156, -0.7287319187, -0.0596583833]
+    example_df = pd.DataFrame(list(zip([abs(num) for num in test_schedule],
+                                       [0 for i in range(len(test_schedule))], test_schedule,
+                                       test_prices)),
+                              columns=['load', 'pv', 'schedule', 'prices'])
 
     def test_init(self):
         # actor_id, dataframe, load_scale, power_scale, pm (?)
@@ -85,16 +89,13 @@ class TestActor:
         assert a.data.index[0].date() != a.data.index[-1].date()
 
     def test_rule_based_strategy_1(self):
-        df = pd.DataFrame(list(zip([abs(num) for num in self.test_schedule],
-                                   [0 for i in range(len(self.test_schedule))], self.test_schedule,
-                                   self.test_prices)), columns=['load', 'pv', 'schedule', 'prices'])
         battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
-        actor = Actor(0, df, battery=battery)
+        actor = Actor(0, self.example_df, battery=battery)
         m = BestMarket(0, self.pn)
         # Iterate through timesteps
         for t in range(20):
             m.t = t
-            actor.plan_global_self_supply()
+            actor.generate_market_schedule(strategy=1)
             order = actor.generate_order()
             # Generate market maker order
             m.accept_order(order)
@@ -103,42 +104,21 @@ class TestActor:
             m.clear()
         assert len(m.matches) == 20
 
-    # def test_rule_based_strategy_2(self):
-    #     ############
-    #     # Strategy 2
-    #     # The 2nd strategy will take the local market into account by trying to estimate useful order prices.
-    #     # It will not be greedy and use strategy as upper bound. Therefore it should not be able to have
-    #     # higher costs than strategy 1. This means it wont greedly hope for better prices after energy buys
-    #     # are planned by  strat. 1
-    #     df = pd.DataFrame(list(zip([abs(num) for num in self.test_schedule],
-    #                                [0 for i in range(len(self.test_schedule))], self.test_schedule,
-    #                                self.test_prices)), columns=['load', 'pv', 'schedule', 'prices'])
-    #     battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
-    #     actor = Actor(0, df, battery=battery)
-    #     m = BestMarket(0, self.pn)
-    #     # Iterate through timesteps
-    #     for t in range(24):
-    #         actor.plan_global_self_supply()
-    #         order_amount, order_price, order_index = actor.create_order()
-    #         actor.order = (order_amount, order_price, order_index)
-    #         order = actor.generate_order()
-    #
-    #
-    #         if order_amount != 0:
-    #             if order_price >= actor.pred.global_price[0] - EPS:
-    #                 assert order_index == 0
-    #                 actor.buy_order(local=False)
-    #             elif random.random() > 0.5:
-    #                 actor.buy_order(local=True)
-    #             else:
-    #                 actor.bought_energy_from_local_market.append(0)
-    #                 actor.bought_energy_from_global_market.append(0)
-    #         else:
-    #             actor.bought_energy_from_local_market.append(0)
-    #             actor.bought_energy_from_global_market.append(0)
-    #
-    #         actor.write_data()
-    #         pred.next_timestep()
+    def test_rule_based_strategy_2(self):
+        battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
+        actor = Actor(0, self.example_df, battery=battery)
+        m = BestMarket(0, self.pn)
+        # Iterate through timesteps
+        for t in range(20):
+            m.t = t
+            actor.generate_market_schedule(strategy=2)
+            order = actor.generate_order()
+            # Generate market maker order
+            m.accept_order(order)
+            # Generate market maker order
+            m.accept_order(Order(1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD, order.price))
+            m.clear()
+        assert len(m.matches) == 20
 
     def test_rule_based_strategy_3(self):
         bat = Battery(2, soc_initial=0)
