@@ -5,6 +5,7 @@ import networkx as nx
 import pytest
 import simply.config as cfg
 
+
 class TestBestMarket:
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
