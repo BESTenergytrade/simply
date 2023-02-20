@@ -11,6 +11,21 @@ class TwoSidedPayAsClear(Market):
     Each timestep, the highest bids are matched with the lowest offers.
     """
 
+    def __init__(self, time, network=None, grid_fee_matrix=None, default_grid_fee=0):
+        super().__init__(time, network, grid_fee_matrix, default_grid_fee)
+        # in case of the two sided pay as clear market a grid price has to be given and should not
+        # be deduced from the network. In this case it needs to be asserted that no cluster
+        # matrix is given but a matrix with a single value
+        assert grid_fee_matrix is not None
+        if type(grid_fee_matrix) == list:
+            assert type(grid_fee_matrix[0]) == list
+            print(grid_fee_matrix)
+            print(len(grid_fee_matrix[0]))
+            assert len(grid_fee_matrix[0]) == 1
+        else:
+            grid_fee_matrix = float(grid_fee_matrix)
+        self.grid_fee_matrix = grid_fee_matrix
+
     def match(self, show=False):
         # order orders by price
         bids = self.get_bids().sort_values(["price", "energy"], ascending=False)
@@ -69,6 +84,17 @@ class TwoSidedPayAsClear(Market):
         output = self.add_grid_fee_info(matches)
         self.append_to_csv(output, 'matches.csv')
         return matches
+
+    def apply_grid_fee(self, ask, bid):
+        """
+        Updates the given ask price by adding the grid fee. For the pay as clear market
+        only as single value is allowed as a grid fee and is added to every possible match.
+
+        :param ask: the ask price to be updated
+        :param bid: the bid used to determine the grid fee to be applied
+        :return: None
+        """
+        ask.price += self.grid_fee_matrix[0][0]
 
 
 def plot_merit_order(bids, asks):

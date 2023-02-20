@@ -127,7 +127,16 @@ class TestTwoSidedPayAsClear:
     def test_prices_matrix(self):
         # test prices with a given grid fee matrix
         # example: cost 1 for trade between clusters
-        m = TwoSidedPayAsClear(0, grid_fee_matrix=[[0, 1], [1, 0]])
+        try:
+            m = TwoSidedPayAsClear(0, grid_fee_matrix=[[0, 1], [1, 0]])
+        except AssertionError:
+            # assertion error because of a full grid_fee_matrix
+            pass
+        else:
+            assert 0, "No assertion Error despite a grid_fee_matrix"
+
+        # grid_fee matrix as a matrix
+        m = TwoSidedPayAsClear(0, grid_fee_matrix=[[1]])
 
         # grid-fees between nodes only allow for partial matching
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
@@ -137,3 +146,18 @@ class TestTwoSidedPayAsClear:
         assert len(matches) == 1
         assert matches[0]["energy"] == 0.1
         assert matches[0]["price"] == 3
+
+        # grid_fee matrix as a value
+        m = TwoSidedPayAsClear(0, grid_fee_matrix=1)
+
+        # grid-fees between nodes only allow for partial matching
+        m.accept_order(Order(-1, 0, 2, 0, 1, 3))
+        m.accept_order(Order(1, 0, 4, 1, 0.9, 3))
+        m.accept_order(Order(1, 0, 0, 1, 0.1, 2))
+        matches = m.match()
+        assert len(matches) == 1
+        assert matches[0]["energy"] == 0.1
+        assert matches[0]["price"] == 3
+
+t= TestTwoSidedPayAsClear()
+t.test_prices_matrix()
