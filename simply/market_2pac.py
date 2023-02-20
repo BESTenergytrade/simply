@@ -11,10 +11,13 @@ class TwoSidedPayAsClear(Market):
     Each timestep, the highest bids are matched with the lowest offers.
     """
 
-    def __init__(self, time, network=None, grid_fee_matrix=None, default_grid_fee=0):
+    def __init__(self, time, network=None, grid_fee_matrix=None, default_grid_fee=None):
+        assert default_grid_fee is not None, "Default grid fee as to be given as an argument for" \
+                                             "TwoSidedPayAsClear Market initialization. '0' is " \
+                                             "allowed"
         assert grid_fee_matrix is None, "Grid fee matrix is not used in two" \
-                                            "sided pay as clear. Only the default_grid_fee is" \
-                                            "applied"
+                                        "sided pay as clear. Only the default_grid_fee is" \
+                                        "applied"
         super().__init__(time, network, grid_fee_matrix, default_grid_fee)
 
     def match(self, show=False):

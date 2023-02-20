@@ -12,7 +12,7 @@ class TestTwoSidedPayAsClear:
         """Tests the basic functionality of the TwoSidedPayAsClear object to accept bids and asks
         via the accept_order method and correctly match asks and bids when the match method
         is called."""
-        m = TwoSidedPayAsClear(0)
+        m = TwoSidedPayAsClear(0, default_grid_fee=0)
         # no orders: no matches
         matches = m.match()
         assert len(matches) == 0
@@ -38,7 +38,7 @@ class TestTwoSidedPayAsClear:
         asks above the crossover (when the bidding price becomes lower than the asking price)
         are matched on the clearing price."""
         # different prices
-        m = TwoSidedPayAsClear(0)
+        m = TwoSidedPayAsClear(0, default_grid_fee=0)
         # ask above bid: no match
         m.accept_order(Order(-1, 0, 0, None, 1, 2))
         m.accept_order(Order(1, 0, 1, None, 1, 2.5))
@@ -59,7 +59,7 @@ class TestTwoSidedPayAsClear:
         """Tests that matches can be made when the amount of energy requested by the bid
         differs from the total amount of energy being offered by the ask."""
         # different energies
-        m = TwoSidedPayAsClear(0)
+        m = TwoSidedPayAsClear(0, default_grid_fee=0)
         m.accept_order(Order(-1, 0, 0, None, .1, 1))
         m.accept_order(Order(1, 0, 1, None, 1, 1))
         matches = m.match()
@@ -89,7 +89,7 @@ class TestTwoSidedPayAsClear:
 
     def test_setting_order_id(self):
         # Check if matched orders retain original ID
-        m = TwoSidedPayAsClear(0)
+        m = TwoSidedPayAsClear(0, default_grid_fee=0)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
         m.accept_order(Order(1, 0, 3, None, 1, 1), "ID2")
         matches = m.match()
@@ -102,7 +102,7 @@ class TestTwoSidedPayAsClear:
         """Tests that multiple bids can be matched with one ask while there is available energy
         within the order."""
         # multiple bids to satisfy one ask
-        m = TwoSidedPayAsClear(0)
+        m = TwoSidedPayAsClear(0, default_grid_fee=0)
         m.accept_order(Order(-1, 0, 1, None, 11, 1.1))
         m.accept_order(Order(-1, 0, 0, None, .1, 3))
         m.accept_order(Order(1, 0, 2, None, 2, 1))
