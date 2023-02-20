@@ -1,2 +1,4 @@
 [flake8]
+exclude = docs,src,data, venv,config
 max-line-length=100
+docstring_style=sphinx

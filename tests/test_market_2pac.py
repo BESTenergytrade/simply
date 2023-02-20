@@ -4,6 +4,7 @@ from simply.market_2pac import TwoSidedPayAsClear
 import pytest
 import simply.config as cfg
 
+
 class TestTwoSidedPayAsClear:
     cfg.Config("")
 

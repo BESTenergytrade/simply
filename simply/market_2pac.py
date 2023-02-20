@@ -97,7 +97,6 @@ class TwoSidedPayAsClear(Market):
         return self.default_grid_fee
 
 
-
 def plot_merit_order(bids, asks):
     # value asignment in iterrows does not change dataframe -> original shown
     bid_x, bid_y = bids["energy"].to_list(), bids["price"].to_list()
