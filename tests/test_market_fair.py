@@ -3,12 +3,13 @@ from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_T
 from simply.power_network import PowerNetwork
 import networkx as nx
 import pytest
-
+import simply.config as cfg
 
 class TestBestMarket:
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
+    cfg.Config("")
 
     def test_basic(self):
         """Tests the basic functionality of the BestMarket object to accept bids and asks via the

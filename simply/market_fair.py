@@ -132,9 +132,16 @@ class BestMarket(Market):
             # remove old matches from same cluster
             matches = [m for m in matches if m["bid_cluster"] != cluster_idx]
 
+            clearing_price = 0
+            if len(_matches) > 0:
+                average_grid_fee = sum([_match["included_grid_fee"]
+                                        for _match in _matches])/len(_matches)
+                clearing_price = (_matches[-1]["price"]-_matches[-1]["included_grid_fee"]
+                                  + average_grid_fee)
+
             for _match in _matches:
                 # adjust price to local market clearing price (highest asking price)
-                _match["price"] = _matches[-1]["price"]
+                _match["price"] = clearing_price
 
                 # try to merge into global matches
                 # remove double matches
