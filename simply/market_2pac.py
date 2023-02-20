@@ -12,19 +12,10 @@ class TwoSidedPayAsClear(Market):
     """
 
     def __init__(self, time, network=None, grid_fee_matrix=None, default_grid_fee=0):
+        assert grid_fee_matrix is None, "Grid fee matrix is not used in two" \
+                                            "sided pay as clear. Only the default_grid_fee is" \
+                                            "applied"
         super().__init__(time, network, grid_fee_matrix, default_grid_fee)
-        # in case of the two sided pay as clear market a grid price has to be given and should not
-        # be deduced from the network. In this case it needs to be asserted that no cluster
-        # matrix is given but a matrix with a single value
-        assert grid_fee_matrix is not None
-        if type(grid_fee_matrix) == list:
-            assert type(grid_fee_matrix[0]) == list
-            print(grid_fee_matrix)
-            print(len(grid_fee_matrix[0]))
-            assert len(grid_fee_matrix[0]) == 1
-        else:
-            grid_fee_matrix = float(grid_fee_matrix)
-        self.grid_fee_matrix = grid_fee_matrix
 
     def match(self, show=False):
         # order orders by price
@@ -43,8 +34,8 @@ class TwoSidedPayAsClear(Market):
         matches = []
         for ask_id, ask in asks.iterrows():
             while bid is not None:
-                if self.grid_fee_matrix:
-                    self.apply_grid_fee(ask, bid)
+                # grid fee is always applied with the default value
+                self.apply_grid_fee(ask, bid)
                 if ask.price > bid.price:
                     break
                 # get common energy value
@@ -94,7 +85,17 @@ class TwoSidedPayAsClear(Market):
         :param bid: the bid used to determine the grid fee to be applied
         :return: None
         """
-        ask.price += self.grid_fee_matrix[0][0]
+        ask.price += self.default_grid_fee
+
+    def get_grid_fee(self, match):
+        """
+        Returns the grid fee associated with the bid and ask clusters of a given match.
+
+        :param match: a dictionary representing a match, with keys 'bid_cluster' and 'ask_cluster'
+        :return: the grid fee associated with the given bid and ask clusters
+        """
+        return self.default_grid_fee
+
 
 
 def plot_merit_order(bids, asks):
