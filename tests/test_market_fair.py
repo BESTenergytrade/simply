@@ -3,12 +3,13 @@ from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_T
 from simply.power_network import PowerNetwork
 import networkx as nx
 import pytest
-
+from simply.config import Config
 
 class TestBestMarket:
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
+    Config("")
 
     def test_basic(self):
         """Tests the basic functionality of the BestMarket object to accept bids and asks via the
@@ -308,3 +309,28 @@ class TestBestMarket:
         m.accept_order(Order(1, 0, 3, 1, 0.1, 4))
         matches = m.match()
         assert len(matches) == 2
+
+    def test_update_clusters(self):
+        """Test the update of a cluster clearing price is correctly done when a better match with
+        another cluster is found."""
+        grid_fee_matrix=[[0, 0.0000, 0], [0.0000, 0, 0], [0, 0, 0]]
+        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix)
+
+        # add bids for two clusters. cluster 2 has higher bids
+        for price in range(20,0,-1):
+            m.accept_order(Order(-1, 0, price, 0, 0.1, price))
+            m.accept_order(Order(-1, 0, price, 1, 0.1, price))
+
+        # add asks. Both clusters have the same producers
+        for price in range(8,25,+1):
+            m.accept_order(Order(1, 0, price, 0, 0.1, price))
+            m.accept_order(Order(1, 0, price, 1, 0.1, price))
+
+        matches = m.match()
+        print([match["price"] for match in matches])
+        print([match["bid_cluster"] for match in matches])
+        print([match["ask_cluster"] for match in matches])
+        assert all([match["price"]==matches[0]["price"] for match in matches])
+
+t=TestBestMarket()
+t.test_update_clusters()
