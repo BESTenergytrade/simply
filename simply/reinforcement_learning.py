@@ -38,10 +38,17 @@ class MyEnv(gym.Env):
         observation = self.actor.pred[['load', 'prices']].values
         # replace missing values with 0
         observation = np.nan_to_num(observation, nan=0)
+        self.actor.create_prediction()
+        # observation = np.roll(observation, shift=-1, axis=0)
         return observation
 
     def _take_action(self, action):
         """Parse order from action and accept order into the market."""
+        # Check if we are out of timesteps
+        if self.m.t > self.actor.horizon:
+            done = True
+            return done
+
         energy = action[0]
         price = action[1]
         if energy < self.actor.pred['load'][0]:
@@ -49,24 +56,14 @@ class MyEnv(gym.Env):
             return done
         order = Order(-1, self.actor.t, self.actor.id, self.actor.cluster, energy, price)
         self.m.accept_order(order)
-        return False
 
-    def _update_market(self):
-        """Add market maker order, clear market and increment timestep"""
         # Add market maker order
 
         # Match orders, clear market and increment timestep
         self.m.clear()
         self.m.t += 1
         self.actor.t += 1
-
-        # Check if we are out of timesteps
-        if self.m.t > self.actor.horizon:
-            done = True
-            return done
-        else:
-            done = False
-            return done
+        return False
 
     def _get_reward(self, action):
         price = action[1]
@@ -75,7 +72,6 @@ class MyEnv(gym.Env):
     def step(self, action):
         # Generate order, add to market with market maker order and clear market
         done = self._take_action(action)
-        done = self._update_market()
 
         # Generate the observation for the next timestep
         observation = self._next_observation()
@@ -133,3 +129,13 @@ if __name__ == '__main__':
     model = PPO("MlpPolicy", env, verbose=1)
     # Train the agent
     model.learn(total_timesteps=25000)
+
+    observation = env.reset()
+    while True:
+        #     action_masks = get_action
+        action, _ = model.predict(observation)
+        observation, reward, done, _ = env.step(action)
+        env.render(action, observation)
+        if done:
+            break
+    env.close()
