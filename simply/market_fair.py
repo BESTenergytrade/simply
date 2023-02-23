@@ -20,8 +20,12 @@ class BestMarket(Market):
     """
 
     def __init__(
-        self, time, network=None, grid_fee_matrix=None, disputed_matching='price', default_grid_fee=0
-    ):
+            self,
+            time,
+            network=None,
+            grid_fee_matrix=None,
+            disputed_matching='price',
+            default_grid_fee=0):
         super().__init__(time, network, grid_fee_matrix, default_grid_fee)
         self.disputed_matching = disputed_matching
 
