@@ -1,8 +1,7 @@
 [{
         "comment": "Below is an example of market maker actor.",
         "prosumerName": "market_maker",
-        "prosumerType": "market_maker",
-        "gridLocation": "market_maker"
+        "prosumerType": "market_maker"
             },
   {
         "comment": "An example of a residential prosumer with load and pv data specifed by their 'deviceID'",

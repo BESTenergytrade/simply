@@ -12,6 +12,17 @@ from simply.scenario import Scenario
 from simply.power_network import create_power_network_from_config
 from simply.config import Config
 
+"""
+This script creates a simulation scenario from a config JSON file, network JSON file,
+configuration text file, a loads assignment CSV file, and a data directory.
+
+It creates a scenario object and uses this to create an Actor and Power Network object. The Actor
+object is created using a basic strategy function, and the Power Network is created using a
+create power network from config function. Additionally, it has helper functions to insert the
+market maker ID, check if the data is present, remove existing scenario directory,
+convert string dates to datetime dtype, and build a pandas dataframe from the config JSON.
+"""
+
 
 # Helper functions
 def insert_market_maker_id(dirpath):
@@ -94,10 +105,24 @@ def read_config_json(config_json):
     return config_df
 
 
-# Primary functions
 def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
                              ts_hour=1, cols=["load", "pv", "schedule", "prices"],
                              ps=None, ls=None):
+    """
+    Create Actor with an ID and given asset time series shifted to a specified start time and
+    resolution (and scaled by factors ps/ls if given).
+
+    :param actor_id: ID of the actor
+    :param asset_dict: Dictionary of asset information
+    :param start_date: Start date of the actor, defaults to "2016-01-01"
+    :param nb_ts: Number of time slots to be generated, defaults to None
+    :param ts_hour: Number of time slot of equal length within one hour, defaults to 4
+    :param cols: List of columns to be included, defaults to ["load", "pv", "schedule", "prices"]
+    :param ps: PV scalar, defaults to None
+    :param ls: Load scalar, defaults to None
+
+    :return: Actor object
+    """
     df = pd.DataFrame([], columns=cols)
     start_date, end_date = dates_to_datetime(start_date, nb_ts, ts_hour)
 
@@ -119,11 +144,30 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
     return Actor(actor_id, df, ls=1, ps=1)
 
 
-# Scenario
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
                                 weight_factor=1, ts_hour=4, nb_ts=None, start_date="2016-01-01",
                                 plot_network=False, price_filename="basic_prices.csv",
                                 ps=None, ls=None):
+    """
+    Create Scenario object while creating Actor objects from config_json referencing to time series
+     data in data_path. The Actors are further mapped to a defined network.
+
+    :param config_json: Path object of the configuration json file
+    :param network_path: Path object of the network json file
+    :param loads_dir_path: Path object of the directory containing loads csv
+    :param data_dirpath: Path object of the directory containing all time series data,
+        defaults to None
+    :param weight_factor: Weight factor used to derive grid fees, defaults to 1
+    :param ts_hour: Number of time slot of equal length within one hour, defaults to 4
+    :param nb_ts: Number of time slots to be generated, defaults to None
+    :param start_date: Start date of the scenario,defaults to "2016-01-01"
+    :param plot_network: Boolean value to indicate whether the network should be plotted,
+        defaults to False
+    :param price_filename: Name of the price csv file, defaults to "basic_prices.csv"
+    :param ps: PV scalar, defaults to None
+    :param ls: Load scalar, defaults to None
+    :return: Scenario object
+    """
     # Extend paths
     loads_path = data_dirpath.joinpath("load")
     pv_path = data_dirpath.joinpath("pv")
