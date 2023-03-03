@@ -51,8 +51,8 @@ class BestMarket(Market):
         if len(large_bids) > len(bids_mm):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
 
-        if (asks.empty and bids.empty)\
-                or (asks.empty and asks_mm.empty)\
+        if (asks.empty and bids.empty) \
+                or (asks.empty and asks_mm.empty) \
                 or (bids.empty and bids_mm.empty):
             # no asks or bids at all: no matches
             return []
@@ -80,7 +80,6 @@ class BestMarket(Market):
         matches = []
         # keep track which asks to exclude in each zone (initially empty)
         exclude = {cluster_idx: set() for cluster_idx in clusters_to_match}
-
         while clusters_to_match:
             # simulate local market within cluster
             cluster_idx = clusters_to_match.pop()
@@ -138,9 +137,11 @@ class BestMarket(Market):
 
             # remove old matches from same cluster
             matches = [m for m in matches if m["bid_cluster"] != cluster_idx]
-
+            removed_match = False
             for _match in _matches:
                 # adjust price to local market clearing price (highest asking price)
+                if removed_match:
+                    break
                 _match["price"] = _matches[-1]["price"]
 
                 # try to merge into global matches
@@ -150,6 +151,10 @@ class BestMarket(Market):
                     if match["ask_id"] == _match["ask_id"]:
                         self.remove_double_matches(exclude, match, _match, clusters_to_match,
                                                    matches, bids, match_idx)
+                        clusters_to_match = set(range(len(self.grid_fee_matrix)))
+                        matches = []
+                        _matches = []
+                        removed_match = True
                         break
                 else:
                     # new match does not conflict: insert as-is
@@ -268,7 +273,8 @@ class BestMarket(Market):
                                      exclude_exisiting=False)
 
         elif self.disputed_matching == 'grid_fee':
-            if _match["grid_fee"] < match["grid_fee"] or _match["grid_fee"] == match["grid_fee"] \
+            if _match["included_grid_fee"] < match["included_grid_fee"]\
+                    or _match["included_grid_fee"] == match["included_grid_fee"] \
                     and bids.loc[_match['bid_id'], 'price'] > bids.loc[match['bid_id'], 'price']:
                 # new match is better:
                 # exclude old match
@@ -282,7 +288,18 @@ class BestMarket(Market):
         elif self.disputed_matching == 'bid_price':
             if bids.loc[_match['bid_id'], 'price'] > bids.loc[match['bid_id'], 'price'] or \
                     bids.loc[_match['bid_id'], 'price'] == bids.loc[match['bid_id'], 'price'] and \
-                    _match['grid_fee'] < match['grid_fee']:
+                    _match['included_grid_fee'] < match['included_grid_fee']:
+                # new match is better:
+                # exclude old match
+                self.exclude_matches(exclude, match, _match, clusters_to_match, matches,
+                                     match_idx=match_idx, exclude_exisiting=True)
+            else:
+                # old match is better: exclude new match
+                self.exclude_matches(exclude, _match, match, clusters_to_match, matches,
+                                     exclude_exisiting=False)
+        elif self.disputed_matching == 'profit':
+            if _match["price"]-_match["included_grid_fee"] >\
+                    match["price"]-match["included_grid_fee"]:
                 # new match is better:
                 # exclude old match
                 self.exclude_matches(exclude, match, _match, clusters_to_match, matches,
