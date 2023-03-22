@@ -509,17 +509,18 @@ class Actor:
                         found_sell_index = sell_index
                         break
                 # find how much energy can be stored in between buying and selling
-                storable_energy = max(
-                    soc_prediction[buy_index:found_sell_index + 1].max() * self.battery.capacity,
-                    self.battery.capacity)
+                storable_energy =(1-soc_prediction[buy_index:found_sell_index + 1].max()) * self.battery.capacity
                 assert storable_energy > 0
                 self.market_schedule[buy_index] += storable_energy
                 self.market_schedule[found_sell_index] -= storable_energy
                 cum_energy_demand[buy_index:] += storable_energy
                 cum_energy_demand[found_sell_index:] -= storable_energy
                 soc_prediction = np.ones(self.horizon) * self.battery.soc \
-                                 + (cum_energy_demand - self.battery.soc * self.battery.capacity) \
+                                 + (cum_energy_demand - self.battery.soc * self.battery.capacity)\
                                  / self.battery.capacity
+                assert 1>=max(soc_prediction)-EPS
+                assert 0<= min(soc_prediction[:-2])+EPS
+        self.predicted_soc = soc_prediction
 
 
 def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):

@@ -1,3 +1,5 @@
+import warnings
+
 import pandas as pd
 import numpy as np
 
@@ -121,16 +123,42 @@ class TestActor:
         assert len(m.matches) == 20
 
     def test_rule_based_strategy_3(self):
-        bat = Battery(2, soc_initial=0)
-        a = Actor(0, self.df, battery=bat)
+        bat = Battery(max_c_rate=2, soc_initial=0, capacity=13.5)
+        a = Actor(0, self.example_df, battery=bat)
         a.data.selling_price *= 0.8
         a.create_prediction()
+
         a.market_schedule *= 0
         a.generate_market_schedule(strategy=1)
         assert a.market_schedule.__abs__().sum() == 0
         a.generate_market_schedule(strategy=3)
         assert a.market_schedule.__abs__().sum() > 0
-
         o = a.generate_order()
         assert len(a.orders) == 1
         assert o.actor_id == 0
+
+
+    def test_rule_based_strategy_3_fixed(self):
+        bat = Battery(max_c_rate=2, soc_initial=0, capacity=13.5)
+        a = Actor(0, self.example_df, battery=bat)
+        a.data.selling_price *= 0.8
+
+        for time in range(50):
+            a.create_prediction()
+            a.generate_market_schedule(strategy=3)
+            # delta_energy= a.market_schedule[0]-a.pred.schedule.iloc[0]
+            # bat.get_energy(delta_energy)
+            a.update()
+            a.t +=1
+
+            print(bat.soc , a.predicted_soc[0])
+
+            df = pd.DataFrame(a.market_schedule, columns=["market_schedule"])
+            df["predicted_soc"] = a.predicted_soc
+            df.plot()
+
+with warnings.catch_warnings() as w:
+    # Cause all warnings to always be triggered.
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    t = TestActor()
+    t.test_rule_based_strategy_3_fixed()
