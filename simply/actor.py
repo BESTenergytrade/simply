@@ -426,7 +426,7 @@ class Actor:
             sell_indicies = sell_indicies.squeeze(axis=1)
         # If there are possible selling points of energy and there is the possibility of
         # storing energy in between, i.e soc<1
-        while sellable_amount_of_stored_energy > 0:
+        while sellable_amount_of_stored_energy > 0+EPS:
 
             found_sell_index = None
             for sell_index in sell_indicies:
@@ -473,15 +473,28 @@ class Actor:
             buying_price = buy_prices[buy_index]
             possible_prices = sell_prices.copy()
             possible_prices[:buy_index + 1] = float("-inf")
+
+
             sell_indicies = np.argwhere(possible_prices > buying_price)
             if sell_indicies.size > 0:
                 sell_indicies = sell_indicies.squeeze(axis=1)
             # If there are possible selling points of energy and there is the possibility of
             # storing energy in between, i.e soc<1
             while sell_indicies.size > 0 and soc_prediction[
-                                             buy_index:sell_indicies[0]].max() < 1 - EPS:
+                                             buy_index:sell_indicies[0]+1].max() < 1 - EPS:
 
                 found_sell_index = None
+
+                # make sure selling isnt considered for sell_indicies which lie behind an soc==1
+                # event. They can not be used, since the battery can not be charged higher.
+                socs = np.array(soc_prediction)
+                soc_idx_almost_one = np.argwhere(socs[buy_index:] > 1 - EPS) + buy_index
+                if soc_idx_almost_one.size > 0:
+                    soc_idx_almost_one = soc_idx_almost_one.squeeze(axis=1)
+                    left_most_soc_to_buy_index = min(soc_idx_almost_one)
+                    # energy cant be stored over an SOC==1 event. Make selling price impossible
+                    possible_prices[left_most_soc_to_buy_index:] = float("-inf")
+
                 for sell_index in sell_indicies:
                     sell_price = possible_prices[sell_index]
                     higher_sell_price_indicies = np.argwhere(
@@ -492,7 +505,8 @@ class Actor:
                         break
                     else:
                         # there are higher prices. choose the left most higher price index
-                        higher_sell_price_index = higher_sell_price_indicies.min()
+                        higher_sell_price_index = sell_index + 1 + higher_sell_price_indicies.min()
+
                     lower_buy_price_indicies = np.argwhere(
                         buy_prices[sell_index + 1:] <= sell_price)
                     # No buy dips but still higher selling prices
@@ -510,7 +524,7 @@ class Actor:
                         break
                 # find how much energy can be stored in between buying and selling
                 storable_energy =(1-soc_prediction[buy_index:found_sell_index + 1].max()) * self.battery.capacity
-                assert storable_energy > 0
+                assert storable_energy+EPS > 0
                 self.market_schedule[buy_index] += storable_energy
                 self.market_schedule[found_sell_index] -= storable_energy
                 cum_energy_demand[buy_index:] += storable_energy
