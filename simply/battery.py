@@ -1,5 +1,5 @@
 class Battery:
-    def __init__(self, max_c_rate, soc_initial=0.5, capacity=13.5, min_charge_level=0.5):
+    def __init__(self, max_c_rate=1, soc_initial=0.5, capacity=13.5, min_charge_level=0.5):
         # float between 0 and 1
         self.soc = soc_initial
         # battery capacity
