@@ -142,7 +142,7 @@ class Actor:
 
     def update(self):
         if self.battery and not self.pred.empty:
-            self.battery.get_energy(self.market_schedule[0] - self.pred.schedule[0])
+            self.battery.get_energy(self.market_schedule[0] + self.pred.schedule[0])
             self.socs.append(self.battery.soc)
         self.create_prediction()
 
@@ -305,7 +305,7 @@ class Actor:
         # 1 ----- x-------------  x-
         #      x         o
         #   x
-        cum_energy_demand = -self.pred.schedule.cumsum() + self.market_schedule.cumsum() + self.battery.soc * \
+        cum_energy_demand = self.pred.schedule.cumsum() + self.market_schedule.cumsum() + self.battery.soc * \
                             self.battery.capacity
         soc_prediction = np.ones(self.horizon) * self.battery.soc \
                          + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
@@ -538,7 +538,7 @@ class Actor:
     def plan_global_trading(self):
         """ Strategy to buy energy when profit is predicted by selling the energy later on
                when the flexibility is given"""
-        cum_energy_demand = -self.pred.schedule.cumsum() + self.market_schedule.cumsum() + \
+        cum_energy_demand = self.pred.schedule.cumsum() + self.market_schedule.cumsum() + \
                             self.battery.soc * self.battery.capacity
         soc_prediction = np.ones(self.horizon) * self.battery.soc \
                          + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
