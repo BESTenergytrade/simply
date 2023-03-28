@@ -142,7 +142,7 @@ class Actor:
 
     def update(self):
         if self.battery and not self.pred.empty:
-            self.battery.get_energy(self.pred.schedule[0] + self.market_schedule[0])
+            self.battery.get_energy(self.market_schedule[0] - self.pred.schedule[0])
             self.socs.append(self.battery.soc)
         self.create_prediction()
 
