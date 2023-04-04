@@ -68,7 +68,7 @@ class Actor:
         prices
     """
 
-    def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}, cluster=None):
+    def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1.5, pm={}, cluster=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -84,7 +84,7 @@ class Actor:
         self.load_scale = ls
         self.pv_scale = ps
         self.error_scale = 0
-        self.battery = None
+        self.battery = battery
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -100,11 +100,17 @@ class Actor:
                 prediction_multiplier = self.error_scale * np.random.rand(self.horizon)
                 self.pm[column] = prediction_multiplier.tolist()
 
-        self.update()
+        self.create_prediction()
+        self.market_schedule = self.get_default_market_schedule()
+
         self.orders = []
         self.traded = {}
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
+
+    # ToDo to be implemented in agent branch
+    def get_default_market_schedule(self):
+        return None
 
     def plot(self, columns):
         """
@@ -117,7 +123,8 @@ class Actor:
         ).plot()
         plt.show()
 
-    def update(self):
+    def create_prediction(self):
+        # ToDo add selling price
         for column in ["load", "pv", "prices", "schedule"]:
             if column in self.data.columns:
                 self.pred[column] = \
@@ -126,7 +133,25 @@ class Actor:
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
-        # if self.battery:
+    def update(self):
+        if self.battery and not self.pred.empty:
+            self.get_energy()
+            self.socs.append(self.battery.soc)
+        self.create_prediction()
+
+    def get_energy(self):
+        if self.get_energy.last_call:
+            error = "Actor used the battery twice in a single time step"
+            assert self.get_energy.last_call < self.t, error
+            self.get_energy.last_call = self.t
+
+        # Assumes schedule is positive when pv is produced, Assertion error useful during
+        # development to be certain
+        # ToDo: Remove for release
+        assert self.pred.schedule[0] == self.pred.pv[0] - self.pred.load[0]
+        # ToDo Make sure that the balance of schedule and bought energy does not charge
+        # or discharge more power than the max c rate
+        self.battery.charge(self.pred.schedule[0])
 
     def generate_order(self):
         """
