@@ -71,6 +71,8 @@ if __name__ == "__main__":
                 m.accept_order(order, callback=a.receive_market_results)
 
         m.clear(reset=cfg.reset_market)
+        for a in sc.actors:
+            a.next_time_step()
         if cfg.show_prints:
             print("Matches of bid/ask ids: {}".format(m.matches))
             print(

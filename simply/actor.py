@@ -82,6 +82,7 @@ class Actor:
         self.t = cfg.parser.getint("default", "start", fallback=0)
         self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
 
+        self.socs = []
         self.load_scale = ls
         self.pv_scale = ps
         self.error_scale = 0
@@ -276,7 +277,10 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     net_price_factor = 0.7
     df["prices"] = df.apply(lambda slot: slot["prices"] - (slot["schedule"] > 0)
                             * net_price_factor * slot["prices"], axis=1)
-    return Actor(actor_id, df, ls=ls, ps=ps)
+    # makes sure that the battery capacity is big enough, even if no useful trading takes place
+    # todo randomize if generate order takes care of meeting demands through a market strategy
+    battery_capacity = (df["schedule"].cumsum().max()-df["schedule"].cumsum().min())*2
+    return Actor(actor_id, df, battery=Battery(capacity=battery_capacity), ls=ls, ps=ps)
 
 
 def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
