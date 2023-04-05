@@ -144,7 +144,6 @@ class Market:
             # remove fully matched orders
             self.orders = self.orders[self.orders.energy >= self.energy_unit]
 
-
     def match(self, show=False):
         """
         Example matching algorithm: pay as bid, first come first served.
