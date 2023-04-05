@@ -179,11 +179,14 @@ class Actor:
         # TODO replace order type by enum
         new = Order(np.sign(energy), self.t, self.id, self.cluster, abs(energy), price)
         self.orders.append(new)
+        return new
+
+    def next_time_step(self):
         # update schedule for next time step
+        # not part of generate_next_order, since order generation should not lead to next time step
+        # other things have to happen, for example matching, and supply of energy through the market
         self.t += 1
         self.update()
-
-        return new
 
     def receive_market_results(self, time, sign, energy, price):
         """
