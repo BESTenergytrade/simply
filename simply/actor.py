@@ -200,8 +200,9 @@ class Actor:
 
         # TODO update schedule, if possible e.g. battery
         # TODO post settlement of differences
-        # Order time and actor time have to be in sync
+        # order time and actor time have to be in sync
         assert time == self.t
+        # sign can only take two values
         assert sign in [-1, 1]
         # append traded energy and price to actor's trades
         post = (sign * energy, price)
