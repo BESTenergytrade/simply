@@ -5,6 +5,7 @@ import pandas as pd
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
+from simply.battery import Battery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
@@ -85,6 +86,8 @@ class Actor:
         self.pv_scale = ps
         self.error_scale = 0
         self.battery = battery
+        if self.battery is None:
+            self.battery = Battery(capacity=0)
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -139,13 +142,17 @@ class Actor:
             self.socs.append(self.battery.soc)
         self.create_prediction()
 
-    def get_energy(self):
-        if self.get_energy.last_call:
+    def get_energy(self, _cache=dict()):
+        # _cache keeps track of method calls by storing the last time of the method call at the
+        # key of self/object reference. This makes sure that energy is only taken once per time step
+        if self not in _cache:
+            _cache[self] = self.t
+        else:
             error = "Actor used the battery twice in a single time step"
-            assert self.get_energy.last_call < self.t, error
-            self.get_energy.last_call = self.t
+            assert _cache[self] < self.t, error
+            _cache[self] = self.t
 
-        # Assumes schedule is positive when pv is produced, Assertion error useful during
+        # assumes schedule is positive when pv is produced, Assertion error useful during
         # development to be certain
         # ToDo: Remove for release
         assert self.pred.schedule[0] == self.pred.pv[0] - self.pred.load[0]

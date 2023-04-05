@@ -22,5 +22,5 @@ class Battery:
         :type energy: float
         """
         soc_after_charge = self.soc + energy/self.capacity
-        assert 1 >= soc_after_charge >= 0
+        assert 1 >= soc_after_charge >= 0, "Battery is out of soc bounds, or energy is not balanced"
         self.soc = soc_after_charge

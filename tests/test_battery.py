@@ -1,7 +1,15 @@
+import numpy as np
+import pandas as pd
 import pytest
+
+from simply import actor
+from simply.actor import Actor
 from simply.battery import Battery
+from simply.config import Config
+
 
 class TestBattery:
+    Config("")
 
     def test_battery_creation(self):
         battery = Battery()
@@ -24,3 +32,25 @@ class TestBattery:
         with pytest.raises(AssertionError):
             battery.charge(-0.001)
 
+    def test_double_charge_error(self):
+        pv = [0] * 24
+        load = np.random.rand(24)
+        schedule = load.copy() * (-1)
+        prices = np.random.rand(24) * 0.3
+
+        df = pd.DataFrame(data=zip(load, pv, schedule, prices),
+                          columns=["load", "pv", "schedule", "prices"])
+        a = Actor(actor_id="1", df=df, battery=Battery())
+
+        # Get energy for the first time step. The actor charges the battery with the amount in the
+        # schedule. If the schedule is negative battery gets discharged.
+        a.get_energy()
+        # Increase time step and get energy again --> No error
+        a.t += 1
+        a.get_energy()
+        # If the time step is not increased an error should be thrown
+        with pytest.raises(AssertionError):
+            a.get_energy()
+
+
+t = TestBattery().test_double_charge_error()
