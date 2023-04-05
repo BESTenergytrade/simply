@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from simply import actor
 from simply.actor import Actor
 from simply.battery import Battery
 from simply.config import Config
@@ -51,6 +50,3 @@ class TestBattery:
         # If the time step is not increased an error should be thrown
         with pytest.raises(AssertionError):
             a.get_energy()
-
-
-t = TestBattery().test_double_charge_error()
