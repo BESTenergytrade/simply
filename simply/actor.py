@@ -128,6 +128,7 @@ class Actor:
         plt.show()
 
     def create_prediction(self):
+        """Reset asset and schedule predicition horizon to the current planning time step self.t"""
         # ToDo add selling price
         for column in ["load", "pv", "prices", "schedule"]:
             if column in self.data.columns:
@@ -138,12 +139,25 @@ class Actor:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
     def update(self):
+        """Changes actor attributes according to the events in the current time step
+
+        The events can be the impact of schedule and trading on the battery soc, the bank / cost for
+        the actor in this time step, and an updated prediction which moves one time step ahead."""
         if self.battery and not self.pred.empty:
             self.get_energy()
             self.socs.append(self.battery.soc)
         self.create_prediction()
 
     def get_energy(self, _cache=dict()):
+        """Charge or discharge the battery depending on the current planned schedule.
+
+        This function needs to be called once per time step to track the energy inside of the
+        battery. It takes the planned, i.e. predicted, schedule and changes the batter soc
+        accordingly. A positive schedule charges the battery and a negative schedule discharges the
+        battery. At a later stage this function will add the traded energy amount as well.
+
+        :param _cache: cache of function calls, which SHOULD NOT be provided by user
+        """
         # _cache keeps track of method calls by storing the last time of the method call at the
         # key of self/object reference. This makes sure that energy is only taken once per time step
         if self not in _cache:
@@ -183,7 +197,10 @@ class Actor:
         return new
 
     def next_time_step(self):
-        # update schedule for next time step
+        """Update schedule for next time step.
+
+        Should be executed after clearing
+        """
         # not part of generate_next_order, since order generation should not lead to next time step
         # other things have to happen, for example matching, and supply of energy through the market
         self.t += 1
@@ -199,8 +216,6 @@ class Actor:
         :param float price: achieved clearing price for the stated energy
         """
 
-        # TODO update schedule, if possible e.g. battery
-        # TODO post settlement of differences
         # order time and actor time have to be in sync
         assert time == self.t
         # sign can only take two values

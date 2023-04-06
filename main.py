@@ -61,7 +61,7 @@ if __name__ == "__main__":
     else:
         # default
         m = market.Market(0, network=sc.power_network)
-
+    cfg.show_prints = True
     list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
     for t in list_ts:
         m.t = t
@@ -72,6 +72,7 @@ if __name__ == "__main__":
 
         m.clear(reset=cfg.reset_market)
         for a in sc.actors:
+            # Update all actors for the next market time slot
             a.next_time_step()
         if cfg.show_prints:
             print("Matches of bid/ask ids: {}".format(m.matches))

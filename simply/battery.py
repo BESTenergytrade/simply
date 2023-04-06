@@ -1,7 +1,7 @@
 class Battery:
     """Class which implements all raw functionality around the battery"""
 
-    def __init__(self, max_c_rate=1, soc_initial=0.5, capacity=13.5):
+    def __init__(self, capacity, max_c_rate=1, soc_initial=0.5):
         # float between 0 and 1
         self.soc = soc_initial
         # battery capacity

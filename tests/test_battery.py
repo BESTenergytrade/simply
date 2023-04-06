@@ -11,10 +11,10 @@ class TestBattery:
     Config("")
 
     def test_battery_creation(self):
-        battery = Battery()
+        battery = Battery(capacity=1)
         # check if battery has all the standard attributes. These were defined at some point. If
         # they are changed, default battery creation has to be adjusted everywhere
-        assert battery.capacity == 13.5
+        assert battery.capacity == 1
         assert battery.soc == 0.5
         assert battery.max_c_rate == 1
 
@@ -33,13 +33,14 @@ class TestBattery:
 
     def test_double_charge_error(self):
         pv = [0] * 24
-        load = np.random.rand(24)
+        rand_gen = np.random.default_rng(seed=42)
+        load = rand_gen.random(24)
         schedule = load.copy() * (-1)
-        prices = np.random.rand(24) * 0.3
+        prices = rand_gen.random(24) * 0.3
 
         df = pd.DataFrame(data=zip(load, pv, schedule, prices),
                           columns=["load", "pv", "schedule", "prices"])
-        a = Actor(actor_id="1", df=df, battery=Battery())
+        a = Actor(actor_id="1", df=df, battery=Battery(capacity=10))
 
         # Get energy for the first time step. The actor charges the battery with the amount in the
         # schedule. If the schedule is negative battery gets discharged.
