@@ -61,7 +61,7 @@ if __name__ == "__main__":
     else:
         # default
         m = market.Market(0, network=sc.power_network)
-    cfg.show_prints = True
+
     list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
     for t in list_ts:
         m.t = t
