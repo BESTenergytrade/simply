@@ -44,10 +44,10 @@ class TestBattery:
 
         # Get energy for the first time step. The actor charges the battery with the amount in the
         # schedule. If the schedule is negative battery gets discharged.
-        a.get_energy()
+        a.update_battery()
         # Increase time step and get energy again --> No error
         a.t += 1
-        a.get_energy()
+        a.update_battery()
         # If the time step is not increased an error should be thrown
         with pytest.raises(AssertionError):
-            a.get_energy()
+            a.update_battery()

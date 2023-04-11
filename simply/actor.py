@@ -27,6 +27,15 @@ class Actor:
     Actor is the representation of a prosumer, i.e. is holding resources (load, photovoltaic/PV)
     and defining an energy management schedule, generating bids or asks and receiving trading
     results.
+    The actor interacts with the market at every time step in a way defined by the actor strategy.
+    The actor has to fulfil his schedule needs by buying power. Buying power can be guaranteed by
+    placing orders with at least the market maker price, since the market maker is seen as unlimited
+    supply. At the start of every time step the actor can place orders to buy or sell energy at
+    the current time step with a predicted schedule and market maker price time series as input.
+    After matching took place, the (monetary) bank and resulting soc is calculated taking into
+    consideration the schedule and the acquired energy of this time step, i.e. bank and soc at the
+    end of the time step. Afterwards the time step is increased and a new prediction for the
+    schedule and price is generated.
 
     :param int actor_id: unique identifier of the actor
     :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "prices" are processed
@@ -138,23 +147,12 @@ class Actor:
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
-    def update(self):
-        """Changes actor attributes according to the events in the current time step
-
-        The events can be the impact of schedule and trading on the battery soc, the bank / cost for
-        the actor in this time step, and an updated prediction which moves one time step ahead."""
-        if self.battery and not self.pred.empty:
-            self.get_energy()
-            self.socs.append(self.battery.soc)
-        self.create_prediction()
-
-    def get_energy(self, _cache=dict()):
-        """Charge or discharge the battery depending on the current planned schedule.
+    def update_battery(self, _cache=dict()):
+        """Update the battery state depending on the currently scheduled planning time step.
 
         This function needs to be called once per time step to track the energy inside of the
-        battery. It takes the planned, i.e. predicted, schedule and changes the batter soc
-        accordingly. A positive schedule charges the battery and a negative schedule discharges the
-        battery. At a later stage this function will add the traded energy amount as well.
+        battery. It takes the planned, i.e. predicted, schedule and changes the battery's SOC
+        accordingly.
 
         :param _cache: cache of function calls, which SHOULD NOT be provided by user
         """
@@ -197,14 +195,19 @@ class Actor:
         return new
 
     def next_time_step(self):
-        """Update schedule for next time step.
+        """Update actor and schedule and for next time step.
 
-        Should be executed after clearing
-        """
-        # not part of generate_next_order, since order generation should not lead to next time step
-        # other things have to happen, for example matching, and supply of energy through the market
+        Should be executed after clearing.
+        Changes actor attributes according to the events in the current time step
+        The events can be the impact of schedule and trading on the battery soc or the bank / cost
+        for the actor in this time step.
+        Update the prediction horizon to the current time step."""
+
+        if self.battery and not self.pred.empty:
+            self.update_battery()
+            self.socs.append(self.battery.soc)
         self.t += 1
-        self.update()
+        self.create_prediction()
 
     def receive_market_results(self, time, sign, energy, price):
         """
