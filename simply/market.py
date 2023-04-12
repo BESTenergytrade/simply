@@ -137,7 +137,6 @@ class Market:
                 bid_actor_callback(self.t, 1, energy, price)
             if ask_actor_callback is not None:
                 ask_actor_callback(self.t, -1, energy, price)
-
         if reset:
             # don't retain orders for next cycle
             self.orders = pd.DataFrame(columns=Order._fields)

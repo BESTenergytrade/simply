@@ -5,6 +5,7 @@ import pandas as pd
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
+from simply.battery import Battery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
@@ -26,6 +27,15 @@ class Actor:
     Actor is the representation of a prosumer, i.e. is holding resources (load, photovoltaic/PV)
     and defining an energy management schedule, generating bids or asks and receiving trading
     results.
+    The actor interacts with the market at every time step in a way defined by the actor strategy.
+    The actor has to fulfil his schedule needs by buying power. Buying power can be guaranteed by
+    placing orders with at least the market maker price, since the market maker is seen as unlimited
+    supply. At the start of every time step the actor can place orders to buy or sell energy at
+    the current time step with a predicted schedule and market maker price time series as input.
+    After matching took place, the (monetary) bank and resulting soc is calculated taking into
+    consideration the schedule and the acquired energy of this time step, i.e. bank and soc at the
+    end of the time step. Afterwards the time step is increased and a new prediction for the
+    schedule and price is generated.
 
     :param int actor_id: unique identifier of the actor
     :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "prices" are processed
@@ -68,7 +78,7 @@ class Actor:
         prices
     """
 
-    def __init__(self, actor_id, df, csv=None, ls=1, ps=1.5, pm={}, cluster=None):
+    def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1.5, pm={}, cluster=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -81,10 +91,13 @@ class Actor:
         self.t = cfg.parser.getint("default", "start", fallback=0)
         self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
 
+        self.socs = []
         self.load_scale = ls
         self.pv_scale = ps
         self.error_scale = 0
-        self.battery = None
+        self.battery = battery
+        if self.battery is None:
+            self.battery = Battery(capacity=0)
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -100,11 +113,17 @@ class Actor:
                 prediction_multiplier = self.error_scale * np.random.rand(self.horizon)
                 self.pm[column] = prediction_multiplier.tolist()
 
-        self.update()
+        self.create_prediction()
+        self.market_schedule = self.get_default_market_schedule()
+
         self.orders = []
         self.traded = {}
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
+
+    # ToDo to be implemented in agent branch
+    def get_default_market_schedule(self):
+        return None
 
     def plot(self, columns):
         """
@@ -117,7 +136,9 @@ class Actor:
         ).plot()
         plt.show()
 
-    def update(self):
+    def create_prediction(self):
+        """Reset asset and schedule predicition horizon to the current planning time step self.t"""
+        # ToDo add selling price
         for column in ["load", "pv", "prices", "schedule"]:
             if column in self.data.columns:
                 self.pred[column] = \
@@ -126,7 +147,31 @@ class Actor:
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
-        # if self.battery:
+    def update_battery(self, _cache=dict()):
+        """Update the battery state depending on the currently scheduled planning time step.
+
+        This function needs to be called once per time step to track the energy inside of the
+        battery. It takes the planned, i.e. predicted, schedule and changes the battery's SOC
+        accordingly.
+
+        :param _cache: cache of function calls, which SHOULD NOT be provided by user
+        """
+        # _cache keeps track of method calls by storing the last time of the method call at the
+        # key of self/object reference. This makes sure that energy is only taken once per time step
+        if self not in _cache:
+            _cache[self] = self.t
+        else:
+            error = "Actor used the battery twice in a single time step"
+            assert _cache[self] < self.t, error
+            _cache[self] = self.t
+
+        # assumes schedule is positive when pv is produced, Assertion error useful during
+        # development to be certain
+        # ToDo: Remove for release
+        assert self.pred.schedule[0] == self.pred.pv[0] - self.pred.load[0]
+        # ToDo Make sure that the balance of schedule and bought energy does not charge
+        # or discharge more power than the max c rate
+        self.battery.charge(self.pred.schedule[0])
 
     def generate_order(self):
         """
@@ -147,11 +192,22 @@ class Actor:
         # TODO replace order type by enum
         new = Order(np.sign(energy), self.t, self.id, self.cluster, abs(energy), price)
         self.orders.append(new)
-        # update schedule for next time step
-        self.t += 1
-        self.update()
-
         return new
+
+    def next_time_step(self):
+        """Update actor and schedule and for next time step.
+
+        Should be executed after clearing.
+        Changes actor attributes according to the events in the current time step
+        The events can be the impact of schedule and trading on the battery soc or the bank / cost
+        for the actor in this time step.
+        Update the prediction horizon to the current time step."""
+
+        if self.battery and not self.pred.empty:
+            self.update_battery()
+            self.socs.append(self.battery.soc)
+        self.t += 1
+        self.create_prediction()
 
     def receive_market_results(self, time, sign, energy, price):
         """
@@ -163,10 +219,9 @@ class Actor:
         :param float price: achieved clearing price for the stated energy
         """
 
-        # TODO update schedule, if possible e.g. battery
-        # TODO post settlement of differences
-        # Cleared market should not be in the past and sign can only take two values
-        assert time < self.t
+        # order time and actor time have to be in sync
+        assert time == self.t
+        # sign can only take two values
         assert sign in [-1, 1]
         # append traded energy and price to actor's trades
         post = (sign * energy, price)
@@ -240,7 +295,10 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     net_price_factor = 0.7
     df["prices"] = df.apply(lambda slot: slot["prices"] - (slot["schedule"] > 0)
                             * net_price_factor * slot["prices"], axis=1)
-    return Actor(actor_id, df, ls=ls, ps=ps)
+    # makes sure that the battery capacity is big enough, even if no useful trading takes place
+    # todo randomize if generate order takes care of meeting demands through a market strategy
+    battery_capacity = (df["schedule"].cumsum().max()-df["schedule"].cumsum().min())*2
+    return Actor(actor_id, df, battery=Battery(capacity=battery_capacity), ls=ls, ps=ps)
 
 
 def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
