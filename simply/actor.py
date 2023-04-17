@@ -81,7 +81,7 @@ class Actor:
         prices
     """
 
-    def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1.5, pm={}, cluster=None,
+    def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1, pm={}, cluster=None,
                  strategy: int = 0, scenario=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
@@ -95,7 +95,12 @@ class Actor:
         self.t = cfg.parser.getint("default", "start", fallback=0)
         self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
 
+        # Let the actor have a reference to the scenario
         self.scenario = scenario
+
+        # Add the actor to the scenario
+        if self not in self.scenario.actors:
+            self.scenario.actors.append(self)
 
         self.socs = []
         self.load_scale = ls
