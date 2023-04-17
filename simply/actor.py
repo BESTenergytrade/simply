@@ -1,4 +1,5 @@
 import random
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -9,6 +10,7 @@ from simply.battery import Battery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
+EPS = 1e-6
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
 Struct to hold order
@@ -78,7 +80,8 @@ class Actor:
         prices
     """
 
-    def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1.5, pm={}, cluster=None):
+    def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1.5, pm={}, cluster=None,
+                 strategy: int = 0):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -101,6 +104,7 @@ class Actor:
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
+        self.strategy = strategy
         if csv is not None:
             self.csv_file = csv
         else:
@@ -114,6 +118,7 @@ class Actor:
                 self.pm[column] = prediction_multiplier.tolist()
 
         self.create_prediction()
+
         self.market_schedule = self.get_default_market_schedule()
 
         self.orders = []
@@ -121,9 +126,300 @@ class Actor:
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
 
-    # ToDo to be implemented in agent branch
+    def get_market_schedule(self):
+        """ Generates a market_schedule for the actor which represents the strategy of the actor
+        when to buy or sell energy. At the current time step the actor will always buy/ or sell
+        this amount even at market maker price.
+
+        :param strategy: Number representing the actor strategy from 1 to 3
+        :type strategy: int
+        :return: market_schedule with planed amounts of energy buying/selling per time step
+        """
+        possible_choices = [0, 1, 2, 3]
+
+        if self.strategy not in possible_choices:
+            warnings.warn(
+                f"Strategy choice: {self.strategy} was not found in the list of possible "
+                f"strategies: {possible_choices}. Using default strategy without "
+                "planning instead.")
+            self.strategy = 0
+        elif self.strategy != 0:
+            if self.battery is None or self.battery.capacity == 0:
+                warnings.warn(
+                    f"Strategy choice: {self.strategy} was found but can not be used since "
+                    f"the battery capacity is 0 or no battery exists. Using default strategy "
+                    f"without planning instead.")
+                self.strategy = 0
+
+        strategy = self.strategy
+
+        if strategy == 0:
+            self.market_schedule = self.get_default_market_schedule
+            return self.market_schedule
+
+        self.market_schedule = self.plan_global_self_supply()
+        if self.strategy == 1:
+            return self.market_schedule
+
+        self.market_schedule = self.plan_selling_strategy()
+        if strategy == 2:
+            return self.market_schedule
+        self.market_schedule = self.plan_global_trading()
+        return self.market_schedule
+
     def get_default_market_schedule(self):
-        return None
+        return np.array(self.data["schedule"].values)
+
+    def plan_global_self_supply(self):
+        """Returns market_schedule where energy needs are covered by the lowest price slots.
+
+        This strategy predicts the soc of the battery. If the soc would drop below 0 the
+        market_schedule will get cover the energy need by finding the cheapest time slot.
+        :return: market_schedule
+        """
+        cum_energy = self.pred.schedule.cumsum() + self.battery.soc * self.battery.capacity
+        self.market_schedule = np.array([0] * self.horizon).astype(float)
+        # Go through the cumulated demands, deducting the demand if we plan on buying energy
+        for i, energy in enumerate(cum_energy):
+            while energy < 0:
+                soc_prediction = np.ones(self.horizon) * self.battery.soc \
+                                 + (cum_energy - self.battery.soc * self.battery.capacity) \
+                                 / self.battery.capacity
+                # Where is the lowest price in between now and when I will need some energy
+                # Only check prices where I dont expect a full soc already or
+                # the time where the energy is needed
+                possible_global_prices = np.ones(self.horizon) * float('inf')
+                # prices are set where the soc in not full yet
+                # possible_global_prices[(0- EPS<=soc_prediction )* (soc_prediction < 1 + EPS)] = \
+                #     self.prices[(0 -EPS<soc_prediction )* (soc_prediction < 1 + EPS)]
+                possible_global_prices[(soc_prediction < 1 - EPS)] = \
+                    self.pred.prices[(soc_prediction < 1 - EPS)]
+
+                # index for the last inf value between now and energy demand
+                last_inf_index = np.argwhere(possible_global_prices[:i + 1] >= float('inf'))
+                if len(last_inf_index) == 0:
+                    last_inf_index = 0
+                else:
+                    last_inf_index = last_inf_index.max()
+                possible_global_prices[0:last_inf_index] = float('inf')
+                # storing energy before that is not possible. only look at prices afterwards
+                min_price_index = np.argmin(possible_global_prices[:i + 1])
+
+                # cheapest price for the energy is when the energy is needed --> no storage needed
+                if min_price_index == i or last_inf_index >= i:
+                    self.market_schedule[i] -= energy
+                    cum_energy[i:] -= energy
+                    break
+
+                # cheapest price is some time before the energy is needed. Check the storage
+                # how much energy can be stored in the battery
+                max_soc = min(1, max(0, np.max(soc_prediction[min_price_index:i])))
+                max_storable_energy = (1 - max_soc) * self.battery.capacity
+
+                # how much energy can be stored in the battery per time step via c-rate
+                max_storable_energy = min(max_storable_energy, self.battery.capacity *
+                                          self.battery.max_c_rate / self.time_steps_per_hour)
+
+                # how much energy do i need to store. Energy needs are negative
+                stored_energy = min(max_storable_energy, -energy)
+                # Reduce the energy needs for the current time step
+                energy += stored_energy
+
+                # fix the soc prediction for the time span between buying and consumption
+                # soc_prediction[min_price_index:i] += stored_energy / self.battery.capacity
+                self.market_schedule[min_price_index] += stored_energy
+                # Energy will be bought this time step. Predictions in the future, e.g. after this
+                # time step will use the reduced demand for the time steps afterwards
+                cum_energy[min_price_index:] += stored_energy
+
+        soc_prediction = np.ones(self.horizon) * self.battery.soc \
+            + (cum_energy - self.battery.soc * self.battery.capacity) / self.battery.capacity
+        self.predicted_soc = soc_prediction
+
+        return self.market_schedule
+
+    def plan_selling_strategy(self):
+        # Find peaks of SOCs above 1.
+        #                                 x
+        #             (x)               x   x
+        #                   x         x      x
+        #           x    x     x    x
+        # 1 ----- x-------------  x-
+        #      x         o
+        #   x
+        cum_energy_demand = self.pred.schedule.cumsum() + self.market_schedule.cumsum() +\
+                            self.battery.soc * self.battery.capacity
+        soc_prediction = np.ones(self.horizon) * self.battery.soc \
+            + (cum_energy_demand - self.battery.soc * self.battery.capacity) / self.battery.capacity
+        for i, energy in enumerate(cum_energy_demand):
+            overcharge = energy - self.battery.capacity
+            while overcharge > 0:
+                possible_prices = self.pred.selling_price.copy()
+                possible_prices[soc_prediction < 0 + EPS] = float('-inf')
+                # in between now and the peak, the right most/latest Zero soc does not allow
+                # reducing the soc before. Energy most be sold afterwards
+                zero_soc_indicies = np.where(soc_prediction[:i] < 0 + EPS)
+                if np.any(zero_soc_indicies):
+                    right_most_peak = np.max(zero_soc_indicies)
+                else:
+                    right_most_peak = 0
+                possible_prices[:right_most_peak] = float('-inf')
+                highest_price_index = np.argmax(possible_prices[:i + 1])
+
+                # If the energy is sold at the time of production no storage is needed
+                if highest_price_index == i:
+                    self.market_schedule[i] -= overcharge
+                    cum_energy_demand[i:] -= overcharge
+                    break
+                # current_soc_after_schedule=((self.battery.soc*self.battery.capacity)
+                #                             +self.pred.schedule[0]+self.global_market_buying_plan[0])/self.battery.capacity
+                soc_to_zero = min(np.min(soc_prediction[highest_price_index:i + 1]), 1)
+                energy_to_zero = soc_to_zero * self.battery.capacity
+                sellable_energy = min(energy_to_zero, overcharge)
+                self.market_schedule[highest_price_index] -= sellable_energy
+                cum_energy_demand[highest_price_index:] -= sellable_energy
+                overcharge -= sellable_energy
+                soc_prediction = np.ones(self.horizon) * self.battery.soc \
+                    + (cum_energy_demand - self.battery.soc * self.battery.capacity) \
+                    / self.battery.capacity
+
+        soc_prediction = np.ones(self.horizon) * self.battery.soc \
+            + (cum_energy_demand - self.battery.soc * self.battery.capacity) \
+            / self.battery.capacity
+        self.predicted_soc = soc_prediction
+
+    def plan_global_trading(self):
+        """ Strategy to buy energy when profit is predicted by selling the energy later on
+               when the flexibility is given"""
+        cum_energy_demand = self.pred.schedule.cumsum() + self.market_schedule.cumsum() + \
+            self.battery.soc * self.battery.capacity
+        soc_prediction = np.ones(self.horizon) * self.battery.soc \
+            + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
+            self.battery.capacity
+        buy_prices = np.array(self.pred.prices.values)
+        sell_prices = np.array(self.pred.selling_price.values)
+
+        # +++++++++++++++++++++++++=
+        # handle stored amount
+        buy_index = 0
+        buying_price = 0
+        sellable_amount_of_stored_energy = min(soc_prediction) * self.battery.capacity
+        possible_prices = sell_prices.copy()
+        possible_prices[:buy_index] = float("-inf")
+        sell_indicies = np.argwhere(possible_prices > buying_price)
+        if sell_indicies.size > 0:
+            sell_indicies = sell_indicies.squeeze(axis=1)
+        # If there are possible selling points of energy and there is the possibility of
+        # storing energy in between, i.e soc<1
+        while sellable_amount_of_stored_energy > 0+EPS:
+
+            found_sell_index = None
+            for sell_index in sell_indicies:
+                sell_price = possible_prices[sell_index]
+                higher_sell_price_indicies = np.argwhere(
+                    possible_prices[sell_index + 1:] >= sell_price)
+                # highest price found
+                if len(higher_sell_price_indicies) == 0:
+                    found_sell_index = sell_index
+                    break
+                else:
+                    # there are higher prices. choose the left most higher price index
+                    higher_sell_price_index = higher_sell_price_indicies.min()
+                lower_buy_price_indicies = np.argwhere(
+                    buy_prices[sell_index + 1:] <= sell_price)
+                # No buy dips but still higher selling prices
+                if len(lower_buy_price_indicies) == 0:
+                    continue
+                else:
+                    # there are lower buy prices onward. choose the left most lower price index
+                    lower_buy_price_index = lower_buy_price_indicies.min()
+                # There are better selling points in the future
+                if higher_sell_price_index < lower_buy_price_index:
+                    continue
+                # if not then we have the best selling point
+                else:
+                    found_sell_index = sell_index
+                    break
+            # find how much energy can be stored in between buying and selling
+            storable_energy = max(
+                soc_prediction[buy_index:found_sell_index + 1].max() * self.battery.capacity,
+                self.battery.capacity)
+            assert storable_energy > 0
+            self.market_schedule[found_sell_index] -= sellable_amount_of_stored_energy
+            cum_energy_demand[found_sell_index:] -= sellable_amount_of_stored_energy
+            soc_prediction = np.ones(self.horizon) * self.battery.soc \
+                + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
+                self.battery.capacity
+            sellable_amount_of_stored_energy = min(soc_prediction) * self.battery.capacity
+
+        # ++++++++++++++++++++
+        sorted_buy_indexes = np.argsort(buy_prices)
+        for buy_index in sorted_buy_indexes:
+            buying_price = buy_prices[buy_index]
+            possible_prices = sell_prices.copy()
+            possible_prices[:buy_index + 1] = float("-inf")
+
+            sell_indicies = np.argwhere(possible_prices > buying_price)
+            if sell_indicies.size > 0:
+                sell_indicies = sell_indicies.squeeze(axis=1)
+            # If there are possible selling points of energy and there is the possibility of
+            # storing energy in between, i.e soc<1
+            while sell_indicies.size > 0 and soc_prediction[
+                                             buy_index:sell_indicies[0]+1].max() < 1 - EPS:
+
+                found_sell_index = None
+
+                # make sure selling isnt considered for sell_indicies which lie behind an soc==1
+                # event. They can not be used, since the battery can not be charged higher.
+                socs = np.array(soc_prediction)
+                soc_idx_almost_one = np.argwhere(socs[buy_index:] > 1 - EPS) + buy_index
+                if soc_idx_almost_one.size > 0:
+                    soc_idx_almost_one = soc_idx_almost_one.squeeze(axis=1)
+                    left_most_soc_to_buy_index = min(soc_idx_almost_one)
+                    # energy cant be stored over an SOC==1 event. Make selling price impossible
+                    possible_prices[left_most_soc_to_buy_index:] = float("-inf")
+
+                for sell_index in sell_indicies:
+                    sell_price = possible_prices[sell_index]
+                    higher_sell_price_indicies = np.argwhere(
+                        possible_prices[sell_index + 1:] >= sell_price)
+                    # highest price found
+                    if len(higher_sell_price_indicies) == 0:
+                        found_sell_index = sell_index
+                        break
+                    else:
+                        # there are higher prices. choose the left most higher price index
+                        higher_sell_price_index = sell_index + 1 + higher_sell_price_indicies.min()
+
+                    lower_buy_price_indicies = np.argwhere(
+                        buy_prices[sell_index + 1:] <= sell_price)
+                    # No buy dips but still higher selling prices
+                    if len(lower_buy_price_indicies) == 0:
+                        continue
+                    else:
+                        # there are lower buy prices onward. choose the left most lower price index
+                        lower_buy_price_index = higher_sell_price_indicies.min()
+                    # There are better selling points in the future
+                    if higher_sell_price_index < lower_buy_price_index:
+                        continue
+                    # if not then we have the best selling point
+                    else:
+                        found_sell_index = sell_index
+                        break
+                # find how much energy can be stored in between buying and selling
+                storable_energy = (1-soc_prediction[buy_index:found_sell_index + 1].max())\
+                    * self.battery.capacity
+                assert storable_energy > 0
+                self.market_schedule[buy_index] += storable_energy
+                self.market_schedule[found_sell_index] -= storable_energy
+                cum_energy_demand[buy_index:] += storable_energy
+                cum_energy_demand[found_sell_index:] -= storable_energy
+                soc_prediction = np.ones(self.horizon) * self.battery.soc \
+                    + (cum_energy_demand - self.battery.soc * self.battery.capacity)\
+                    / self.battery.capacity
+                assert 1 >= max(soc_prediction)-EPS
+                assert 0 <= min(soc_prediction[:-2])+EPS
+        self.predicted_soc = soc_prediction
 
     def plot(self, columns):
         """
