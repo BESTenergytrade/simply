@@ -15,12 +15,13 @@ class Scenario:
      connected (power_network). RNG seed is preserved so results can be reproduced.
     """
 
-    def __init__(self, network, actors, map_actors, rng_seed=None):
+    def __init__(self, network, actors, map_actors, rng_seed=None, steps_per_hour = 4):
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
 
         self.power_network = network
         self.actors = list(actors)
+        self.steps_per_hour = steps_per_hour
         # maps node ids to actors
         self.map_actors = map_actors
 
@@ -247,4 +248,4 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
 
-    return Scenario(pn, actors, map_actors)
+    return Scenario(pn, actors, map_actors, steps_per_hour=ts_hour)

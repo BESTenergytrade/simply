@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from simply.battery import Battery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
+from simply.scenario import Scenario
 
 EPS = 1e-6
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
@@ -81,7 +82,7 @@ class Actor:
     """
 
     def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1.5, pm={}, cluster=None,
-                 strategy: int = 0):
+                 strategy: int = 0, scenario=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -93,6 +94,8 @@ class Actor:
         self.cluster = cluster
         self.t = cfg.parser.getint("default", "start", fallback=0)
         self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
+
+        self.scenario = scenario
 
         self.socs = []
         self.load_scale = ls
@@ -126,7 +129,7 @@ class Actor:
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
 
-    def get_market_schedule(self):
+    def get_market_schedule(self, strategy=None):
         """ Generates a market_schedule for the actor which represents the strategy of the actor
         when to buy or sell energy. At the current time step the actor will always buy/ or sell
         this amount even at market maker price.
@@ -136,29 +139,28 @@ class Actor:
         :return: market_schedule with planed amounts of energy buying/selling per time step
         """
         possible_choices = [0, 1, 2, 3]
-
-        if self.strategy not in possible_choices:
+        if strategy is None:
+            strategy = self.strategy
+        if strategy not in possible_choices:
             warnings.warn(
-                f"Strategy choice: {self.strategy} was not found in the list of possible "
+                f"Strategy choice: {strategy} was not found in the list of possible "
                 f"strategies: {possible_choices}. Using default strategy without "
                 "planning instead.")
-            self.strategy = 0
-        elif self.strategy != 0:
+            strategy = 0
+        elif strategy != 0:
             if self.battery is None or self.battery.capacity == 0:
                 warnings.warn(
                     f"Strategy choice: {self.strategy} was found but can not be used since "
                     f"the battery capacity is 0 or no battery exists. Using default strategy "
                     f"without planning instead.")
-                self.strategy = 0
-
-        strategy = self.strategy
+                strategy = 0
 
         if strategy == 0:
             self.market_schedule = self.get_default_market_schedule
             return self.market_schedule
 
         self.market_schedule = self.plan_global_self_supply()
-        if self.strategy == 1:
+        if strategy == 1:
             return self.market_schedule
 
         self.market_schedule = self.plan_selling_strategy()
@@ -218,7 +220,7 @@ class Actor:
 
                 # how much energy can be stored in the battery per time step via c-rate
                 max_storable_energy = min(max_storable_energy, self.battery.capacity *
-                                          self.battery.max_c_rate / self.time_steps_per_hour)
+                                          self.battery.max_c_rate / self.scenario.steps_per_hour)
 
                 # how much energy do i need to store. Energy needs are negative
                 stored_energy = min(max_storable_energy, -energy)
@@ -251,6 +253,8 @@ class Actor:
                             self.battery.soc * self.battery.capacity
         soc_prediction = np.ones(self.horizon) * self.battery.soc \
             + (cum_energy_demand - self.battery.soc * self.battery.capacity) / self.battery.capacity
+
+        # ToDo selling is not capped by max c-rate of battery
         for i, energy in enumerate(cum_energy_demand):
             overcharge = energy - self.battery.capacity
             while overcharge > 0:
@@ -299,6 +303,7 @@ class Actor:
         buy_prices = np.array(self.pred.prices.values)
         sell_prices = np.array(self.pred.selling_price.values)
 
+        # ToDo selling is not capped by max c-rate of battery
         # +++++++++++++++++++++++++=
         # handle stored amount
         buy_index = 0
