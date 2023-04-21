@@ -36,10 +36,10 @@ class TestBattery:
         rand_gen = np.random.default_rng(seed=42)
         load = rand_gen.random(24)
         schedule = load.copy() * (-1)
-        prices = rand_gen.random(24) * 0.3
+        price = rand_gen.random(24) * 0.3
 
-        df = pd.DataFrame(data=zip(load, pv, schedule, prices),
-                          columns=["load", "pv", "schedule", "prices"])
+        df = pd.DataFrame(data=zip(load, pv, schedule, price),
+                          columns=["load", "pv", "schedule", "price"])
         a = Actor(actor_id="1", df=df, battery=Battery(capacity=10))
 
         # Get energy for the first time step. The actor charges the battery with the amount in the
