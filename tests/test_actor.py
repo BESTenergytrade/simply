@@ -5,7 +5,7 @@ from simply.actor import Actor, create_random
 
 
 class TestActor:
-    df = pd.DataFrame(np.random.rand(24, 4), columns=["load", "pv", "prices", "schedule"])
+    df = pd.DataFrame(np.random.rand(24, 4), columns=["load", "pv", "price", "schedule"])
 
     def test_init(self):
         # actor_id, dataframe, load_scale, power_scale, pm (?)
