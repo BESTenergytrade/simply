@@ -1,3 +1,4 @@
+EPS=1e-6
 class Battery:
     """Class which implements all raw functionality around the battery """
 
@@ -23,5 +24,6 @@ class Battery:
         """
         soc_after_charge = self.soc + energy/self.capacity
         if self.check_boundaries:
-            assert 1 >= soc_after_charge >= 0, "Battery is out of soc bounds."
+            assert 1+EPS >= soc_after_charge >= 0-EPS, \
+                f"Battery is out of soc bounds with soc of: {soc_after_charge}."
         self.soc = soc_after_charge

@@ -76,6 +76,9 @@ class Market:
           raised)
         :return:
         """
+        if order is None:
+            return
+
         if order.time != self.t:
             raise ValueError("Wrong order time ({}), market is at time {}".format(order.time,
                                                                                   self.t))

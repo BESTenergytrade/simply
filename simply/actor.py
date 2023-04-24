@@ -23,7 +23,40 @@ Struct to hold order
 :param price: bidding/asking price for 1 kWh
 """
 
+from time import time
 
+
+def time_it(function, timers={}):
+    """Decorator function to time the duration and number of function calls.
+
+    :param function: function do be decorated
+    :type function: function
+    :param timers: storage for cumulated time and call number
+    :type timers: dict
+    :return: decorated function or timer if given function is None
+    :rtype function or dict
+
+    """
+    if function:
+        def decorated_function(*this_args, **kwargs):
+            key = function.__name__
+            start_time = time()
+            return_value = function(*this_args, **kwargs)
+            delta_time = time() - start_time
+            try:
+                timers[key]["time"] += delta_time
+                timers[key]["calls"] += 1
+            except KeyError:
+                timers[key] = dict(time=0, calls=1)
+                timers[key]["time"] += delta_time
+            return return_value
+
+        return decorated_function
+
+    sorted_timer = dict(sorted(timers.items(), key=lambda x: x[1]["time"] / x[1]["calls"]))
+    return sorted_timer
+
+@time_it
 def clip_soc(soc_prediction, upper_clipping):
     soc_max = np.max(soc_prediction)
     while soc_max > upper_clipping:
@@ -115,7 +148,7 @@ class Actor:
         self.cluster = cluster
         self.t = cfg.parser.getint("default", "start", fallback=0)
         self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
-
+        self.planning_horizon = self.horizon
         # ToDo: Use reference to scenario or market
         self.energy_unit = cfg.parser.getfloat("default", "energy_unit", fallback=0.01)
 
@@ -225,7 +258,9 @@ class Actor:
                 strategy = 0
 
         if strategy == 0:
-            self.market_schedule = self.get_default_market_schedule
+            self.market_schedule = self.get_default_market_schedule()
+            # overwrite the current value of the market schedule if the soc would surpass 1
+            self.predicted_soc = self.predict_socs()
             return self.market_schedule
 
         self.market_schedule = self.plan_global_self_supply()
@@ -242,8 +277,14 @@ class Actor:
         return self.market_schedule
 
     def get_default_market_schedule(self):
-        return -np.array(self.data["schedule"].values)
+        default_market_schedule = -np.array(self.pred.schedule.values)
+        # If there is energy in the battery, try making use of it in the next time step. This can
+        # happen due to small differences in between traded energy and needed energy due to the
+        # energy unit
+        default_market_schedule[0] -= self.battery.energy()
+        return default_market_schedule
 
+    @time_it
     def predict_socs(self, clip=False, clip_value=1):
         cum_energy_demand = self.pred.schedule.cumsum() + self.market_schedule.cumsum() +\
                             self.battery.soc * self.battery.capacity
@@ -260,6 +301,7 @@ class Actor:
             clip_soc(soc_prediction, clip_value)
         return soc_prediction
 
+    @time_it
     def plan_global_self_supply(self):
         """Returns market_schedule where energy needs are covered by the lowest price slots.
 
@@ -267,20 +309,16 @@ class Actor:
         market_schedule will cover the energy need by finding the cheapest time slot.
         :return: market_schedule
         """
-        # cum_energy = self.pred.schedule.cumsum() + self.battery.soc * self.battery.capacity
+        # initialize the market schedule with zeros
         self.market_schedule = np.array([0] * self.horizon).astype(float)
-        # clip_soc(cum_energy, self.battery.capacity)
-
         soc_prediction = self.predict_socs(clip=True)
-
-
         # Go through the cumulated demands, deducting the demand if we plan on buying energy
         for i, _ in enumerate(soc_prediction):
             energy = soc_prediction[i] * self.battery.capacity
             while energy < 0:
-                # Where is the lowest price in between now and when I will need some energy
-                # Only check prices where I do not expect a full soc already or
-                # the time where the energy is needed
+                # where is the lowest price in between now and when the energy is needed?
+                # only check prices where the battery is not full and time before when the energy
+                # is needed
                 possible_global_prices = np.ones(self.horizon) * float('inf')
                 # prices are set where the soc in not full yet
                 # possible_global_prices[(0- EPS<=soc_prediction )* (soc_prediction < 1 + EPS)] = \
@@ -327,6 +365,13 @@ class Actor:
                 # time step will use the reduced demand for the time steps afterwards
                 soc_prediction = self.predict_socs(clip=True, clip_value=1)
 
+            # if the predicted soc is 1 for the time steps before the current one, it is not
+            # possible to buy energy before. Since planning used only for time step 0, rest can
+            # be skipped
+            if max(soc_prediction[:i+1]) >= 1-EPS:
+                self.planning_horizon = i
+                break
+
         soc_prediction = self.predict_socs(clip=False)
         self.predicted_soc = soc_prediction
 
@@ -342,12 +387,14 @@ class Actor:
         #      x         o
         #   x
         soc_prediction = self.predict_socs(clip=False)
+        soc_prediction = soc_prediction[:self.planning_horizon+1]
+
         # ToDo selling is not capped by max c-rate of battery
         for i, _ in enumerate(soc_prediction):
             energy = soc_prediction[i] * self.battery.capacity
             overcharge = energy - self.battery.capacity
             while overcharge > 0:
-                possible_prices = self.pred.selling_prices.copy()
+                possible_prices = self.pred.selling_prices.copy()[:self.planning_horizon+1]
                 possible_prices[soc_prediction < 0 + EPS] = float('-inf')
                 # in between now and the peak, the right most/latest Zero soc does not allow
                 # reducing the soc before. Energy most be sold afterwards
@@ -382,9 +429,12 @@ class Actor:
                when the flexibility is given"""
         cum_energy_demand = self.pred.schedule.cumsum() + self.market_schedule.cumsum() + \
             self.battery.soc * self.battery.capacity
+        cum_energy_demand = cum_energy_demand[:self.planning_horizon+1]
+
         soc_prediction = np.ones(self.horizon) * self.battery.soc \
             + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
             self.battery.capacity
+        soc_prediction = soc_prediction[:self.planning_horizon+1]
         buy_prices = np.array(self.pred.prices.values)
         sell_prices = np.array(self.pred.selling_prices.values)
 
@@ -592,11 +642,15 @@ class Actor:
                 energy -= self.energy_unit
 
         # TODO simulate strategy: manipulation, etc.
-        price = self.pred["prices"][0]
+        price = (energy < 0) * self.pred["selling_prices"][0] +\
+                (energy >= 0) * self.pred["prices"][0]
         # TODO take flexibility into account to generate the bid
 
         # TODO replace order type by enum
-        new = Order(np.sign(energy), self.t, self.id, self.cluster, abs(energy), price)
+        # +1 as sign --> ask
+        # -1 as sign --> bid
+        # Therefore the sign is the negative of the sign of the energy
+        new = Order(np.sign(-energy), self.t, self.id, self.cluster, abs(energy), price)
         self.orders.append(new)
         return new
 
@@ -634,9 +688,8 @@ class Actor:
         post = (sign * energy, price)
         pre = self.traded.get(time, ([], []))
         self.traded[time] = tuple(e + [post[i]] for i, e in enumerate(pre))
-        self.matched_energy_current_step += energy*(-sign)
-        self.bank += energy*sign*price
-        print(f"Matched {energy*(-sign)}")
+        self.matched_energy_current_step += energy*sign
+        self.bank += energy*(-sign)*price
 
     def to_dict(self, external_data=False):
         """

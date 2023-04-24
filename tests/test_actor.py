@@ -2,17 +2,22 @@ import warnings
 
 import pandas as pd
 import numpy as np
+import pytest
 
-from simply.actor import Actor, create_random, Order
+
+from simply.actor import Actor, create_random, Order, time_it
 from simply.battery import Battery
 from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD
 from simply.power_network import PowerNetwork
 import simply.config as cfg
 import networkx as nx
-
+from pytest import approx
 from simply.scenario import Scenario
 
-
+ratings = dict()
+NR_STEPS = 100
+SELL_MULT = 0.8
+BAT_CAPACITY = 3
 def actor_print(actor):
     header= ["Battery Energy: ", "Actor Schedule: ", "Actor Market Schedule: ", "Battery SOC: ", "Actor Bank: ", "Buyin Price: "]
     header=["", "", "", "", "", ""]
@@ -23,8 +28,22 @@ def actor_print(actor):
           f"{header[2]}{round(actor.market_schedule[0],4)}, "
           f"{header[3]}{round(actor.battery.soc,4)}, "
           f"{header[4]}{round(actor.bank,4)},"
-          f"{header[5]}{round(actor.pred.prices[0],4)}")
+          f"{header[5]}{round(actor.pred.prices[0],4)},"
+          f"{round(actor.matched_energy_current_step,4)}")
 
+
+def market_step(actor, market, time):
+    order = actor.generate_order()
+    # Get the order into the market
+    market.accept_order(order, callback=actor.receive_market_results)
+    # Generate market maker order as ask
+    market.accept_order(
+        Order(1, time, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.prices[0]))
+    # Generate market maker order as bid
+    market.accept_order(
+        Order(-1, time, 'market_maker', None, MARKET_MAKER_THRESHOLD,
+              actor.pred.selling_prices[0]))
+    market.clear()
 
 class TestActor:
 
@@ -51,6 +70,7 @@ class TestActor:
                  [val if val > 0 else 0 for val in test_schedule],
                  test_schedule, test_prices)),
         columns=['load', 'pv', 'schedule', 'prices'])
+    example_df = pd.concat([example_df] * 10).reset_index(drop=True)
 
     def test_init(self):
         # actor_id, dataframe, load_scale, power_scale, pm (?)
@@ -92,118 +112,160 @@ class TestActor:
         # time series is longer than one day
         assert a.data.index[0].date() != a.data.index[-1].date()
 
+    def test_no_strategy(self):
+        # Overwrite strategy 0 with zero buys/sells. Assert that the simulation throws an error
+        pn = PowerNetwork("", nx.random_tree(1))
+
+        scenario = Scenario(pn, [], None, steps_per_hour=4)
+        #
+        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
+        m = BestMarket(0, self.pn)
+
+        # make sure error is thrown
+        with pytest.raises(AssertionError):
+            # Iterate through time steps
+            for t in range(NR_STEPS):
+                m.t = t
+                actor.get_market_schedule(strategy=0)
+                # Nullify market schedule
+                actor.market_schedule *= 0
+
+                market_step(actor, m, t)
+
+                for a in scenario.actors:
+                    # Update all actors for the next market time slot
+                    a.next_time_step()
+
+    def test_rule_based_strategy_0(self):
+        # The simplest strategy which buys or sells exactly the amount of the schedule at the time
+        # the energy is needed. A battery is still needed since schedule values do not necessarily
+        # line up with the traded_energy amount, e.g. schedule does not have 0.01 steps.
+        pn = PowerNetwork("", nx.random_tree(1))
+
+        scenario = Scenario(pn, [], None, steps_per_hour=4)
+        #
+        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
+        actor.data.selling_prices *= SELL_MULT
+        actor.create_prediction()
+
+        m = BestMarket(0, self.pn)
+        nr_of_matches = 0
+        # Iterate through time steps
+        for t in range(NR_STEPS):
+            m.t = t
+            actor.get_market_schedule(strategy=0)
+            market_step(actor, m, t)
+
+            # Tolerance due to energy_unit differences
+            tol = 2*actor.energy_unit
+            assert actor.battery.energy() < tol
+            assert -actor.market_schedule[0] == approx(actor.pred.schedule[0], abs=tol)
+            assert len(m.matches)-1 == nr_of_matches
+            nr_of_matches = len(m.matches)
+
+            for a in scenario.actors:
+                # Update all actors for the next market time slot
+                a.next_time_step()
+
+        actor_print(actor)
 
     def test_rule_based_strategy_1(self):
         pn = PowerNetwork("", nx.random_tree(1))
 
         scenario = Scenario(pn, [], None, steps_per_hour=4)
         #
-        battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
+        actor.data.selling_prices *= SELL_MULT
+        actor.create_prediction()
         m = BestMarket(0, self.pn)
+        nr_of_matches = 0
 
         # Iterate through time steps
-        for t in range(30):
+        for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=1)
-            actor_print(actor)
-            order = actor.generate_order()
-            # Get the order into the market
-            m.accept_order(order, callback=actor.receive_market_results)
-            # Generate market maker order as ask
-            m.accept_order(Order(1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.prices[0]))
-            # Generate market maker order as bid
-            m.accept_order(Order(-1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.prices[0]))
 
-            m.clear()
+            market_step(actor, m, t)
+            assert len(m.matches)-1 == nr_of_matches
+            nr_of_matches = len(m.matches)
 
-            for a in scenario.actors:
-                # Update all actors for the next market time slot
-                a.next_time_step()
-
+            # Battery makes sure soc bounds are not violated, so no assertion is needed here
+            # Make sure the schedule is planning only to buy energy. Might sell energy in the
+            # current time steps to get rid of energy at SOC ~ 1
+            if actor.pred.schedule[0] > 0:
+                assert actor.pred.schedule[0] + actor.market_schedule[0] >= 0
+            assert all(actor.market_schedule[1:] >= 0)
+            actor.next_time_step()
+        actor_print(actor)
+        ratings["strategy_1"]=actor.bank
 
     def test_rule_based_strategy_2(self):
-        battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
+        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
+        actor.data.selling_prices *= SELL_MULT
+        actor.create_prediction()
         m = BestMarket(0, self.pn)
+        nr_of_matches = 0
         # Iterate through time steps
-        for t in range(30):
+        for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=2)
-            actor_print(actor)
-            order = actor.generate_order()
-            # Get the order into the market
-            m.accept_order(order, callback=actor.receive_market_results)
-            # Generate market maker order as ask
-            m.accept_order(Order(1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.prices[0]))
-            # Generate market maker order as bid
-            m.accept_order(Order(-1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.prices[0]))
-            m.clear()
+            market_step(actor, m, t)
+            assert len(m.matches)-1 == nr_of_matches
+            nr_of_matches = len(m.matches)
+
             actor.next_time_step()
+        actor_print(actor)
+        ratings["strategy_2"] = actor.bank
 
     def test_rule_based_strategy_3(self):
-        battery = Battery(capacity=3, max_c_rate=2, soc_initial=0.0)
+        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
+        actor.data.selling_prices *= SELL_MULT
+        actor.create_prediction()
+
         m = BestMarket(0, self.pn)
+        nr_of_matches = 0
         # Iterate through time steps
-        for t in range(30):
+        for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=3)
-            actor_print(actor)
-            order = actor.generate_order()
-            # Get the order into the market
-            m.accept_order(order, callback=actor.receive_market_results)
-            # Generate market maker order as ask
-            m.accept_order(Order(1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.prices[0]))
-            # Generate market maker order as bid
-            m.accept_order(Order(-1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.prices[0]))
-            m.clear()
+            market_step(actor, m, t)
+            assert len(m.matches)-1 == nr_of_matches
+            nr_of_matches = len(m.matches)
             actor.next_time_step()
+        actor_print(actor)
+        ratings["strategy_3"] = actor.bank
 
+    def test_strategy_ranking(self):
+        assert ratings["strategy_3"] >= ratings["strategy_2"] >= ratings["strategy_1"]
 
-    def test_rule_based_strategy_3_fixed(self):
-        bat = Battery(max_c_rate=2, soc_initial=0, capacity=13.5)
-        a = Actor(0, self.example_df, battery=bat)
-        a.data.selling_price = a.data.prices
-        bank = 0
-        actual_market_schedule = []
-        socs = []
-        prices = []
-        sched=[]
-        for time in range(24):
-            a.create_prediction()
-            a.get_market_schedule(strategy=2)
-            # delta_energy= a.market_schedule[0]-a.pred.schedule.iloc[0]
-            # bat.get_energy(delta_energy)
-            a.update()
-            a.t +=1
-            bank += a.market_schedule[0]*a.data.prices[0]
-            actual_market_schedule.append(a.market_schedule[0])
-            socs.append(a.battery.soc)
-            prices.append(a.pred.prices[0]*40)
-            sched.append(a.pred.schedule[0])
-            if time == 0:
-                first_market_schedule= a.market_schedule.copy()
-                first_pred_soc = a.predicted_soc.copy()
-            #
-        df = pd.DataFrame(actual_market_schedule, columns=["market_schedule"])
+    def test_reduced_bank(self):
+        # check that reducing the selling prices reduces profit
+        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
+        actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
+        actor.data.selling_prices *= SELL_MULT*0.5
+        actor.create_prediction()
+        m = BestMarket(0, self.pn)
 
-        # df["predicted_soc"] = first_pred_soc
-        df["socs"] = socs
-        df["prices"] = prices
-        df["schedule"] = sched
-        # df["actual_market"]=actual_market_schedule
-        df.plot()
-        print(f"Bank: {bank}")
+        # Iterate through time steps
+        for t in range(NR_STEPS):
+            m.t = t
+            actor.get_market_schedule(strategy=3)
+            market_step(actor, m, t)
+            actor.next_time_step()
+        actor_print(actor)
+        assert ratings["strategy_3"] >= actor.bank
 
 with warnings.catch_warnings() as w:
     # Cause all warnings to always be triggered.
     warnings.filterwarnings("ignore", category=FutureWarning)
     t = TestActor()
-
-    print("Strat 2")
-    t.test_rule_based_strategy_2()
-    print("Strat 3")
-    t.test_rule_based_strategy_3()
     print("Strat 1")
     t.test_rule_based_strategy_1()
+    t.test_rule_based_strategy_2()
+    t.test_rule_based_strategy_3()
+    print(time_it(None))
