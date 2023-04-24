@@ -18,35 +18,47 @@ ratings = dict()
 NR_STEPS = 100
 SELL_MULT = 0.9
 BAT_CAPACITY = 3
-def actor_print(actor):
-    header= ["Battery Energy: ", "Actor Schedule: ", "Actor Market Schedule: ", "Battery SOC: ", "Actor Bank: ", "Buyin Price: "]
-    header=["", "", "", "", "", ""]
 
+
+def actor_print(actor, header=False, _header=dict()):
+    if not header or actor in _header:
+        pass
+    else:
+        header = ("Battery Energy, ",
+                  "Actor Schedule, ",
+                  "Actor Market Schedule, ",
+                  "Battery SOC, ",
+                  "Actor Bank, ",
+                  "Buying Price, ",
+                  "Matched Energy")
+        print(header)
+    _header[actor] = True
+    
     print(f"{actor.t},"
-        f"{header[0]}{round(actor.battery.energy(),4)}, "
-          f"{header[1]}{round(actor.pred.schedule[0],4)}, "
-          f"{header[2]}{round(actor.market_schedule[0],4)}, "
-          f"{header[3]}{round(actor.battery.soc,4)}, "
-          f"{header[4]}{round(actor.bank,4)},"
-          f"{header[5]}{round(actor.pred.prices[0],4)},"
+        f"{round(actor.battery.energy(),4)}, "
+          f"{round(actor.pred.schedule[0],4)}, "
+          f"{round(actor.market_schedule[0],4)}, "
+          f"{round(actor.battery.soc,4)}, "
+          f"{round(actor.bank,4)},"
+          f"{round(actor.pred.prices[0],4)},"
           f"{round(actor.matched_energy_current_step,4)}")
 
 
-def market_step(actor, market, time):
+def market_step(actor, market, step_time):
     order = actor.generate_order()
     # Get the order into the market
     market.accept_order(order, callback=actor.receive_market_results)
     # Generate market maker order as ask
     market.accept_order(
-        Order(1, time, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.prices[0]))
+        Order(1, step_time, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.prices[0]))
     # Generate market maker order as bid
     market.accept_order(
-        Order(-1, time, 'market_maker', None, MARKET_MAKER_THRESHOLD,
+        Order(-1, step_time, 'market_maker', None, MARKET_MAKER_THRESHOLD,
               actor.pred.selling_prices[0]))
     market.clear()
 
-class TestActor:
 
+class TestActor:
     df = pd.DataFrame(np.random.rand(24, 4), columns=["load", "pv", "prices", "schedule"])
     cfg.Config("")
     nw = nx.Graph()
@@ -260,15 +272,37 @@ class TestActor:
         actor_print(actor)
         assert ratings["strategy_3"] >= actor.bank
 
+    def test_strategy_3_no_schedule(self):
+        # check that reducing the selling prices reduces profit
+        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
+        actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
+        actor.data.selling_prices = actor.data.selling_prices.copy()
+        actor.data.schedule *= 0
+        actor.data.pv *= 0
+        actor.data.load *= 0
+        actor.create_prediction()
+        m = BestMarket(0, self.pn)
+
+        # Iterate through time steps
+        for t in range(NR_STEPS):
+            m.t = t
+            actor.get_market_schedule(strategy=3)
+            market_step(actor, m, t)
+            actor.next_time_step()
+            actor_print(actor, header=True)
+
+        val = self.example_df.prices.diff()[self.example_df.prices.diff() > 0].sum()
+        val == actor.bank
+
 with warnings.catch_warnings() as w:
     # Cause all warnings to always be triggered.
     warnings.filterwarnings("ignore", category=FutureWarning)
     t = TestActor()
     import time
-    t.test_rule_based_strategy_0()
-    t.test_rule_based_strategy_1()
-    t.test_rule_based_strategy_2()
+    # t.test_rule_based_strategy_0()
+    # t.test_rule_based_strategy_1()
+    # t.test_rule_based_strategy_2()
     ta = time.time()
-    t.test_rule_based_strategy_3()
+    t.test_strategy_3_no_schedule()
     # print(time.time() - ta)
     print(time_it(None))
