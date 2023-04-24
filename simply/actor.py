@@ -16,8 +16,8 @@ Struct to hold order
 :param type: sign of order, representing bid (-1) or ask (+1)
 :param time: timestamp when order was created
 :param actor_id: ID of ordering actor
-:param energy: amount of energy the actor wants to trade. Will be rounded down(asks)/up(bids) according to the market's
-    energy unit
+:param energy: amount of energy the actor wants to trade. Will be rounded down(asks)/up(bids)
+    according to the market's energy unit
 :param price: bidding/asking price for 1 kWh
 """
 
@@ -31,7 +31,8 @@ class Actor:
     The actor fullfils his schedule needs by buying/selling power. Buying power can be guaranteed by
     placing orders with at least the market maker price, since the market maker is seen as unlimited
     supply. At the start of every time step the actor can place one order to buy or sell energy at
-    the current time step. Basis for this order are a predicted schedule and a market maker price time series as input.
+    the current time step. Basis for this order are a predicted schedule and a market maker price
+    time series as input.
     After matching took place, the (monetary) bank and resulting soc is calculated taking into
     consideration the schedule and the acquired energy of this time step, i.e. bank and soc at the
     end of the time step. Afterwards the time step is increased and a new prediction for the
@@ -294,7 +295,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     # (i.e. positive power) Bids however include network charges
     net_price_factor = 0.7
     df["price"] = df.apply(lambda slot: slot["price"] - (slot["schedule"] > 0)
-                            * net_price_factor * slot["price"], axis=1)
+                           * net_price_factor * slot["price"], axis=1)
     # makes sure that the battery capacity is big enough, even if no useful trading takes place
     # todo randomize if generate order takes care of meeting demands through a market strategy
     battery_capacity = (df["schedule"].cumsum().max()-df["schedule"].cumsum().min())*2
