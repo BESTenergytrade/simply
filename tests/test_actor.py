@@ -24,12 +24,12 @@ def actor_print(actor, header=False, _header=dict()):
     if not header or actor in _header:
         pass
     else:
-        header = ("Battery Energy, ",
-                  "Actor Schedule, ",
-                  "Actor Market Schedule, ",
-                  "Battery SOC, ",
-                  "Actor Bank, ",
-                  "Buying Price, ",
+        header = ("Battery Energy, "
+                  "Actor Schedule, "
+                  "Actor Market Schedule, "
+                  "Battery SOC, "
+                  "Actor Bank, "
+                  "Buying Price, "
                   "Matched Energy")
         print(header)
     _header[actor] = True
@@ -282,27 +282,17 @@ class TestActor:
         actor.data.load *= 0
         actor.create_prediction()
         m = BestMarket(0, self.pn)
-
+        # number of steps depends on data input. assertion only works if last step ends on price
+        # maximum, since only then the actor makes use of stored energy by selling it
+        NR_STEPS  = 43
         # Iterate through time steps
         for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=3)
             market_step(actor, m, t)
-            actor.next_time_step()
             actor_print(actor, header=True)
+            actor.next_time_step()
 
-        val = self.example_df.prices.diff()[self.example_df.prices.diff() > 0].sum()
-        val == actor.bank
-
-with warnings.catch_warnings() as w:
-    # Cause all warnings to always be triggered.
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    t = TestActor()
-    import time
-    # t.test_rule_based_strategy_0()
-    # t.test_rule_based_strategy_1()
-    # t.test_rule_based_strategy_2()
-    ta = time.time()
-    t.test_strategy_3_no_schedule()
-    # print(time.time() - ta)
-    print(time_it(None))
+        val = (self.example_df.prices.diff()[:NR_STEPS]
+            [self.example_df.prices.diff()[:NR_STEPS] > 0].sum()*BAT_CAPACITY)
+        assert val == approx(actor.bank)

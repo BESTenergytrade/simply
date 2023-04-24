@@ -23,40 +23,7 @@ Struct to hold order
 :param price: bidding/asking price for 1 kWh
 """
 
-from time import time
 
-
-def time_it(function, timers={}):
-    """Decorator function to time the duration and number of function calls.
-
-    :param function: function do be decorated
-    :type function: function
-    :param timers: storage for cumulated time and call number
-    :type timers: dict
-    :return: decorated function or timer if given function is None
-    :rtype function or dict
-
-    """
-    if function:
-        def decorated_function(*this_args, **kwargs):
-            key = function.__name__
-            start_time = time()
-            return_value = function(*this_args, **kwargs)
-            delta_time = time() - start_time
-            try:
-                timers[key]["time"] += delta_time
-                timers[key]["calls"] += 1
-            except KeyError:
-                timers[key] = dict(time=0, calls=1)
-                timers[key]["time"] += delta_time
-            return return_value
-
-        return decorated_function
-
-    sorted_timer = dict(sorted(timers.items(), key=lambda x: x[1]["time"] / x[1]["calls"]))
-    return sorted_timer
-
-@time_it
 def clip_soc(soc_prediction, upper_clipping):
     soc_max = np.max(soc_prediction)
     while soc_max > upper_clipping:
@@ -285,7 +252,6 @@ class Actor:
         default_market_schedule[0] -= self.battery.energy()
         return default_market_schedule
 
-    @time_it
     def predict_socs(self, clip=False, clip_value=1):
         cum_energy_demand = (self.pred.schedule.cumsum() + self.market_schedule.cumsum() +\
                             self.battery.soc * self.battery.capacity)[:self.planning_horizon+1]
@@ -302,7 +268,7 @@ class Actor:
             clip_soc(soc_prediction, clip_value)
         return soc_prediction
 
-    @time_it
+
     def plan_global_self_supply(self):
         """Returns market_schedule where energy needs are covered by the lowest price slots.
 
@@ -381,7 +347,7 @@ class Actor:
 
         return self.market_schedule
 
-    @time_it
+
     def plan_selling_strategy(self):
         # Find peaks of SOCs above 1.
         #                                 x
@@ -435,7 +401,6 @@ class Actor:
         self.predicted_soc = soc_prediction
         return self.market_schedule
 
-    @time_it
     def plan_global_trading(self):
         """ Strategy to buy energy when profit is predicted by selling the energy later on
                when the flexibility is given"""
