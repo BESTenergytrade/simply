@@ -16,7 +16,7 @@ from simply.scenario import Scenario
 
 ratings = dict()
 NR_STEPS = 100
-SELL_MULT = 0.8
+SELL_MULT = 0.9
 BAT_CAPACITY = 3
 def actor_print(actor):
     header= ["Battery Energy: ", "Actor Schedule: ", "Actor Market Schedule: ", "Battery SOC: ", "Actor Bank: ", "Buyin Price: "]
@@ -264,8 +264,11 @@ with warnings.catch_warnings() as w:
     # Cause all warnings to always be triggered.
     warnings.filterwarnings("ignore", category=FutureWarning)
     t = TestActor()
-    print("Strat 1")
+    import time
+    t.test_rule_based_strategy_0()
     t.test_rule_based_strategy_1()
     t.test_rule_based_strategy_2()
+    ta = time.time()
     t.test_rule_based_strategy_3()
+    # print(time.time() - ta)
     print(time_it(None))

@@ -148,7 +148,7 @@ class Actor:
         self.cluster = cluster
         self.t = cfg.parser.getint("default", "start", fallback=0)
         self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
-        self.planning_horizon = self.horizon
+        self.planning_horizon = self.horizon-1
         # ToDo: Use reference to scenario or market
         self.energy_unit = cfg.parser.getfloat("default", "energy_unit", fallback=0.01)
 
@@ -286,9 +286,9 @@ class Actor:
 
     @time_it
     def predict_socs(self, clip=False, clip_value=1):
-        cum_energy_demand = self.pred.schedule.cumsum() + self.market_schedule.cumsum() +\
-                            self.battery.soc * self.battery.capacity
-        soc_prediction = np.ones(self.horizon) * self.battery.soc \
+        cum_energy_demand = (self.pred.schedule.cumsum() + self.market_schedule.cumsum() +\
+                            self.battery.soc * self.battery.capacity)[:self.planning_horizon+1]
+        soc_prediction = np.ones(self.planning_horizon+1) * self.battery.soc \
             + (cum_energy_demand - self.battery.soc * self.battery.capacity) / self.battery.capacity
 
         last_val = 0
@@ -368,9 +368,9 @@ class Actor:
             # if the predicted soc is 1 for the time steps before the current one, it is not
             # possible to buy energy before. Since planning used only for time step 0, rest can
             # be skipped
-            if max(soc_prediction[:i+1]) >= 1-EPS:
-                self.planning_horizon = i
-                break
+            # if max(soc_prediction[:i+1]) >= 1-EPS:
+            #     self.planning_horizon = i
+            #     break
 
         soc_prediction = self.predict_socs(clip=False)
         self.predicted_soc = soc_prediction
@@ -424,6 +424,7 @@ class Actor:
         self.predicted_soc = soc_prediction
         return self.market_schedule
 
+    @time_it
     def plan_global_trading(self):
         """ Strategy to buy energy when profit is predicted by selling the energy later on
                when the flexibility is given"""
@@ -431,10 +432,10 @@ class Actor:
             self.battery.soc * self.battery.capacity
         cum_energy_demand = cum_energy_demand[:self.planning_horizon+1]
 
-        soc_prediction = np.ones(self.horizon) * self.battery.soc \
+        soc_prediction = np.ones(self.planning_horizon+1) * self.battery.soc \
             + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
             self.battery.capacity
-        soc_prediction = soc_prediction[:self.planning_horizon+1]
+
         buy_prices = np.array(self.pred.prices.values)
         sell_prices = np.array(self.pred.selling_prices.values)
 
@@ -444,7 +445,7 @@ class Actor:
         buy_index = 0
         buying_price = 0
         sellable_amount_of_stored_energy = min(soc_prediction) * self.battery.capacity
-        possible_prices = sell_prices.copy()
+        possible_prices = sell_prices.copy()[:self.planning_horizon+1]
         possible_prices[:buy_index] = float("-inf")
         sell_indicies = np.argwhere(possible_prices > buying_price)
         if sell_indicies.size > 0:
@@ -486,17 +487,14 @@ class Actor:
                 self.battery.capacity)
             assert storable_energy > 0
             self.market_schedule[found_sell_index] -= sellable_amount_of_stored_energy
-            cum_energy_demand[found_sell_index:] -= sellable_amount_of_stored_energy
-            soc_prediction = np.ones(self.horizon) * self.battery.soc \
-                + (cum_energy_demand - self.battery.soc * self.battery.capacity) / \
-                self.battery.capacity
+            soc_prediction = self.predict_socs(clip=False)
             sellable_amount_of_stored_energy = min(soc_prediction) * self.battery.capacity
 
         # ++++++++++++++++++++
         sorted_buy_indexes = np.argsort(buy_prices)
         for buy_index in sorted_buy_indexes:
             buying_price = buy_prices[buy_index]
-            possible_prices = sell_prices.copy()
+            possible_prices = sell_prices.copy()[:self.planning_horizon+1]
             possible_prices[:buy_index + 1] = float("-inf")
 
             sell_indicies = np.argwhere(possible_prices > buying_price)
@@ -552,11 +550,8 @@ class Actor:
                 assert storable_energy > 0
                 self.market_schedule[buy_index] += storable_energy
                 self.market_schedule[found_sell_index] -= storable_energy
-                cum_energy_demand[buy_index:] += storable_energy
-                cum_energy_demand[found_sell_index:] -= storable_energy
-                soc_prediction = np.ones(self.horizon) * self.battery.soc \
-                    + (cum_energy_demand - self.battery.soc * self.battery.capacity)\
-                    / self.battery.capacity
+                soc_prediction = self.predict_socs(clip=False)
+
                 assert 1 >= max(soc_prediction)-EPS
                 assert 0 <= min(soc_prediction[:-2])+EPS
         self.predicted_soc = soc_prediction
@@ -668,6 +663,7 @@ class Actor:
             self.socs.append(self.battery.soc)
         self.t += 1
         self.matched_energy_current_step = 0
+        self.planning_horizon = self.horizon-1
         self.create_prediction()
 
     def receive_market_results(self, time, sign, energy, price):
