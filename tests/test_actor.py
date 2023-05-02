@@ -218,8 +218,8 @@ class TestActor:
             # production which leads to negative sign market schedule
             cost_with_strat += (actor.market_schedule[0] > 0) * \
                 actor.market_schedule[0] * actor.pred.price[0]
-            energy_with_strat += (actor.market_schedule[0] > 0) * \
-                actor.market_schedule[0]
+            energy_with_strat += (actor.market_schedule[0] > 0) * actor.market_schedule[0]
+
             assert len(m.matches)-1 == nr_of_matches
             nr_of_matches = len(m.matches)
 
@@ -313,7 +313,6 @@ class TestActor:
             actor.get_market_schedule(strategy=3)
             market_step(actor, m, t)
             actor.next_time_step()
-        actor_print(actor)
         assert ratings["strategy_3"] >= actor.bank
 
     def test_strategy_3_no_schedule(self):
@@ -335,7 +334,7 @@ class TestActor:
             m.t = t
             actor.get_market_schedule(strategy=3)
             market_step(actor, m, t)
-            actor_print(actor, header=True)
+            # actor_print(actor, header=True)
             actor.next_time_step()
 
         val = (self.example_df.price.diff()[:NR_STEPS]
