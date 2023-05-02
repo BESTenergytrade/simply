@@ -497,7 +497,7 @@ class Actor:
         plt.show()
 
     def create_prediction(self):
-        """Reset asset and schedule predicition horizon to the current planning time step self.t"""
+        """Reset asset and schedule prediction horizon to the current planning time step self.t"""
         # ToDo add selling price
         for column in ["load", "pv", "price", "selling_price", "schedule"]:
             if column in self.data.columns:
