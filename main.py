@@ -3,11 +3,12 @@
 from argparse import ArgumentParser
 
 from simply import market, market_2pac, market_fair
+from simply.actor import Order
 from simply.scenario import load, create_random
 from simply.config import Config
 from simply.util import summerize_actor_trading
 from numpy import linspace
-
+from simply.market_fair import MARKET_MAKER_THRESHOLD
 
 """
 Entry point for standalone functionality.
@@ -64,17 +65,33 @@ if __name__ == "__main__":
         m = market.Market(0, network=sc.power_network)
 
     list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
+    for a in sc.actors:
+        a.data.selling_price = sc.actors[0].data.selling_price
+        a.data.price = sc.actors[0].data.price
+        a.create_prediction()
+
     for t in list_ts:
         m.t = t
         for a in sc.actors:
+            a.get_market_schedule()
             order = a.generate_order()
             if order:
                 m.accept_order(order, callback=a.receive_market_results)
+
+        # Generate market maker order as ask
+        m.accept_order(
+            Order(1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD,
+                  sc.actors[0].pred.price[0]))
+        # Generate market maker order as bid
+        m.accept_order(
+            Order(-1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD,
+                  sc.actors[0].pred.selling_price[0]))
 
         m.clear(reset=cfg.reset_market)
         for a in sc.actors:
             # Update all actors for the next market time slot
             a.next_time_step()
+
         if cfg.show_prints:
             print("Matches of bid/ask ids: {}".format(m.matches))
             print(

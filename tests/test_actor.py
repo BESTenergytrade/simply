@@ -334,7 +334,6 @@ class TestActor:
             m.t = t
             actor.get_market_schedule(strategy=3)
             market_step(actor, m, t)
-            # actor_print(actor, header=True)
             actor.next_time_step()
 
         val = (self.example_df.price.diff()[:NR_STEPS]

@@ -269,4 +269,9 @@ class Market:
         :param bid: the bid used to determine the grid fee to be applied
         :return: None
         """
-        ask.price += self.grid_fee_matrix[bid.cluster][ask.cluster]
+        try:
+            ask.price += self.grid_fee_matrix[bid.cluster][ask.cluster]
+        except TypeError:
+            # if an actor as none as cluster, e.g. the market maker, a TypeError will be thrown.
+            # use default grid fee in this case.
+            ask.price += self.default_grid_fee
