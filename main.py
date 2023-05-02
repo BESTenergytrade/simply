@@ -65,6 +65,10 @@ if __name__ == "__main__":
         m = market.Market(0, network=sc.power_network)
 
     list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
+
+    # Actors generate their order prices from the market maker prices. These need to be the same
+    # for each actor. In the future market maker prices should be stored in a single data structure,
+    # eg. market object, a market maker instance or something similar.
     for a in sc.actors:
         a.data.selling_price = sc.actors[0].data.selling_price
         a.data.price = sc.actors[0].data.price
