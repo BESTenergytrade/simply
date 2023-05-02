@@ -404,7 +404,7 @@ class Actor:
                when the flexibility is given"""
         soc_prediction = self.predict_socs(clip=False)
 
-        # ülanning to trade for the current time step is only possible until a soc of 1 is reached.
+        # planning to trade for the current time step is only possible until a soc of 1 is reached.
         planning_horizon = np.argwhere([soc_prediction >= 1-EPS])
         if planning_horizon.size == 0:
             pass
