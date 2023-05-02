@@ -15,7 +15,7 @@ class Scenario:
      connected (power_network). RNG seed is preserved so results can be reproduced.
     """
 
-    def __init__(self, network, actors, map_actors, rng_seed=None, steps_per_hour = 4):
+    def __init__(self, network, actors, map_actors, rng_seed=None, steps_per_hour=4):
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
 

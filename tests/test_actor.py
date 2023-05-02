@@ -1,11 +1,9 @@
-import warnings
-
 import pandas as pd
 import numpy as np
 import pytest
 
 
-from simply.actor import Actor, create_random, Order, time_it
+from simply.actor import Actor, create_random, Order
 from simply.battery import Battery
 from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD
 from simply.power_network import PowerNetwork
@@ -33,9 +31,9 @@ def actor_print(actor, header=False, _header=dict()):
                   "Matched Energy")
         print(header)
     _header[actor] = True
-    
+
     print(f"{actor.t},"
-        f"{round(actor.battery.energy(),4)}, "
+          f"{round(actor.battery.energy(),4)}, "
           f"{round(actor.pred.schedule[0],4)}, "
           f"{round(actor.market_schedule[0],4)}, "
           f"{round(actor.battery.soc,4)}, "
@@ -64,18 +62,19 @@ class TestActor:
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
-    test_prices = [0.082,0.083,0.087,0.102,0.112,0.122,0.107,0.103,0.1,0.1,0.09,0.082,0.083,0.083,
-                   0.094,0.1,0.11,0.109,0.106,0.105,0.1,0.093,0.084,0.081,0.078,0.074,0.074,0.079,
-                   0.081,0.083,0.079,0.074,0.07,0.067,0.065,0.067,0.073,0.075,0.085,0.095,0.107,
-                   0.107,0.107,0.107,0.1,0.094,0.087,0.08,]
+    test_prices = [0.082, 0.083, 0.087, 0.102, 0.112, 0.122, 0.107, 0.103, 0.1, 0.1, 0.09, 0.082,
+                   0.083, 0.083, 0.094, 0.1, 0.11, 0.109, 0.106, 0.105, 0.1, 0.093, 0.084, 0.081,
+                   0.078, 0.074, 0.074, 0.079, 0.081, 0.083, 0.079, 0.074, 0.07, 0.067, 0.065,
+                   0.067, 0.073, 0.075, 0.085, 0.095, 0.107, 0.107, 0.107, 0.107, 0.1, 0.094, 0.087,
+                   0.08]
 
-    test_schedule = [0.164,0.077,0.019,-0.038,-0.281,-0.054,-0.814,-1.292,-1.301,-1.303,-1.27,
-                     -1.228,-1.301,-0.392,-0.564,-0.411,1.046,1.385,1.448,1.553,0.143,0.123,0.172,
-                     0.094,0.084,0.075,-0.017,-0.071,-0.147,-0.23,-1.208,-1.072,-0.277,-0.274,
-                     -0.813,-0.131,-0.844,0.013,0.071,-0.027,-0.005,1.08,1.065,1.406,1.403,1.341,
-                     1.096,1.098,]
+    test_schedule = [0.164, 0.077, 0.019, -0.038, -0.281, -0.054, -0.814, -1.292, -1.301, -1.303,
+                     -1.27, -1.228, -1.301, -0.392, -0.564, -0.411, 1.046, 1.385, 1.448, 1.553,
+                     0.143, 0.123, 0.172, 0.094, 0.084, 0.075, -0.017, -0.071, -0.147, -0.23,
+                     -1.208, -1.072, -0.277, -0.274, -0.813, -0.131, -0.844, 0.013, 0.071, -0.027,
+                     -0.005, 1.08, 1.065, 1.406, 1.403, 1.341, 1.096, 1.098]
 
-    # Note: Positve load values lead to negative schedule values.
+    # Note: Positive load values lead to negative schedule values.
     # Positive PV values lead to positive schedule values
     example_df = pd.DataFrame(
         list(zip([abs(val) if val < 0 else 0 for val in test_schedule],
@@ -130,7 +129,8 @@ class TestActor:
 
         scenario = Scenario(pn, [], None, steps_per_hour=4)
         #
-        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        battery = Battery(
+            capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
         m = BestMarket(0, self.pn)
 
@@ -157,7 +157,8 @@ class TestActor:
 
         scenario = Scenario(pn, [], None, steps_per_hour=4)
         #
-        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        battery = Battery(
+            capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
         actor.data.selling_prices *= SELL_MULT
         actor.create_prediction()
@@ -188,7 +189,8 @@ class TestActor:
 
         scenario = Scenario(pn, [], None, steps_per_hour=4)
         #
-        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        battery = Battery(
+            capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
         actor.data.selling_prices *= SELL_MULT
         actor.create_prediction()
@@ -212,7 +214,7 @@ class TestActor:
             assert all(actor.market_schedule[1:] >= 0)
             actor.next_time_step()
         actor_print(actor)
-        ratings["strategy_1"]=actor.bank
+        ratings["strategy_1"] = actor.bank
 
     def test_rule_based_strategy_2(self):
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
@@ -273,7 +275,8 @@ class TestActor:
         assert ratings["strategy_3"] >= actor.bank
 
     def test_strategy_3_no_schedule(self):
-        # check that reducing the selling prices reduces profit
+        # without schedule and with no price difference, the profit an actor can make is dependent
+        # on the cumulated sum of positive price gradients and the battery capacity
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
         actor.data.selling_prices = actor.data.selling_prices.copy()
@@ -284,7 +287,7 @@ class TestActor:
         m = BestMarket(0, self.pn)
         # number of steps depends on data input. assertion only works if last step ends on price
         # maximum, since only then the actor makes use of stored energy by selling it
-        NR_STEPS  = 43
+        NR_STEPS = 41
         # Iterate through time steps
         for t in range(NR_STEPS):
             m.t = t
@@ -294,5 +297,5 @@ class TestActor:
             actor.next_time_step()
 
         val = (self.example_df.prices.diff()[:NR_STEPS]
-            [self.example_df.prices.diff()[:NR_STEPS] > 0].sum()*BAT_CAPACITY)
+               [self.example_df.prices.diff()[:NR_STEPS] > 0].sum()*BAT_CAPACITY)
         assert val == approx(actor.bank)
