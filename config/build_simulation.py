@@ -106,7 +106,7 @@ def read_config_json(config_json):
 
 
 def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None,
-                             ts_hour=1, cols=["load", "pv", "schedule", "prices"],
+                             ts_hour=1, cols=["load", "pv", "schedule", "price"],
                              ps=None, ls=None):
     """
     Create Actor with an ID and given asset time series shifted to a specified start time and
@@ -117,7 +117,7 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
     :param start_date: Start date of the actor, defaults to "2016-01-01"
     :param nb_ts: Number of time slots to be generated, defaults to None
     :param ts_hour: Number of time slot of equal length within one hour, defaults to 4
-    :param cols: List of columns to be included, defaults to ["load", "pv", "schedule", "prices"]
+    :param cols: List of columns to be included, defaults to ["load", "pv", "schedule", "price"]
     :param ps: PV scalar, defaults to None
     :param ls: Load scalar, defaults to None
 
@@ -210,7 +210,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
             asset_dict['pv'] = {"csv": pv_path.joinpath(file_dict['solar']), "col_index": 1}
 
         # Prices
-        asset_dict['prices'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
+        asset_dict['price'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
 
         actor = create_actor_from_config(actor_row['prosumerName'], asset_dict=asset_dict,
                                          start_date=start_date, nb_ts=nb_ts, ts_hour=ts_hour,

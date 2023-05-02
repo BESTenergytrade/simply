@@ -38,7 +38,7 @@ def actor_print(actor, header=False, _header=dict()):
           f"{round(actor.market_schedule[0],4)}, "
           f"{round(actor.battery.soc,4)}, "
           f"{round(actor.bank,4)},"
-          f"{round(actor.pred.prices[0],4)},"
+          f"{round(actor.pred.price[0],4)},"
           f"{round(actor.matched_energy_current_step,4)}")
 
 
@@ -48,16 +48,16 @@ def market_step(actor, market, step_time):
     market.accept_order(order, callback=actor.receive_market_results)
     # Generate market maker order as ask
     market.accept_order(
-        Order(1, step_time, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.prices[0]))
+        Order(1, step_time, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.price[0]))
     # Generate market maker order as bid
     market.accept_order(
         Order(-1, step_time, 'market_maker', None, MARKET_MAKER_THRESHOLD,
-              actor.pred.selling_prices[0]))
+              actor.pred.selling_price[0]))
     market.clear()
 
 
 class TestActor:
-    df = pd.DataFrame(np.random.rand(24, 4), columns=["load", "pv", "prices", "schedule"])
+    df = pd.DataFrame(np.random.rand(24, 4), columns=["load", "pv", "price", "schedule"])
     cfg.Config("")
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
@@ -80,7 +80,7 @@ class TestActor:
         list(zip([abs(val) if val < 0 else 0 for val in test_schedule],
                  [val if val > 0 else 0 for val in test_schedule],
                  test_schedule, test_prices)),
-        columns=['load', 'pv', 'schedule', 'prices'])
+        columns=['load', 'pv', 'schedule', 'price'])
     example_df = pd.concat([example_df] * 10).reset_index(drop=True)
 
     def test_init(self):
@@ -160,7 +160,7 @@ class TestActor:
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
-        actor.data.selling_prices *= SELL_MULT
+        actor.data.selling_price *= SELL_MULT
         actor.create_prediction()
 
         m = BestMarket(0, self.pn)
@@ -192,7 +192,7 @@ class TestActor:
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
-        actor.data.selling_prices *= SELL_MULT
+        actor.data.selling_price *= SELL_MULT
         actor.create_prediction()
         m = BestMarket(0, self.pn)
         nr_of_matches = 0
@@ -219,7 +219,7 @@ class TestActor:
     def test_rule_based_strategy_2(self):
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
-        actor.data.selling_prices *= SELL_MULT
+        actor.data.selling_price *= SELL_MULT
         actor.create_prediction()
         m = BestMarket(0, self.pn)
         nr_of_matches = 0
@@ -238,7 +238,7 @@ class TestActor:
     def test_rule_based_strategy_3(self):
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
-        actor.data.selling_prices *= SELL_MULT
+        actor.data.selling_price *= SELL_MULT
         actor.create_prediction()
 
         m = BestMarket(0, self.pn)
@@ -251,7 +251,6 @@ class TestActor:
             assert len(m.matches)-1 == nr_of_matches
             nr_of_matches = len(m.matches)
             actor.next_time_step()
-        actor_print(actor)
         ratings["strategy_3"] = actor.bank
 
     def test_strategy_ranking(self):
@@ -261,7 +260,7 @@ class TestActor:
         # check that reducing the selling prices reduces profit
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
-        actor.data.selling_prices *= SELL_MULT*0.5
+        actor.data.selling_price *= SELL_MULT*0.5
         actor.create_prediction()
         m = BestMarket(0, self.pn)
 
@@ -279,7 +278,7 @@ class TestActor:
         # on the cumulated sum of positive price gradients and the battery capacity
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
-        actor.data.selling_prices = actor.data.selling_prices.copy()
+        actor.data.selling_price = actor.data.selling_price.copy()
         actor.data.schedule *= 0
         actor.data.pv *= 0
         actor.data.load *= 0
@@ -296,6 +295,6 @@ class TestActor:
             actor_print(actor, header=True)
             actor.next_time_step()
 
-        val = (self.example_df.prices.diff()[:NR_STEPS]
-               [self.example_df.prices.diff()[:NR_STEPS] > 0].sum()*BAT_CAPACITY)
+        val = (self.example_df.price.diff()[:NR_STEPS]
+               [self.example_df.price.diff()[:NR_STEPS] > 0].sum()*BAT_CAPACITY)
         assert val == approx(actor.bank)

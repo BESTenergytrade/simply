@@ -18,8 +18,8 @@ Struct to hold order
 :param type: sign of order, representing bid (-1) or ask (+1)
 :param time: timestamp when order was created
 :param actor_id: ID of ordering actor
-:param energy: sum of energy needed or provided. Will be rounded down according to the market's
-    energy unit
+:param energy: amount of energy the actor wants to trade. Will be rounded down(asks)/up(bids)
+    according to the market's energy unit
 :param price: bidding/asking price for 1 kWh
 """
 
@@ -52,17 +52,18 @@ class Actor:
     and defining an energy management schedule, generating bids or asks and receiving trading
     results.
     The actor interacts with the market at every time step in a way defined by the actor strategy.
-    The actor has to fulfil his schedule needs by buying power. Buying power can be guaranteed by
+    The actor fullfils his schedule needs by buying/selling power. Buying power can be guaranteed by
     placing orders with at least the market maker price, since the market maker is seen as unlimited
-    supply. At the start of every time step the actor can place orders to buy or sell energy at
-    the current time step with a predicted schedule and market maker price time series as input.
+    supply. At the start of every time step the actor can place one order to buy or sell energy at
+    the current time step. Basis for this order are a predicted schedule and a market maker price
+    time series as input.
     After matching took place, the (monetary) bank and resulting soc is calculated taking into
     consideration the schedule and the acquired energy of this time step, i.e. bank and soc at the
     end of the time step. Afterwards the time step is increased and a new prediction for the
     schedule and price is generated.
 
     :param int actor_id: unique identifier of the actor
-    :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "prices" are processed
+    :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "price" are processed
     :param str csv: Filename in which this actor's data should be stored
     :param float ls: (optional) Scaling factor for load time series
     :param float ps: (optional) Scaling factor for photovoltaic time series
@@ -78,7 +79,7 @@ class Actor:
     t : int
         Actor's current time slot should equal current market time slot (init default: 0)
     horizon : int
-        [unused] Horizon to which energy management is considered
+        [unused] Horizon up to which energy management is considered
         (default: cfg.parser.get("actor", "horizon", fallback=24))
     load_scale : float
         Scaling factor for load time series (default: init ls)
@@ -148,16 +149,16 @@ class Actor:
         else:
             self.csv_file = f'actor_{actor_id}.csv'
         for column, scale in [("load", ls), ("pv", ps),
-                              ("prices", 1), ("selling_prices", 1), ("schedule", 1)]:
+                              ("price", 1), ("selling_price", 1), ("schedule", 1)]:
             try:
                 self.data[column] = scale * df[column]
             except KeyError:
                 # Catch cases were no selling prices were provided for backwards compatibility
-                if column == "selling_prices":
+                if column == "selling_price":
                     warnings.warn(
-                        "The provided data does not contain a column with 'selling_prices'. The "
-                        "column will be created using the same values as 'prices' (for buying).")
-                    self.data[column] = scale * df["prices"]
+                        "The provided data does not contain a column with 'selling_price'. The "
+                        "column will be created using the same values as 'price' (for buying).")
+                    self.data[column] = scale * df["price"]
                 else:
                     raise KeyError
             try:
@@ -286,14 +287,14 @@ class Actor:
             energy = soc_prediction[i] * self.battery.capacity
             while energy < 0:
                 # where is the lowest price in between now and when the energy is needed?
-                # only check prices where the battery is not full and time before when the energy
+                # only check price where the battery is not full and time before when the energy
                 # is needed
                 possible_global_prices = np.ones(self.horizon) * float('inf')
                 # prices are set where the soc in not full yet
                 # possible_global_prices[(0- EPS<=soc_prediction )* (soc_prediction < 1 + EPS)] = \
                 #     self.prices[(0 -EPS<soc_prediction )* (soc_prediction < 1 + EPS)]
                 possible_global_prices[(soc_prediction < 1 - EPS)] = \
-                    self.pred.prices[(soc_prediction < 1 - EPS)]
+                    self.pred.price[(soc_prediction < 1 - EPS)]
 
                 # index for the last inf value between now and energy demand
                 last_inf_index = np.argwhere(possible_global_prices[:i + 1] >= float('inf'))
@@ -356,7 +357,7 @@ class Actor:
             energy = soc_prediction[i] * self.battery.capacity
             overcharge = energy - self.battery.capacity
             while overcharge > 0:
-                possible_prices = self.pred.selling_prices.copy()[:self.planning_horizon+1]
+                possible_prices = self.pred.selling_price.copy()[:self.planning_horizon+1]
                 possible_prices[soc_prediction < 0 + EPS] = float('-inf')
                 # in between now and the peak, the right most/latest Zero soc does not allow
                 # reducing the soc before. Energy most be sold afterwards
@@ -401,8 +402,8 @@ class Actor:
         else:
             self.planning_horizon = planning_horizon[0, 1]-1
         soc_prediction = soc_prediction[:self.planning_horizon+1]
-        buy_prices = np.array(self.pred.prices.values)[:self.planning_horizon+1]
-        sell_prices = np.array(self.pred.selling_prices.values)[:self.planning_horizon+1]
+        buy_prices = np.array(self.pred.price.values)[:self.planning_horizon+1]
+        sell_prices = np.array(self.pred.selling_price.values)[:self.planning_horizon+1]
         # ToDo selling is not capped by max c-rate of battery
         # ++++++++++++++++++++
         sorted_buy_indexes = np.argsort(buy_prices)
@@ -435,15 +436,15 @@ class Actor:
 
                 for sell_index in sell_indices:
                     sell_price = possible_prices[sell_index]
-                    higher_sell_price_indicies = np.argwhere(
+                    higher_sell_price_indices = np.argwhere(
                         possible_prices[sell_index + 1:] >= sell_price)
                     # highest price found
-                    if len(higher_sell_price_indicies) == 0:
+                    if len(higher_sell_price_indices) == 0:
                         found_sell_index = sell_index
                         break
                     else:
                         # there are higher prices. choose the left most higher price index
-                        higher_sell_price_index = sell_index + 1 + higher_sell_price_indicies.min()
+                        higher_sell_price_index = sell_index + 1 + higher_sell_price_indices.min()
 
                     lower_buy_price_indices = np.argwhere(
                         buy_prices[sell_index + 1:] <= sell_price)
@@ -488,7 +489,7 @@ class Actor:
     def create_prediction(self):
         """Reset asset and schedule predicition horizon to the current planning time step self.t"""
         # ToDo add selling price
-        for column in ["load", "pv", "prices", "selling_prices", "schedule"]:
+        for column in ["load", "pv", "price", "selling_price", "schedule"]:
             if column in self.data.columns:
                 self.pred[column] = \
                     self.data[column].iloc[self.t: self.t + self.horizon].reset_index(drop=True) \
@@ -553,8 +554,9 @@ class Actor:
                 energy -= self.energy_unit
 
         # TODO simulate strategy: manipulation, etc.
-        price = (energy < 0) * self.pred["selling_prices"][0] +\
-                (energy >= 0) * self.pred["prices"][0]
+        price = (energy < 0) * self.pred["selling_price"][0] +\
+                (energy >= 0) * self.pred["price"][0]
+
         # TODO take flexibility into account to generate the bid
 
         # TODO replace order type by enum
@@ -631,7 +633,7 @@ class Actor:
         #  also errors need to be saved
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
-        save_df = self.data[["load", "pv", "schedule", "prices"]]
+        save_df = self.data[["load", "pv", "schedule", "price"]]
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
@@ -648,7 +650,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     :rtype: Actor
     """
     time_idx = pd.date_range(start_date, freq="{}min".format(int(60 / ts_hour)), periods=nb_ts)
-    cols = ["load", "pv", "schedule", "prices"]
+    cols = ["load", "pv", "schedule", "price"]
     values = np.random.rand(nb_ts, len(cols))
     df = pd.DataFrame(values, columns=cols, index=time_idx)
 
@@ -664,12 +666,12 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     ps = random.choices([0, ps], [1 - pv_prob, pv_prob], k=1)
     df["schedule"] = ps * df["pv"] - ls * df["load"]
     max_price = 0.3
-    df["prices"] *= max_price
+    df["price"] *= max_price
     # Adapt order price by a factor to compensate net pricing of ask orders
     # (i.e. positive power) Bids however include network charges
     net_price_factor = 0.7
-    df["prices"] = df.apply(lambda slot: slot["prices"] - (slot["schedule"] > 0)
-                            * net_price_factor * slot["prices"], axis=1)
+    df["price"] = df.apply(lambda slot: slot["price"] - (slot["schedule"] > 0)
+                           * net_price_factor * slot["price"], axis=1)
     # makes sure that the battery capacity is big enough, even if no useful trading takes place
     # todo randomize if generate order takes care of meeting demands through a market strategy
     battery_capacity = (df["schedule"].cumsum().max()-df["schedule"].cumsum().min())*2
@@ -703,7 +705,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     peak["pv"] = random.choices([0, peak["pv"]], [1 - pv_prob, pv_prob], k=1)
 
     # Initialize DataFrame
-    cols = ["load", "pv", "schedule", "prices"]
+    cols = ["load", "pv", "schedule", "price"]
     df = pd.DataFrame([], columns=cols)
 
     # Read csv files for each asset
@@ -745,13 +747,13 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     # Predefined energy management, energy volume and price for trades due to no flexibility
     df["schedule"] = peak["pv"] * df["pv"] - peak["load"] * df["load"]
     max_price = 0.3
-    df["prices"] = np.random.rand(nb_ts, 1)
-    df["prices"] *= max_price
+    df["price"] = np.random.rand(nb_ts, 1)
+    df["price"] *= max_price
     # Adapt order price by a factor to compensate net pricing of ask orders
     # (i.e. positive power) Bids however include network charges
     net_price_factor = 0.7
-    df["prices"] = df.apply(
-        lambda slot: slot["prices"] - (slot["schedule"] > 0) * net_price_factor * slot["prices"],
+    df["price"] = df.apply(
+        lambda slot: slot["price"] - (slot["schedule"] > 0) * net_price_factor * slot["price"],
         axis=1)
 
     return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
