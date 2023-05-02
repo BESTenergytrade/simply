@@ -124,11 +124,10 @@ class TestActor:
         assert a.data.index[0].date() != a.data.index[-1].date()
 
     def test_no_strategy(self):
-        # Overwrite strategy 0 with zero buys/sells. Assert that the simulation throws an error
+        # overwrite strategy 0 with zero buys/sells. Assert that the simulation throws an error
         pn = PowerNetwork("", nx.random_tree(1))
 
         scenario = Scenario(pn, [], None, steps_per_hour=4)
-        #
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
@@ -136,27 +135,26 @@ class TestActor:
 
         # make sure error is thrown
         with pytest.raises(AssertionError):
-            # Iterate through time steps
+            # iterate over time steps
             for t in range(NR_STEPS):
                 m.t = t
                 actor.get_market_schedule(strategy=0)
-                # Nullify market schedule
-                actor.market_schedule *= 0
 
+                # nullify market schedule
+                actor.market_schedule *= 0
                 market_step(actor, m, t)
 
                 for a in scenario.actors:
-                    # Update all actors for the next market time slot
+                    # update all actors for the next market time slot
                     a.next_time_step()
 
     def test_rule_based_strategy_0(self):
-        # The simplest strategy which buys or sells exactly the amount of the schedule at the time
+        # the simplest strategy which buys or sells exactly the amount of the schedule at the time
         # the energy is needed. A battery is still needed since schedule values do not necessarily
         # line up with the traded_energy amount, e.g. schedule does not have 0.01 steps.
         pn = PowerNetwork("", nx.random_tree(1))
 
         scenario = Scenario(pn, [], None, steps_per_hour=4)
-        #
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
@@ -165,13 +163,13 @@ class TestActor:
 
         m = BestMarket(0, self.pn)
         nr_of_matches = 0
-        # Iterate through time steps
+        # iterate through time steps
         for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=0)
             market_step(actor, m, t)
 
-            # Tolerance due to energy_unit differences
+            # tolerance due to energy_unit differences
             tol = 2*actor.energy_unit
             assert actor.battery.energy() < tol
             assert -actor.market_schedule[0] == approx(actor.pred.schedule[0], abs=tol)
@@ -179,16 +177,19 @@ class TestActor:
             nr_of_matches = len(m.matches)
 
             for a in scenario.actors:
-                # Update all actors for the next market time slot
+                # update all actors for the next market time slot
                 a.next_time_step()
 
-        actor_print(actor)
+        ratings["strategy_0"] = actor.bank
 
     def test_rule_based_strategy_1(self):
+        # strategy 1 buys energy at the lowest possible price before or exactly when energy is
+        # predicted to be needed.
+        # test that strategy 1 works without errors. Assert that price of energy is lower than
+        # buying only in the current time slots
         pn = PowerNetwork("", nx.random_tree(1))
 
         scenario = Scenario(pn, [], None, steps_per_hour=4)
-        #
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
@@ -197,33 +198,65 @@ class TestActor:
         m = BestMarket(0, self.pn)
         nr_of_matches = 0
 
-        # Iterate through time steps
+        bank_no_strat = 0
+        bank_with_strat = 0
+        energy_no_strat = 0
+        energy_with_strat = 0
+
+        # iterate over time steps
         for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=1)
-
             market_step(actor, m, t)
+
+            bank_no_strat += (actor.pred.schedule[0] < 0) * \
+                actor.pred.schedule[0] * actor.pred.price[0]
+            energy_no_strat += (actor.pred.schedule[0] < 0) * \
+                actor.pred.schedule[0]
+
+            bank_with_strat += (actor.market_schedule[0] < 0) * \
+                actor.market_schedule[0] * actor.pred.price[0]
+            energy_with_strat += (actor.market_schedule[0] < 0) * \
+                actor.market_schedule[0]
             assert len(m.matches)-1 == nr_of_matches
             nr_of_matches = len(m.matches)
 
-            # Battery makes sure soc bounds are not violated, so no assertion is needed here
-            # Make sure the schedule is planning only to buy energy. Might sell energy in the
+            # battery makes sure soc bounds are not violated, so no assertion is needed here
+            # make sure the schedule is planning only to buy energy. Might sell energy in the
             # current time steps to get rid of energy at SOC ~ 1
             if actor.pred.schedule[0] > 0:
                 assert actor.pred.schedule[0] + actor.market_schedule[0] >= 0
             assert all(actor.market_schedule[1:] >= 0)
             actor.next_time_step()
-        actor_print(actor)
+
+        # make sure energy was bought for a lower price than just buying energy when it is needed
+        assert bank_with_strat > bank_no_strat
+        # make sure the less energy is bought with strategy 1 than is bought without a
+        # strategy since strategy 1 uses pv when possible
+        # this should be the case in the current test scenario.
+        assert energy_no_strat >= energy_with_strat
+        minimal_price = actor.data.selling_price.min()
+
+        bank_in_bat = minimal_price * actor.battery.energy()
+        # battery could be full. If this energy would be sold for the minimal price strategy 1 has
+        # to have a higher bank than strategy 0
+
+        # average energy price of strategy 1 should be lower than no strategy.
+        assert (bank_with_strat + bank_in_bat) / energy_with_strat < bank_no_strat / energy_no_strat
         ratings["strategy_1"] = actor.bank
 
     def test_rule_based_strategy_2(self):
+        # strategy 2 extends strategy 1. It sells energy at the highest possible price before or
+        # exactly when the battery would reach an soc of 1 or higher.
+        # Assert that price of energy is lower than
+        # buying only in the current time slots
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
         actor.data.selling_price *= SELL_MULT
         actor.create_prediction()
         m = BestMarket(0, self.pn)
         nr_of_matches = 0
-        # Iterate through time steps
+        # iterate over time steps
         for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=2)
@@ -232,10 +265,17 @@ class TestActor:
             nr_of_matches = len(m.matches)
 
             actor.next_time_step()
-        actor_print(actor)
         ratings["strategy_2"] = actor.bank
+        minimal_price = actor.data.selling_price.min()
+        bank_in_bat = minimal_price * actor.battery.energy()
+        # battery could be full. If this energy would be sold for the minimal price strategy 2 has
+        # to have a higher bank than strategy 0
+        assert ratings["strategy_2"] + bank_in_bat > ratings["strategy_0"]
 
     def test_rule_based_strategy_3(self):
+        # Strategy 3 extends strategy 2. It buys energy at low prices and sells it at high prices
+        # if profit can be made and the soc of of the previous strategies allows for it.
+        # Assert this strategy runs without errors.
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
         actor.data.selling_price *= SELL_MULT
@@ -243,7 +283,7 @@ class TestActor:
 
         m = BestMarket(0, self.pn)
         nr_of_matches = 0
-        # Iterate through time steps
+        # iterate over time steps
         for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=3)
@@ -254,6 +294,7 @@ class TestActor:
         ratings["strategy_3"] = actor.bank
 
     def test_strategy_ranking(self):
+        # Assert that the strategy extensions improve the rating, e.g. bank account
         assert ratings["strategy_3"] >= ratings["strategy_2"] >= ratings["strategy_1"]
 
     def test_reduced_bank(self):
@@ -264,7 +305,7 @@ class TestActor:
         actor.create_prediction()
         m = BestMarket(0, self.pn)
 
-        # Iterate through time steps
+        # iterate over time steps
         for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=3)
@@ -274,7 +315,7 @@ class TestActor:
         assert ratings["strategy_3"] >= actor.bank
 
     def test_strategy_3_no_schedule(self):
-        # without schedule and with no price difference, the profit an actor can make is dependent
+        # without schedule and with no price difference, the profit an actor can make, is dependent
         # on the cumulated sum of positive price gradients and the battery capacity
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
@@ -287,7 +328,7 @@ class TestActor:
         # number of steps depends on data input. assertion only works if last step ends on price
         # maximum, since only then the actor makes use of stored energy by selling it
         NR_STEPS = 41
-        # Iterate through time steps
+        # iterate over time steps
         for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=3)

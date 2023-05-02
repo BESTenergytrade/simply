@@ -24,28 +24,6 @@ Struct to hold order
 """
 
 
-def clip_soc(soc_prediction, upper_clipping):
-    soc_max = np.max(soc_prediction)
-    while soc_max > upper_clipping:
-        # descending array
-        desc = np.arange(len(soc_prediction), 0, -1)
-        # gradient of soc i.e. positive if charging negative if discharging
-        diff = np.hstack((np.diff(soc_prediction), -1))
-        # masking of socs >1 and negative gradient for local maximum
-        # i.e. after lifting the soc, it finds the first spot where the soc is bigger
-        # than the upper threshold and descending.
-        idc_loc_max = np.argmax(desc * (soc_prediction > upper_clipping) * (diff < 0))
-
-        # find the soc value of this local maximum
-        soc_max = soc_prediction[idc_loc_max]
-        # reducing everything after local maximum
-        soc_prediction[idc_loc_max:] = soc_prediction[idc_loc_max:] - (soc_max - upper_clipping)
-
-        # capping everything before local maximum
-        soc_prediction[:idc_loc_max][soc_prediction[:idc_loc_max] > upper_clipping] = upper_clipping
-        soc_max = np.max(soc_prediction)
-
-
 class Actor:
     """
     Actor is the representation of a prosumer, i.e. is holding resources (load, photovoltaic/PV)
@@ -204,7 +182,7 @@ class Actor:
         when to buy or sell energy. At the current time step the actor will always buy/ or sell
         this amount even at market maker price.
 
-        :param strategy: Number representing the actor strategy from 1 to 3
+        :param strategy: Number representing the actor strategy from 0 to 3
         :type strategy: int
         :return: market_schedule with planed amounts of energy buying/selling per time step
         """
@@ -214,7 +192,7 @@ class Actor:
         if strategy not in possible_choices:
             warnings.warn(
                 f"Strategy choice: {strategy} was not found in the list of possible "
-                f"strategies: {possible_choices}. Using default strategy without "
+                f"strategies: {possible_choices}. Using default strategy 0 without "
                 "planning instead.")
             strategy = 0
         elif strategy != 0:
@@ -245,6 +223,13 @@ class Actor:
         return self.market_schedule
 
     def get_default_market_schedule(self):
+        """ Return the default market schedule
+
+        The default market schedule is the schedule with flipped signs and minor adjustments
+        to make use of residual energy in the battery
+
+        :return: default market schedule
+        """
         default_market_schedule = -np.array(self.pred.schedule.values)
         # If there is energy in the battery, try making use of it in the next time step. This can
         # happen due to small differences in between traded energy and needed energy due to the
@@ -253,6 +238,17 @@ class Actor:
         return default_market_schedule
 
     def predict_socs(self, clip=False, clip_value=1):
+        """ Returns prediction of future socs based on schedule and market schedule
+
+        Creates a prediction for the planning horizon, which is not necessarily the horizon.
+        The prediction is based on the soc of the battery the schedule and the market schedule,
+        which contains the amount the actor plans to buy or sell in a future time slot.
+        Setting clip to true, does not allow values over the clipping value
+
+        :param clip: should the values be clipped
+        :param clip_value: value where socs are clipped to
+        :return: soc prediction for planning horizon
+        """
         cum_energy_demand = (self.pred.schedule.cumsum() + self.market_schedule.cumsum() +
                              self.battery.soc * self.battery.capacity)[:self.planning_horizon+1]
         soc_prediction = np.ones(self.planning_horizon+1) * self.battery.soc \
@@ -278,7 +274,8 @@ class Actor:
         """
         # initialize the market schedule with last market_schedule. Last value is 0 since
         # its a new value. This implies the planned strategy stays valid, i.e. a time slot for
-        # optimal buying or selling does not change.
+        # optimal buying or selling does not change. This increases the speed of the algorithm
+        # drastically
         self.market_schedule = np.roll(self.market_schedule, -1)
         self.market_schedule[-1] = 0
         soc_prediction = self.predict_socs(clip=True)
@@ -321,9 +318,9 @@ class Actor:
                 max_storable_energy = min(max_storable_energy, self.battery.capacity *
                                           self.battery.max_c_rate / self.steps_per_hour)
 
-                # how much energy do i need to store. Energy needs are negative
+                # how much energy needs to be stored. Energy needs are negative
                 stored_energy = min(max_storable_energy, -energy)
-                # Reduce the energy needs for the current time step
+                # reduce the energy needs for the current time step
                 energy += stored_energy
 
                 # fix the soc prediction for the time span between buying and consumption
@@ -339,7 +336,8 @@ class Actor:
             # possible to buy energy before. Since planning used only for time step 0, rest can
             # be skipped
             if max(soc_prediction[:i+1]) >= 1-EPS:
-                # self.planning_horizon = i
+                # set planning horizon for soc_prediction
+                self.planning_horizon = i
                 break
 
         soc_prediction = self.predict_socs(clip=False)
@@ -348,18 +346,29 @@ class Actor:
         return self.market_schedule
 
     def plan_selling_strategy(self):
+        """Returns market_schedule where overcharges are sold at the highest possible price.
+
+        This strategy extends strategy 1. If the soc would rise over 1 the
+        market_schedule will sell the energy by finding the most expensive time slot before or at
+        the energy need time slot. Soc constrains will be considered, meaning that if needed,
+        multiple time slots will be used to sell the energy.
+        :return: market_schedule
+        """
+        # set planning horizon for soc_prediction
         self.planning_horizon = self.horizon-1
         soc_prediction = self.predict_socs(clip=False)
         soc_prediction = soc_prediction[:self.planning_horizon+1]
 
         # ToDo selling is not capped by max c-rate of battery
+        # iterate over socs
         for i, _ in enumerate(soc_prediction):
             energy = soc_prediction[i] * self.battery.capacity
             overcharge = energy - self.battery.capacity
+            # if overcharge is found, find the possible prices to sell this energy
             while overcharge > 0:
                 possible_prices = self.pred.selling_price.copy()[:self.planning_horizon+1]
                 possible_prices[soc_prediction < 0 + EPS] = float('-inf')
-                # in between now and the peak, the right most/latest Zero soc does not allow
+                # in between now and the peak, the right most/latest zero soc does not allow
                 # reducing the soc before. Energy most be sold afterwards
                 zero_soc_indices = np.where(soc_prediction[:i] < 0 + EPS)
                 if np.any(zero_soc_indices):
@@ -369,13 +378,12 @@ class Actor:
                 possible_prices[:right_most_peak] = float('-inf')
                 highest_price_index = np.argmax(possible_prices[:i + 1])
 
-                # If the energy is sold at the time of production no storage is needed
+                # if the energy is sold at the time of production no storage is needed
                 if highest_price_index == i:
                     self.market_schedule[i] -= overcharge
                     soc_prediction = self.predict_socs(clip=False)
                     break
-                # current_soc_after_schedule=((self.battery.soc*self.battery.capacity)
-                #                             +self.pred.schedule[0]+self.global_market_buying_plan[0])/self.battery.capacity
+
                 soc_to_zero = min(np.min(soc_prediction[highest_price_index:i + 1]), 1)
                 energy_to_zero = soc_to_zero * self.battery.capacity
                 sellable_energy = min(energy_to_zero, overcharge)
@@ -396,6 +404,7 @@ class Actor:
                when the flexibility is given"""
         soc_prediction = self.predict_socs(clip=False)
 
+        # ülanning to trade for the current time step is only possible until a soc of 1 is reached.
         planning_horizon = np.argwhere([soc_prediction >= 1-EPS])
         if planning_horizon.size == 0:
             pass
@@ -411,13 +420,14 @@ class Actor:
         for buy_index in sorted_buy_indexes:
             buying_price = buy_prices[buy_index]
             possible_prices = sell_prices.copy()[:self.planning_horizon+1]
+
             # prices before buying can not be used for selling
             possible_prices[:buy_index + 1] = float("-inf")
             # if energy would be bought, it could be sold at these indices for a profit
             sell_indices = np.argwhere(possible_prices > buying_price)
             if sell_indices.size > 0:
                 sell_indices = sell_indices.squeeze(axis=1)
-            # If there are possible selling points of energy and there is the possibility of
+            # if there are possible selling points of energy and there is the possibility of
             # storing energy in between, i.e soc<1
             while sell_indices.size > 0 and soc_prediction[
                                              buy_index:sell_indices[0]+1].max() < 1 - EPS:
@@ -449,14 +459,14 @@ class Actor:
                     lower_buy_price_indices = np.argwhere(
                         buy_prices[sell_index + 1:] <= sell_price)
 
-                    # No buy dips but still higher selling prices
+                    # no buy dips but still higher selling prices
                     if len(lower_buy_price_indices) == 0:
                         continue
                     else:
                         # there are lower buy prices onward. choose the left most lower price index
                         lower_buy_price_index = sell_index + 1+lower_buy_price_indices.min()
 
-                    # There are better selling points in the future
+                    # there are better selling points in the future
                     if higher_sell_price_index < lower_buy_price_index:
                         continue
                     # if not then we have the best selling point
@@ -602,7 +612,9 @@ class Actor:
         post = (sign * energy, price)
         pre = self.traded.get(time, ([], []))
         self.traded[time] = tuple(e + [post[i]] for i, e in enumerate(pre))
+        # Buying energy as well as pv have positive sign
         self.matched_energy_current_step += energy*sign
+        # Buying energy therefore decreases the bank
         self.bank += energy*(-sign)*price
 
     def to_dict(self, external_data=False):
@@ -757,3 +769,25 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
         axis=1)
 
     return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
+
+
+def clip_soc(soc_prediction, upper_clipping):
+    soc_max = np.max(soc_prediction)
+    while soc_max > upper_clipping:
+        # descending array
+        desc = np.arange(len(soc_prediction), 0, -1)
+        # gradient of soc i.e. positive if charging negative if discharging
+        diff = np.hstack((np.diff(soc_prediction), -1))
+        # masking of socs >1 and negative gradient for local maximum
+        # i.e. after lifting the soc, it finds the first spot where the soc is bigger
+        # than the upper threshold and descending.
+        idc_loc_max = np.argmax(desc * (soc_prediction > upper_clipping) * (diff < 0))
+
+        # find the soc value of this local maximum
+        soc_max = soc_prediction[idc_loc_max]
+        # reducing everything after local maximum
+        soc_prediction[idc_loc_max:] = soc_prediction[idc_loc_max:] - (soc_max - upper_clipping)
+
+        # clipping everything before local maximum
+        soc_prediction[:idc_loc_max][soc_prediction[:idc_loc_max] > upper_clipping] = upper_clipping
+        soc_max = np.max(soc_prediction)
