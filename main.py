@@ -2,7 +2,8 @@
 
 from argparse import ArgumentParser
 
-from simply import scenario, market, market_2pac, market_fair
+from simply import market, market_2pac, market_fair
+from simply.scenario import load, create_random
 from simply.config import Config
 from simply.util import summerize_actor_trading
 from numpy import linspace
@@ -34,7 +35,7 @@ if __name__ == "__main__":
     # load existing scenario or else create randomized new one
     if cfg.load_scenario:
         if scenario_exists:
-            sc = scenario.load(cfg.path, cfg.data_format)
+            sc = load(cfg.path, cfg.data_format)
         else:
             raise Exception(f'Could not find actor data in path: {cfg.path} .')
     else:
@@ -42,7 +43,7 @@ if __name__ == "__main__":
             raise Exception(f'The path: {cfg.path} already exists with another file structure. '
                             'Please remove or rename folder to avoid confusion and restart '
                             'simulation.')
-        sc = scenario.create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
+        sc = create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.path, cfg.data_format)
 
     if cfg.show_plots:
