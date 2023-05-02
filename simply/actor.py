@@ -6,11 +6,11 @@ import pandas as pd
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
+from simply.scenario import EPS
 from simply.battery import Battery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
-EPS = 1e-6
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
 Struct to hold order

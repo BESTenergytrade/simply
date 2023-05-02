@@ -8,6 +8,8 @@ from simply import actor
 from simply import power_network
 from simply.util import get_all_data
 
+EPS = 1e-6
+
 
 class Scenario:
     """

@@ -198,8 +198,8 @@ class TestActor:
         m = BestMarket(0, self.pn)
         nr_of_matches = 0
 
-        bank_no_strat = 0
-        bank_with_strat = 0
+        cost_no_strat = 0
+        cost_with_strat = 0
         energy_no_strat = 0
         energy_with_strat = 0
 
@@ -209,14 +209,16 @@ class TestActor:
             actor.get_market_schedule(strategy=1)
             market_step(actor, m, t)
 
-            bank_no_strat += (actor.pred.schedule[0] < 0) * \
-                actor.pred.schedule[0] * actor.pred.price[0]
+            cost_no_strat += (actor.pred.schedule[0] < 0) * \
+                -actor.pred.schedule[0] * actor.pred.price[0]
             energy_no_strat += (actor.pred.schedule[0] < 0) * \
-                actor.pred.schedule[0]
+                -actor.pred.schedule[0]
 
-            bank_with_strat += (actor.market_schedule[0] < 0) * \
+            # market schedule has opposite sign to schedule, i.e. positive sign schedule is pv
+            # production which leads to negative sign market schedule
+            cost_with_strat += (actor.market_schedule[0] > 0) * \
                 actor.market_schedule[0] * actor.pred.price[0]
-            energy_with_strat += (actor.market_schedule[0] < 0) * \
+            energy_with_strat += (actor.market_schedule[0] > 0) * \
                 actor.market_schedule[0]
             assert len(m.matches)-1 == nr_of_matches
             nr_of_matches = len(m.matches)
@@ -229,20 +231,20 @@ class TestActor:
             assert all(actor.market_schedule[1:] >= 0)
             actor.next_time_step()
 
-        # make sure energy was bought for a lower price than just buying energy when it is needed
-        assert bank_with_strat > bank_no_strat
+        # make sure energy was bought for a lower price than just buying energy when it is needed.
+        assert cost_with_strat < cost_no_strat
         # make sure the less energy is bought with strategy 1 than is bought without a
         # strategy since strategy 1 uses pv when possible
         # this should be the case in the current test scenario.
         assert energy_no_strat >= energy_with_strat
         minimal_price = actor.data.selling_price.min()
 
-        bank_in_bat = minimal_price * actor.battery.energy()
+        cost_in_bat = minimal_price * actor.battery.energy()
         # battery could be full. If this energy would be sold for the minimal price strategy 1 has
-        # to have a higher bank than strategy 0
+        # to have a lower cost than strategy 0
 
         # average energy price of strategy 1 should be lower than no strategy.
-        assert (bank_with_strat + bank_in_bat) / energy_with_strat < bank_no_strat / energy_no_strat
+        assert (cost_with_strat - cost_in_bat) / energy_with_strat < cost_no_strat / energy_no_strat
         ratings["strategy_1"] = actor.bank
 
     def test_rule_based_strategy_2(self):

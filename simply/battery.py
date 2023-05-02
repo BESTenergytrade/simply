@@ -1,4 +1,4 @@
-EPS = 1e-6
+from simply.scenario import EPS
 
 
 class Battery:
