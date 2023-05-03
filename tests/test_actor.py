@@ -275,7 +275,7 @@ class TestActor:
         assert ratings["strategy_2"] + bank_in_bat > ratings["strategy_0"]
 
     def test_rule_based_strategy_3(self):
-        # Strategy 3 extends strategy 2. It buys energy at low prices and sells it at high prices
+        # strategy 3 extends strategy 2. It buys energy at low prices and sells it at high prices
         # if profit can be made and the soc of of the previous strategies allows for it.
         # Assert this strategy runs without errors.
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
@@ -339,3 +339,136 @@ class TestActor:
         val = (self.example_df.price.diff()[:NR_STEPS]
                [self.example_df.price.diff()[:NR_STEPS] > 0].sum()*BAT_CAPACITY)
         assert val == approx(actor.bank)
+
+    def test_pricing(self):
+        battery = Battery(capacity=10, max_c_rate=2, soc_initial=0.5)
+        actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4, pricing_strategy=None)
+        buy_price = 10
+        sell_price = 1
+        actor.pred.price = buy_price
+        actor.pred.selling_price = sell_price
+        actor.pred.schedule[:] = 0
+        actor.get_market_schedule(strategy=0)
+
+        check_index = 5
+        energy_amount = 1
+
+        # If no pricing strategy is given, no order is generated, since the current time step
+        # does not plan interaction
+        actor.pricing_strategy = None
+        actor.market_schedule[:] = 0
+        actor.market_schedule[check_index] = energy_amount
+        order = actor.generate_order()
+        assert order is None
+
+        # A pricing_strategy can ba a function with the inputs index, meaning time steps until some
+        # market interaction in planned in the market_schedule, the price this interaction would use
+        # (e.g. selling or buying price) and the energy amount, which is positive when energy is
+        # bought
+        # Note that the energy used is the adjusted and limited energy which is the energy
+        # in the order. this amount is limited by battery capacity
+        actor.pricing_strategy = lambda index, final_price, energy: final_price/index + energy
+        order = actor.generate_order()
+        assert order.price == buy_price/check_index + energy_amount
+        actor.market_schedule[:] = 0
+        energy_amount = - energy_amount
+        actor.market_schedule[check_index] = energy_amount
+        order = actor.generate_order()
+        assert order.price == sell_price/check_index + energy_amount
+
+        # linear pricing function increases or decreases the order price by the given factor.
+        # If the market schedule dictates buying power in 4 time steps for 1$ the current price
+        # for order generation is set to 0.6$. If energy is sold the price would be increased
+        # instead.
+        actor.pricing_strategy = dict(name="linear", param=[0.1])
+        check_index = 4
+        actor.market_schedule[:] = 0
+        actor.market_schedule[check_index] = 1
+        order = actor.generate_order()
+        assert order.price == buy_price - check_index*0.1*buy_price
+
+        actor.market_schedule[check_index] = -1
+        order = actor.generate_order()
+        assert order.price == sell_price + check_index*0.1*sell_price
+
+        check_index = 0
+        actor.market_schedule[:] = 0
+        actor.market_schedule[check_index] = 1
+        order = actor.generate_order()
+        assert order.price == buy_price
+
+        actor.market_schedule[check_index] = -1
+        order = actor.generate_order()
+        assert order.price == sell_price
+
+
+
+
+        # negative prices are possible when buying
+        actor.market_schedule[:] = 0
+        actor.market_schedule[20] = 1
+        order = actor.generate_order()
+        assert order.price < 0
+
+        # harmonic pricing changes the price according to the harmonic series meaning
+        # 1, 1/2, 1/3, 1/4, 1/5 ... and so on. The mandatory parameter is the half life index
+        # which dictates at which index 1/2 is reached the function follows the formula
+        # final_price * ((index / half_life_index) + 1) ** (- sign(energy))
+        #
+        actor.pricing_strategy = dict(name="harmonic", param=[3])
+        check_index = 0
+        actor.market_schedule[:] = 0
+        actor.market_schedule[check_index] = 1
+        order = actor.generate_order()
+        assert order.price == buy_price
+        actor.market_schedule[check_index] = -1
+        order = actor.generate_order()
+        assert order.price == sell_price
+
+        check_index = 3
+        actor.market_schedule[:] = 0
+        actor.market_schedule[check_index] = 1
+        order = actor.generate_order()
+        assert order.price == buy_price / 2
+
+
+
+        actor.market_schedule[check_index] = -1
+        order = actor.generate_order()
+        assert order.price == sell_price * 2
+
+        check_index = 6
+        actor.market_schedule[:] = 0
+        actor.market_schedule[check_index] = 1
+        order = actor.generate_order()
+        assert order.price == pytest.approx(buy_price / 3)
+
+        actor.market_schedule[check_index] = -1
+        order = actor.generate_order()
+        assert order.price == sell_price * 3
+
+        actor.pricing_strategy = dict(name="harmonic", param=[1, 0.6])
+        check_index = 15
+        actor.market_schedule[:] = 0
+        actor.market_schedule[check_index] = 1
+        order = actor.generate_order()
+        assert order.price == 6.25
+
+        actor.market_schedule[:] = 0
+        actor.market_schedule[check_index] = -1
+        order = actor.generate_order()
+        assert order.price == 1.6
+
+        actor.market_schedule[:] = 0
+        actor.market_schedule[0] = 1
+        order = actor.generate_order()
+        assert order.price == buy_price
+        # ToDo test geometric series
+        order = actor.generate_order()
+        actor.pricing_strategy = dict(name="harmonic", param=[1, 0.6])
+        order = actor.generate_order()
+        actor.pricing_strategy = dict(name="harmonic", param=[0.9,0.5])
+        order = actor.generate_order()
+
+
+TestActor().test_pricing()
