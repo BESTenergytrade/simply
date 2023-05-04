@@ -571,11 +571,8 @@ class Actor:
         energy = self.limit_energy(energy, index=index)
         energy = self.adjust_energy(energy, index=index)
 
+        # get the price by using the pricing strategy
         price = self.get_price(index, final_price, energy)
-
-
-
-
 
         # TODO simulate strategy: manipulation, etc.
         # TODO take flexibility into account to generate the bid
@@ -592,7 +589,14 @@ class Actor:
         return get_price(self.pricing_strategy, index, final_price, energy)
 
     def limit_energy(self, energy, index):
-        self.planning_horizon = index
+        # no limit is needed if the energy is used in the current time step --> index 0
+        if index == 0:
+            return energy
+
+        # look at all the time steps before the energy is traded with the market maker
+        self.planning_horizon = index-1
+
+
         socs = self.predict_socs()
         self.planning_horizon = self.horizon - 1
 
@@ -610,7 +614,7 @@ class Actor:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
             if self.battery.energy() + self.pred.schedule[0:index+1].sum() + \
-                    (energy // self.energy_unit * self.energy_unit) < 0:
+                    ((energy+EPS) // self.energy_unit * self.energy_unit) < 0:
                 energy += self.energy_unit
 
         # selling energy
@@ -618,12 +622,10 @@ class Actor:
             # rounding to the next energy unit can lead to unfulfilled schedules or over 1 socs.
             # In these cases decrease the order by one energy unit, i.e. sell more energy
             if self.battery.energy() + self.pred.schedule[0:index+1].sum() + (
-                    (energy // self.energy_unit + 1) * self.energy_unit) > self.battery.capacity:
+                    ((energy+EPS) // self.energy_unit + 1) * self.energy_unit) > self.battery.capacity:
                 energy -= self.energy_unit
         return energy
 
-    def calculate_price(self, energy):
-        return
 
     def next_time_step(self):
         """Update actor and schedule and for next time step.
@@ -665,6 +667,19 @@ class Actor:
         self.matched_energy_current_step += energy*sign
         # Buying energy therefore decreases the bank
         self.bank += energy*(-sign)*price
+        delta_energy = sign*energy
+        i = -1
+        # iterate over the market schedule to reduce the market schedule according to
+        # received energy
+        while np.sign(delta_energy) == sign and delta_energy != 0:
+            i += 1
+            planned_energy = self.market_schedule[i]
+            if planned_energy != 0:
+                assert np.sign(delta_energy) == np.sign(planned_energy)
+            else:
+                continue
+            self.market_schedule[i] -= sign*min(abs(delta_energy), abs(planned_energy))
+            delta_energy -= planned_energy
 
     def to_dict(self, external_data=False):
         """
@@ -869,7 +884,8 @@ def get_price(pricing_strategy, index, final_price, energy):
             # the half_life_index is the index where the price is 50% of the final price for buys.
             # if energy is supposed to be sold, its 200% instead
             half_life_index = pricing_strategy["param"][0]
-            assert half_life_index > 0 , "Harmonic series needs a positive non zero float value as first parameter"
+            error = "Harmonic series needs a positive non zero float value as first parameter"
+            assert half_life_index > 0, error
             factor = ((index / half_life_index) + 1)**-1
             try:
                 symmetric_bound_factor = pricing_strategy["param"][1]
@@ -897,18 +913,15 @@ def get_price(pricing_strategy, index, final_price, energy):
         if geometric_factor > 1:
             geometric_factor = 1 / geometric_factor
 
-        geometric_price = final_price ** geometric_factor ** (index * sign)
+        geometric_price = final_price * geometric_factor ** (index * sign)
         try:
-            symmetric_bound_factor = pricing_strategy["param"][1]
+            symmetric_bound_cap = pricing_strategy["param"][1]
         except IndexError:
             # no symmetric_bound_factor was provided
             return geometric_price
 
-        if sign==True:
-            return max(geometric_price, symmetric_bound_factor*final_price)
+        if sign == True:
+            return max(geometric_price, symmetric_bound_cap*final_price)
         else:
-            return min(geometric_price, 1/symmetric_bound_factor*final_price)
-
-
-
+            return min(geometric_price, 1/symmetric_bound_cap*final_price)
 
