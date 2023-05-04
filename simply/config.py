@@ -93,7 +93,7 @@ class Config:
         self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
 
         # time related
-        # start timestep
+        # start time step
         self.start = parser.getint("default", "start", fallback=0)
         # number of timesteps in simulation
         self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
