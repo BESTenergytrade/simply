@@ -86,7 +86,7 @@ class Market:
         if order.energy == 0:
             return
 
-        if not order.price:
+        if order.price is None:
             raise ValueError("Wrong order price ({})".format(order.price))
 
         if order.type not in [-1, 1]:
