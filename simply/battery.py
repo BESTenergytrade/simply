@@ -1,4 +1,5 @@
-from simply.scenario import EPS
+import simply.config as cfg
+
 
 
 class Battery:
@@ -27,6 +28,6 @@ class Battery:
         """
         soc_after_charge = self.soc + energy/self.capacity
         if self.check_boundaries:
-            assert 1+EPS >= soc_after_charge >= 0-EPS, \
+            assert 1+cfg.config.EPS >= soc_after_charge >= 0-cfg.config.EPS, \
                 f"Battery is out of soc bounds with soc of: {soc_after_charge}."
         self.soc = soc_after_charge

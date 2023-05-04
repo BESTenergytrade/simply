@@ -6,7 +6,6 @@ import pandas as pd
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
-from simply.scenario import EPS
 from simply.battery import Battery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
@@ -287,10 +286,8 @@ class Actor:
                 # is needed
                 possible_global_prices = np.ones(self.horizon) * float('inf')
                 # prices are set where the soc in not full yet
-                # possible_global_prices[(0- EPS<=soc_prediction )* (soc_prediction < 1 + EPS)] = \
-                #     self.prices[(0 -EPS<soc_prediction )* (soc_prediction < 1 + EPS)]
-                possible_global_prices[(soc_prediction < 1 - EPS)] = \
-                    self.pred.price[(soc_prediction < 1 - EPS)]
+                possible_global_prices[(soc_prediction < 1 - cfg.config.EPS)] = \
+                    self.pred.price[(soc_prediction < 1 - cfg.config.EPS)]
 
                 # index for the last inf value between now and energy demand
                 last_inf_index = np.argwhere(possible_global_prices[:i + 1] >= float('inf'))
@@ -334,7 +331,7 @@ class Actor:
             # if the predicted soc is 1 for the time steps before the current one, it is not
             # possible to buy energy before. Since planning used only for time step 0, rest can
             # be skipped
-            if max(soc_prediction[:i+1]) >= 1-EPS:
+            if max(soc_prediction[:i+1]) >= 1-cfg.config.EPS:
                 # set planning horizon for soc_prediction
                 self.planning_horizon = i
                 break
@@ -366,10 +363,10 @@ class Actor:
             # if overcharge is found, find the possible prices to sell this energy
             while overcharge > 0:
                 possible_prices = self.pred.selling_price.copy()[:self.planning_horizon+1]
-                possible_prices[soc_prediction < 0 + EPS] = float('-inf')
+                possible_prices[soc_prediction < 0 + cfg.config.EPS] = float('-inf')
                 # in between now and the peak, the right most/latest zero soc does not allow
                 # reducing the soc before. Energy most be sold afterwards
-                zero_soc_indices = np.where(soc_prediction[:i] < 0 + EPS)
+                zero_soc_indices = np.where(soc_prediction[:i] < 0 + cfg.config.EPS)
                 if np.any(zero_soc_indices):
                     right_most_peak = np.max(zero_soc_indices)
                 else:
@@ -391,7 +388,7 @@ class Actor:
                 soc_prediction = self.predict_socs(clip=False)
 
             # early breaking in case of reaching zero soc
-            if min(soc_prediction[:i+1]) <= 0+EPS:
+            if min(soc_prediction[:i+1]) <= 0+cfg.config.EPS:
                 break
 
         soc_prediction = self.predict_socs(clip=False)
@@ -404,7 +401,7 @@ class Actor:
         soc_prediction = self.predict_socs(clip=False)
 
         # planning to trade for the current time step is only possible until a soc of 1 is reached.
-        planning_horizon = np.argwhere([soc_prediction >= 1-EPS])
+        planning_horizon = np.argwhere([soc_prediction >= 1-cfg.config.EPS])
         if planning_horizon.size == 0:
             pass
         else:
@@ -429,14 +426,14 @@ class Actor:
             # if there are possible selling points of energy and there is the possibility of
             # storing energy in between, i.e soc<1
             while sell_indices.size > 0 and soc_prediction[
-                                             buy_index:sell_indices[0]+1].max() < 1 - EPS:
+                                             buy_index:sell_indices[0]+1].max() < 1 - cfg.config.EPS:
 
                 found_sell_index = None
 
                 # make sure selling is not considered for sell_indices which lie behind an soc==1
                 # event. They can not be used, since the battery can not be charged higher.
                 socs = np.array(soc_prediction)
-                soc_idx_almost_one = np.argwhere(socs[buy_index:] > 1 - EPS) + buy_index
+                soc_idx_almost_one = np.argwhere(socs[buy_index:] > 1 - cfg.config.EPS) + buy_index
                 if soc_idx_almost_one.size > 0:
                     soc_idx_almost_one = soc_idx_almost_one.squeeze(axis=1)
                     left_most_soc_to_buy_index = min(soc_idx_almost_one)
@@ -479,8 +476,8 @@ class Actor:
                 self.market_schedule[buy_index] += storable_energy
                 self.market_schedule[found_sell_index] -= storable_energy
                 soc_prediction = self.predict_socs(clip=False)
-                assert 1 >= max(soc_prediction)-EPS
-                assert 0 <= min(soc_prediction[:-1])+EPS
+                assert 1 >= max(soc_prediction)-cfg.config.EPS
+                assert 0 <= min(soc_prediction[:-1])+cfg.config.EPS
         self.predicted_soc = soc_prediction
         return self.market_schedule
 
@@ -686,8 +683,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
                            * net_price_factor * slot["price"], axis=1)
     # makes sure that the battery capacity is big enough, even if no useful trading takes place
     # todo randomize if generate order takes care of meeting demands through a market strategy
-    energy_unit = cfg.parser.getfloat("default", "energy_unit", fallback=0.01)
-    battery_capacity = max(random.random()*10, 2 * energy_unit)
+    battery_capacity = max(random.random()*10, 2 * cfg.config.energy_unit)
     return Actor(actor_id, df, battery=Battery(capacity=battery_capacity), ls=ls, ps=ps)
 
 

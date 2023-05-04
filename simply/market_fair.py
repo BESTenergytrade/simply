@@ -193,7 +193,7 @@ class BestMarket(Market):
 
         # match with market maker
         # find unmatched orders
-        orders = self.orders[(self.orders["energy"] + self.EPS) > cfg.config.energy_unit]
+        orders = self.orders[(self.orders["energy"] + cfg.config.EPS) > cfg.config.energy_unit]
         # ignore large orders
         orders = orders[~orders.index.isin(large_asks.index)]
         orders = orders[~orders.index.isin(large_bids.index)]

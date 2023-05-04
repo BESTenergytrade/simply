@@ -32,7 +32,6 @@ class Market:
             self.grid_fee_matrix = network.grid_fee_matrix
         if self.grid_fee_matrix:
             self.add_default_grid_fee()
-        self.EPS = 1e-10
         if self.save_csv:
             match_header = ["time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
                             "ask_cluster", "energy", "price", 'included_grid_fee']
@@ -97,7 +96,7 @@ class Market:
             order = order._replace(cluster=cluster)
 
         # make certain energy has step size of energy_unit
-        energy = ((order.energy + self.EPS) // cfg.config.energy_unit) * cfg.config.energy_unit
+        energy = ((order.energy + cfg.config.EPS) // cfg.config.energy_unit) * cfg.config.energy_unit
         # make certain enough energy is traded
         if energy < cfg.config.energy_unit:
             return
