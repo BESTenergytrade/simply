@@ -1,12 +1,14 @@
 from simply.actor import Order
 from simply.market import Market
 from simply.power_network import PowerNetwork
+import simply.config as cfg
 import networkx as nx
 
 import pytest
 
 
 class TestMarket:
+    cfg.Config("")
 
     def test_init(self):
         """
@@ -65,7 +67,7 @@ class TestMarket:
         """
         m = Market(0)
         # round to energy unit
-        m.energy_unit = 0.1
+        cfg.config.energy_unit = 0.1
         m.accept_order(Order(1, 0, 0, None, 0.1, 1))
         assert m.orders.at[0, "energy"] == pytest.approx(0.1)
         m.accept_order(Order(1, 0, 0, None, 0.3, 1))
@@ -78,7 +80,7 @@ class TestMarket:
         assert m.orders.at[2, "energy"] == pytest.approx(0.5)
         # reset orders
         m.orders = m.orders[:0]
-        m.energy_unit = 1
+        cfg.config.energy_unit = 1
         m.accept_order(Order(1, 0, 0, None, 1, 1))
         assert m.orders.at[0, "energy"] == pytest.approx(1)
         m.accept_order(Order(1, 0, 0, None, 3, 1))
@@ -89,6 +91,9 @@ class TestMarket:
         # round down
         m.accept_order(Order(1, 0, 0, None, 5.5, 1))
         assert m.orders.at[2, "energy"] == pytest.approx(5)
+
+        # reset config
+        cfg.Config("")
 
     def test_get_bids(self):
         """
