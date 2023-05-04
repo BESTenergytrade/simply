@@ -28,11 +28,11 @@ class Actor:
     and defining an energy management schedule, generating bids or asks and receiving trading
     results.
     The actor interacts with the market at every time step in a way defined by the actor strategy.
-    The actor fullfils his schedule needs by buying/selling energy. Trading energy can be guaranteed
-    by placing orders with at least the market maker price, since the market maker is seen as
-    unlimited supply. At the start of every time step the actor can place one order to buy or sell
-    energy at the current time step. Basis for this order are a predicted schedule and a market
-    maker price time series as input.
+    The actor fullfils his schedule needs by buying/selling energy. A successful energy trade can
+    be guaranteed by placing orders with at least the market maker price, since the market maker
+    is seen as unlimited supply. At the start of every time step the actor can place one order to
+    buy or sell energy at the current time step. Basis for this order are a predicted schedule and
+    a market maker price time series as input.
     After matching took place, the (monetary) bank and resulting soc is calculated taking into
     consideration the schedule and the acquired energy of this time step, i.e. bank and soc at the
     end of the time step. Afterwards the time step is increased and a new prediction for the
