@@ -3,12 +3,14 @@ from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_T
 from simply.power_network import PowerNetwork
 import networkx as nx
 import pytest
+from simply.config import Config
 
 
 class TestBestMarket:
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
+    Config("")
 
     def test_basic(self):
         """Tests the basic functionality of the BestMarket object to accept bids and asks via the
@@ -300,11 +302,226 @@ class TestBestMarket:
         another cluster is found."""
         m = BestMarket(0, self.pn)
         # add bids
-        m.accept_order(Order(-1, 0, 1, 1, 0.1, 10))
+        m.accept_order(Order(-1, 0, 0, 1, 0.1, 10))
         m.accept_order(Order(-1, 0, 1, 1, 0.1, 7))
         m.accept_order(Order(-1, 0, 0, 0, 0.1, 10))
         # add asks
         m.accept_order(Order(1, 0, 3, 1, 0.1, 6))
         m.accept_order(Order(1, 0, 3, 1, 0.1, 4))
         matches = m.match()
-        assert len(matches) == 2
+        assert all([match["bid_actor"] == 0 for match in matches])
+        matched_energy = sum([match["energy"] for match in matches])
+        assert matched_energy == pytest.approx(0.2)
+
+    def test_disputed_matching_approaches(self):
+        # Highest price match is selected
+        m = BestMarket(0, self.pn, disputed_matching='price')
+        # cluster 0
+        m.accept_order(Order(1, 0, 0, 0, 0.1, 1))
+        m.accept_order(Order(-1, 0, 4, 0, 0.1, 2))
+        # cluster 1
+        m.accept_order(Order(-1, 0, 3, 1, 0.1, 2))
+        matches = m.match()
+        assert matches[0]['included_grid_fee'] == 1
+
+        # Match with the highest bid price is selected
+        m = BestMarket(0, self.pn, disputed_matching='bid_price')
+        # cluster 0
+        m.accept_order(Order(1, 0, 0, 0, 0.1, 1))
+        m.accept_order(Order(-1, 0, 4, 0, 0.1, 2))
+        # cluster 1
+        m.accept_order(Order(-1, 0, 3, 1, 0.1, 2))
+        matches = m.match()
+        assert matches[0]['included_grid_fee'] == 0
+
+        # Disputed matches are resolved based on price
+        m = BestMarket(0, self.pn, disputed_matching='grid_fee')
+        # cluster 0
+        m.accept_order(Order(1, 0, 0, 0, 0.1, 1))
+        m.accept_order(Order(-1, 0, 4, 0, 0.1, 2))
+        # cluster 1
+        m.accept_order(Order(-1, 0, 3, 1, 0.1, 2))
+        matches = m.match()
+        assert matches[0]['included_grid_fee'] == 0
+
+    def test_update_clusters(self):
+        """Test the update of a cluster clearing price is correctly done when a better match with
+        another cluster is found."""
+        grid_fee_matrix = [[0, 0.0000, 0], [0.0000, 0, 0], [0, 0, 0]]
+        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix)
+
+        # add bids for two clusters. cluster 2 has higher bids
+        for price in range(20, 0, -1):
+            m.accept_order(Order(-1, 0, price, 0, 0.1, price))
+            m.accept_order(Order(-1, 0, price, 1, 0.1, price))
+
+        # add asks. Both clusters have the same producers
+        for price in range(8, 25, +1):
+            m.accept_order(Order(1, 0, price, 0, 0.1, price))
+            m.accept_order(Order(1, 0, price, 1, 0.1, price))
+
+        matches = m.match()
+        print([match["price"] for match in matches])
+        print([match["bid_cluster"] for match in matches])
+        print([match["ask_cluster"] for match in matches])
+        assert all([match["price"] == matches[0]["price"] for match in matches])
+
+    def test_profit_and_new_matching(self):
+        """Test the update of a cluster clearing price is correctly done when a better match with
+        another cluster is found."""
+        # Scenario 0 / Simple case
+        # bids and asks are in a single cluster. Get the amount of matches and clearing price
+        grid_fee_matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix, disputed_matching='profit')
+        order_amount = 0.01
+        for price in range(20, 0, -1):
+            actor_id = price
+            # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+            m.accept_order(Order(-1, 0, actor_id, 0, order_amount, price))
+
+        for price in range(0, 30, +1):
+            price = max(price, 0.001)
+            price = price
+            actor_id = price
+            #"Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+            m.accept_order(Order(1, 0, actor_id, 0, order_amount, price))
+
+        matches = m.match()
+        nr_matches_simple_case = len(matches)
+        clearing_price_simple_case = matches[0]["price"]
+
+        # Scenario 2
+        # Simple case with two clusters with the same asks and bids as Scenario 0 in each cluster
+        # Nr of matches should double and clearing price should be the same
+        grid_fee_matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix, disputed_matching='profit')
+        order_amount = 0.01
+        for price in range(20, 0, -1):
+            actor_id = price
+            # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+            m.accept_order(Order(-1, 0, actor_id, 0, order_amount, price))
+            m.accept_order(Order(-1, 0, actor_id, 1, order_amount, price))
+
+        for price in range(0, 30, +1):
+            price = max(price, 0.001)
+            price = price
+            actor_id = price
+            # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+            m.accept_order(Order(1, 0, actor_id, 0, order_amount, price))
+            m.accept_order(Order(1, 0, actor_id, 1, order_amount, price))
+
+        matches = m.match()
+        assert nr_matches_simple_case * 2 == len(matches)
+        assert all([clearing_price_simple_case == match["price"] for match in matches])
+
+        # Scenario 3
+        # Simple case with two clusters with different bids. Since grid fee is 0, and same ask
+        # prices exist in both clusters clearing price needs to be identical
+
+        grid_fee_matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix, disputed_matching='profit')
+        order_amount = 0.01
+
+        # BIDS
+        for price in range(20, 0, -1):
+            actor_id = price
+            # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+            m.accept_order(Order(-1, 0, actor_id*2, 0, order_amount, price*2))
+            m.accept_order(Order(-1, 0, actor_id*3, 1, order_amount, price*3))
+
+        # ASKS
+        for price in range(0, 30, +1):
+            price = max(price, 0.001)
+            price = price
+            actor_id = price
+            # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+            m.accept_order(Order(1, 0, actor_id, 0, order_amount, price))
+            m.accept_order(Order(1, 0, actor_id, 1, order_amount, price))
+
+        matches = m.match()
+        for x in matches:
+            print(x)
+
+        assert all([abs(matches[0]["price"]-match["price"]) == 0  for match in matches])
+        matched_energy_cluster_0 = sum([1 for match in matches if match["bid_cluster"] == 0])
+        matched_energy_cluster_1 = sum([1 for match in matches if match["bid_cluster"] == 1])
+        assert matched_energy_cluster_1 > matched_energy_cluster_0
+
+        # Scenario 4
+        # Simple case with two clusters with different bids. Since grid fee is 0, and same ask
+        # prices exist in both clusters clearing price needs to be identical
+        # Since bid prices of cluster 0 are lower than in scenario 3, the matched energy
+        # in cluster 1 should increase.
+
+        grid_fee_matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix, disputed_matching='profit')
+        order_amount = 0.01
+
+        # BIDS
+        for price in range(20, 0, -1):
+            actor_id = price
+            # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+            m.accept_order(Order(-1, 0, actor_id * 2, 0, order_amount, price * 1))
+            m.accept_order(Order(-1, 0, actor_id * 3, 1, order_amount, price * 3))
+
+        # ASKS
+        for price in range(0, 30, +1):
+            price = max(price, 0.001)
+            price = price
+            actor_id = price
+            # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+            m.accept_order(Order(1, 0, actor_id, 0, order_amount, price))
+            m.accept_order(Order(1, 0, actor_id, 1, order_amount, price))
+
+        matches = m.match()
+        for x in matches:
+            print(x)
+
+        assert all([abs(matches[0]["price"] - match["price"]) == 0 for match in matches])
+        matched_energy_cluster_0 = sum([1 for match in matches if match["bid_cluster"] == 0])
+        matched_energy_cluster_1_new = sum([1 for match in matches if match["bid_cluster"] == 1])
+        assert matched_energy_cluster_1_new > matched_energy_cluster_0
+        assert matched_energy_cluster_1_new > matched_energy_cluster_1
+
+    def test_scenario_5(self):
+        # Scenario 5
+        # Simple case with two clusters with different bids. Since grid fee is 0, and same ask
+        # prices exist in both clusters clearing price needs to be identical
+
+
+        grid_fee_matrix = [[1, 0, 0], [0, 1, 0], [0, 0, 0]]
+        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix, disputed_matching='profit')
+        order_amount = 0.03
+
+        # BIDS
+        for price in range(20, 0, -1):
+            price1 = price*2
+            actor_id = price1
+            # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+            m.accept_order(Order(-1, 0, actor_id, 0, order_amount, price1))
+            price2 = price*3
+            actor_id = price2
+            m.accept_order(Order(-1, 0, actor_id, 1, order_amount, price2))
+
+        # ASKS
+        for price in range(0, 30, +1):
+            price = max(price, 0.001)
+            # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
+            price1 = price+1/2
+            actor_id = price1
+            m.accept_order(Order(1, 0, actor_id, 0, order_amount, price1))
+            price2 = price
+            actor_id = price2
+            m.accept_order(Order(1, 0, actor_id, 1, order_amount, price2))
+
+        matches = m.match()
+        for x in matches:
+            print(x)
+
+        # assert all([abs(matches[0]["price"] - match["price"]) == 0 for match in matches])
+        matched_energy_cluster_0 = sum([1 for match in matches if match["bid_cluster"] == 0])
+        matched_energy_cluster_1 = sum([1 for match in matches if match["bid_cluster"] == 1])
+#
+# import warnings
+# warnings.filterwarnings("ignore", category=FutureWarning)
+# t=TestBestMarket().test_scenario_5()

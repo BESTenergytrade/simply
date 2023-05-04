@@ -239,7 +239,10 @@ class Market:
             if match['bid_cluster'] is None or match['ask_cluster'] is None:
                 # default grid fee
                 return self.grid_fee_matrix[0][-1]
-            else:
+            elif isinstance(
+                match['bid_cluster'], (int, float, str)) \
+                and isinstance(match['ask_cluster'], (int, float, str)
+            ):
                 return self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
 
     def add_grid_fee_info(self, matches):
