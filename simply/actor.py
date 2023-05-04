@@ -91,11 +91,10 @@ class Actor:
         self.id = actor_id
         self.grid_id = None
         self.cluster = cluster
-        self.t = cfg.parser.getint("default", "start", fallback=0)
-        self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
+        self.t = cfg.config.start
+
+        self.horizon = cfg.config.horizon
         self.planning_horizon = self.horizon-1
-        # ToDo: Use reference to scenario or market
-        self.energy_unit = cfg.parser.getfloat("default", "energy_unit", fallback=0.01)
 
         self._steps_per_hour = _steps_per_hour
         # Let the actor have a reference to the scenario
@@ -117,7 +116,7 @@ class Actor:
         self.error_scale = 0
         self.battery = battery
         if self.battery is None:
-            self.battery = Battery(capacity=2*self.energy_unit)
+            self.battery = Battery(capacity=2*cfg.config.energy_unit)
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -552,16 +551,16 @@ class Actor:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
             if self.battery.energy()+self.pred.schedule[0] +\
-                    (energy // self.energy_unit * self.energy_unit) < 0:
-                energy += self.energy_unit
+                    (energy // cfg.config.energy_unit * cfg.config.energy_unit) < 0:
+                energy += cfg.config.energy_unit
 
         # selling energy
         elif energy < 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or over 1 socs.
             # In these cases decrease the order by one energy unit, i.e. sell more energy
             if self.battery.energy() + self.pred.schedule[0] + (
-                    (energy // self.energy_unit+1) * self.energy_unit) > self.battery.capacity:
-                energy -= self.energy_unit
+                    (energy // cfg.config.energy_unit+1) * cfg.config.energy_unit) > self.battery.capacity:
+                energy -= cfg.config.energy_unit
 
         # TODO simulate strategy: manipulation, etc.
         price = (energy < 0) * self.pred["selling_price"][0] +\

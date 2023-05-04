@@ -1,3 +1,4 @@
+import warnings
 from configparser import ConfigParser, MissingSectionHeaderError
 from numpy import linspace
 from pathlib import Path
@@ -47,6 +48,8 @@ class Config:
         config = self
         global parser
         parser = ConfigParser()
+        if not cfg_file:
+            warnings.warn("No Configuration file path was provided. Default values will be used.")
         try:
             parser.read(cfg_file)
         except MissingSectionHeaderError:
@@ -74,6 +77,9 @@ class Config:
         # weight factor: network charges to power network weight
         self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
 
+        # Tolerance value for assertions, comparison and so on
+        self.EPS = parser.getfloat("default", "EPS", fallback=1e-6)
+
         # --------------------------
         # market
         # --------------------------
@@ -88,7 +94,7 @@ class Config:
 
         # time related
         # start timestep
-        self.start = parser.getint("default", "start", fallback=8)
+        self.start = parser.getint("default", "start", fallback=0)
         # number of timesteps in simulation
         self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
         # interval between simulation timesteps
