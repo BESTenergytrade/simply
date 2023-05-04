@@ -1,7 +1,6 @@
 import simply.config as cfg
 
 
-
 class Battery:
     """Class which implements all raw functionality around the battery """
 

@@ -425,8 +425,8 @@ class Actor:
                 sell_indices = sell_indices.squeeze(axis=1)
             # if there are possible selling points of energy and there is the possibility of
             # storing energy in between, i.e soc<1
-            while sell_indices.size > 0 and soc_prediction[
-                                             buy_index:sell_indices[0]+1].max() < 1 - cfg.config.EPS:
+            while (sell_indices.size > 0 and
+                    soc_prediction[buy_index:sell_indices[0]+1].max() < 1 - cfg.config.EPS):
 
                 found_sell_index = None
 
@@ -543,12 +543,13 @@ class Actor:
         if energy == 0:
             return None
 
+        energy_unit = cfg.config.energy_unit
         # buying energy
         if energy > 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
             if self.battery.energy()+self.pred.schedule[0] +\
-                    (energy // cfg.config.energy_unit * cfg.config.energy_unit) < 0:
+                    (energy // energy_unit * energy_unit) < 0:
                 energy += cfg.config.energy_unit
 
         # selling energy
@@ -556,8 +557,8 @@ class Actor:
             # rounding to the next energy unit can lead to unfulfilled schedules or over 1 socs.
             # In these cases decrease the order by one energy unit, i.e. sell more energy
             if self.battery.energy() + self.pred.schedule[0] + (
-                    (energy // cfg.config.energy_unit+1) * cfg.config.energy_unit) > self.battery.capacity:
-                energy -= cfg.config.energy_unit
+                    (energy // energy_unit+1) * energy_unit) > self.battery.capacity:
+                energy -= energy_unit
 
         # TODO simulate strategy: manipulation, etc.
         price = (energy < 0) * self.pred["selling_price"][0] +\

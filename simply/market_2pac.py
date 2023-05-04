@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from simply.market import Market
 import simply.config as cfg
 
+
 class TwoSidedPayAsClear(Market):
     """
     Two sided Pay-As-Clear market mechanism, similar to

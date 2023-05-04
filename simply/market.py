@@ -41,7 +41,8 @@ class Market:
         # append column and row containing the default grid fee
         for row in self.grid_fee_matrix:
             row.append(cfg.config.default_grid_fee)
-        additional_row = [cfg.config.default_grid_fee for i in range((len(self.grid_fee_matrix) + 1))]
+        additional_row = [cfg.config.default_grid_fee
+                          for _ in range((len(self.grid_fee_matrix) + 1))]
         self.grid_fee_matrix.append(additional_row)
 
     def get_bids(self):
@@ -95,7 +96,8 @@ class Market:
             order = order._replace(cluster=cluster)
 
         # make certain energy has step size of energy_unit
-        energy = ((order.energy + cfg.config.EPS) // cfg.config.energy_unit) * cfg.config.energy_unit
+        energy = (
+            (order.energy + cfg.config.EPS) // cfg.config.energy_unit) * cfg.config.energy_unit
         # make certain enough energy is traded
         if energy < cfg.config.energy_unit:
             return
