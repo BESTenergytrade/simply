@@ -25,7 +25,7 @@ class Market:
         self.actor_callback = {}
         self.network = network
         self.save_csv = cfg.config.save_csv
-        self.csv_path = Path(cfg.parser.get("default", "path", fallback="./scenarios/default"))
+        self.csv_path = Path(cfg.config.path)
         self.default_grid_fee = default_grid_fee
         self.grid_fee_matrix = grid_fee_matrix
         if network is not None and grid_fee_matrix is None:
