@@ -57,7 +57,7 @@ class Actor:
     t : int
         Actor's current time slot should equal current market time slot (init default: 0)
     horizon : int
-        [unused] Horizon up to which energy management is considered
+        Horizon up to which energy management is considered
         (default: cfg.parser.get("actor", "horizon", fallback=24))
     load_scale : float
         Scaling factor for load time series (default: init ls)
@@ -66,7 +66,7 @@ class Actor:
     error_scale : float
         [unused] Noise scaling factor (default: 0)
     battery : object
-        [unused] Representation of a battery (default: None)
+        Representation of a battery (default: None)
     data : pandas.DataFrame()
         Actual generation and load time series as would be measured (default: init df)
     pred : pandas.DataFrame()
@@ -117,7 +117,7 @@ class Actor:
         self.error_scale = 0
         self.battery = battery
         if self.battery is None:
-            self.battery = Battery(capacity=0)
+            self.battery = Battery(capacity=2*self.energy_unit)
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -508,7 +508,7 @@ class Actor:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
     def update_battery(self, _cache=dict()):
-        """Update the battery state depending on the currently scheduled planning time step.
+        """Update the battery state with the current schedule and the matched energy in this step.
 
         This function needs to be called once per time step to track the energy inside of the
         battery. It takes the planned, i.e. predicted, schedule and changes the battery's SOC
