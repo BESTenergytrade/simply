@@ -22,10 +22,9 @@ class Market:
         self.t = time
         self.trades = None
         self.matches = []
-        self.energy_unit = cfg.parser.getfloat("default", "energy_unit", fallback=0.01)
         self.actor_callback = {}
         self.network = network
-        self.save_csv = cfg.parser.getboolean("default", "save_csv", fallback=False)
+        self.save_csv = cfg.config.save_csv
         self.csv_path = Path(cfg.parser.get("default", "path", fallback="./scenarios/default"))
         self.default_grid_fee = default_grid_fee
         self.grid_fee_matrix = grid_fee_matrix
@@ -98,9 +97,9 @@ class Market:
             order = order._replace(cluster=cluster)
 
         # make certain energy has step size of energy_unit
-        energy = ((order.energy + self.EPS) // self.energy_unit) * self.energy_unit
+        energy = ((order.energy + self.EPS) // cfg.config.energy_unit) * cfg.config.energy_unit
         # make certain enough energy is traded
-        if energy < self.energy_unit:
+        if energy < cfg.config.energy_unit:
             return
         order = order._replace(energy=energy)
         # If an order ID parameter is not set,
@@ -145,7 +144,7 @@ class Market:
             self.orders = pd.DataFrame(columns=Order._fields)
         else:
             # remove fully matched orders
-            self.orders = self.orders[self.orders.energy >= self.energy_unit]
+            self.orders = self.orders[self.orders.energy >= cfg.config.energy_unit]
 
     def match(self, show=False):
         """
@@ -177,7 +176,7 @@ class Market:
                     continue
                 if self.grid_fee_matrix:
                     self.apply_grid_fee(ask, bid)
-                if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit \
+                if ask.energy >= cfg.config.energy_unit and bid.energy >= cfg.config.energy_unit \
                         and ask.price <= bid.price:
                     # match ask and bid
                     energy = min(ask.energy, bid.energy)

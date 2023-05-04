@@ -1,7 +1,7 @@
 import pandas as pd
 
 from simply.market import Market
-
+import simply.config as cfg
 LARGE_ORDER_THRESHOLD = 2**32
 MARKET_MAKER_THRESHOLD = 2**63-1
 
@@ -58,13 +58,13 @@ class BestMarket(Market):
         asks = pd.DataFrame(asks)
         asks["order_id"] = asks.index
         asks = pd.DataFrame(asks.values.repeat(
-            asks.energy * (1/self.energy_unit), axis=0), columns=asks.columns)
-        asks.energy = self.energy_unit
+            asks.energy * (1/cfg.config.energy_unit), axis=0), columns=asks.columns)
+        asks.energy = cfg.config.energy_unit
         bids = pd.DataFrame(bids)
         bids["order_id"] = bids.index
         bids = pd.DataFrame(bids.values.repeat(
-            bids.energy * (1/self.energy_unit), axis=0), columns=bids.columns)
-        bids.energy = self.energy_unit
+            bids.energy * (1/cfg.config.energy_unit), axis=0), columns=bids.columns)
+        bids.energy = cfg.config.energy_unit
 
         # keep track which clusters have to be (re)matched
         # start with all clusters
@@ -118,7 +118,7 @@ class BestMarket(Market):
                             "ask_actor": ask.actor_id,
                             "bid_cluster": bid.cluster,
                             "ask_cluster": ask.cluster,
-                            "energy": self.energy_unit,
+                            "energy": cfg.config.energy_unit,
                             "price": ask.adjusted_price,
                             "included_grid_fee": ask.adjusted_price - ask.price
                         })
@@ -193,7 +193,7 @@ class BestMarket(Market):
 
         # match with market maker
         # find unmatched orders
-        orders = self.orders[(self.orders["energy"] + self.EPS) > self.energy_unit]
+        orders = self.orders[(self.orders["energy"] + self.EPS) > cfg.config.energy_unit]
         # ignore large orders
         orders = orders[~orders.index.isin(large_asks.index)]
         orders = orders[~orders.index.isin(large_bids.index)]

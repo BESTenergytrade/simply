@@ -170,7 +170,7 @@ class TestActor:
             market_step(actor, m, t)
 
             # tolerance due to energy_unit differences
-            tol = 2*actor.energy_unit
+            tol = 2*cfg.config.energy_unit
             assert actor.battery.energy() < tol
             assert -actor.market_schedule[0] == approx(actor.pred.schedule[0], abs=tol)
             assert len(m.matches)-1 == nr_of_matches

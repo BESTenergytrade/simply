@@ -113,4 +113,4 @@ class Config:
         # print debug info to console
         self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
         # save orders and matching results to csv files
-        self.save_csv = parser.getboolean("default", "save_csv", fallback=True)
+        self.save_csv = parser.getboolean("default", "save_csv", fallback=False)
