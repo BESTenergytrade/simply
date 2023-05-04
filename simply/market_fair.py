@@ -19,8 +19,8 @@ class BestMarket(Market):
     This converges to an optimal solution.
     """
 
-    def __init__(self, time, network=None, grid_fee_matrix=None, default_grid_fee=0):
-        super().__init__(time, network, grid_fee_matrix, default_grid_fee)
+    def __init__(self, time, network=None, grid_fee_matrix=None):
+        super().__init__(time, network, grid_fee_matrix)
 
     def match(self, show=False):
         asks = self.get_asks()
@@ -201,7 +201,7 @@ class BestMarket(Market):
         asks = orders[orders.type == 1]
         if not bids_mm.empty:
             # select bidding market maker by order ID, that has highest price
-            bids_mm['price'] += self.default_grid_fee
+            bids_mm['price'] += cfg.config.default_grid_fee
             bid_mm_id = bids_mm['price'].astype(float).idxmax()
             bid_mm = bids_mm.loc[bid_mm_id]
             asks = asks[asks["price"] <= bid_mm.price]
@@ -216,14 +216,14 @@ class BestMarket(Market):
                     "ask_cluster": ask.cluster,
                     "energy": ask.energy,
                     "price": bid_mm.price,
-                    "included_grid_fee": self.default_grid_fee
+                    "included_grid_fee": cfg.config.default_grid_fee
                 })
 
         # match bids only with ask market maker with lowest price
         bids = orders[orders.type == -1]
         if not asks_mm.empty:
             # select asking market maker by order ID, that has lowest price
-            asks_mm['price'] += self.default_grid_fee
+            asks_mm['price'] += cfg.config.default_grid_fee
             ask_mm_id = asks_mm['price'].astype(float).idxmin()
             ask_mm = asks_mm.loc[ask_mm_id]
             # indices of matched bids equal order IDs respectively
@@ -239,7 +239,7 @@ class BestMarket(Market):
                     "ask_cluster": ask_mm.cluster,
                     "energy": bid.energy,
                     "price": ask_mm.price,
-                    "included_grid_fee": self.default_grid_fee
+                    "included_grid_fee": cfg.config.default_grid_fee
                 })
 
         if show:

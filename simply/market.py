@@ -17,7 +17,7 @@ class Market:
     This class provides a basic matching strategy which may be overridden.
     """
 
-    def __init__(self, time, network=None, grid_fee_matrix=None, default_grid_fee=0):
+    def __init__(self, time, network=None, grid_fee_matrix=None):
         self.orders = pd.DataFrame(columns=Order._fields)
         self.t = time
         self.trades = None
@@ -26,7 +26,6 @@ class Market:
         self.network = network
         self.save_csv = cfg.config.save_csv
         self.csv_path = Path(cfg.config.path)
-        self.default_grid_fee = default_grid_fee
         self.grid_fee_matrix = grid_fee_matrix
         if network is not None and grid_fee_matrix is None:
             self.grid_fee_matrix = network.grid_fee_matrix
@@ -41,8 +40,8 @@ class Market:
     def add_default_grid_fee(self):
         # append column and row containing the default grid fee
         for row in self.grid_fee_matrix:
-            row.append(self.default_grid_fee)
-        additional_row = [self.default_grid_fee for i in range((len(self.grid_fee_matrix) + 1))]
+            row.append(cfg.config.default_grid_fee)
+        additional_row = [cfg.config.default_grid_fee for i in range((len(self.grid_fee_matrix) + 1))]
         self.grid_fee_matrix.append(additional_row)
 
     def get_bids(self):
@@ -272,4 +271,4 @@ class Market:
         except TypeError:
             # if an actor as none as cluster, e.g. the market maker, a TypeError will be thrown.
             # use default grid fee in this case.
-            ask.price += self.default_grid_fee
+            ask.price += cfg.config.default_grid_fee
