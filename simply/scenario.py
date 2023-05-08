@@ -145,7 +145,7 @@ def load(dirpath, data_format):
         at = actors_file.read_text()
         actors_j = json.loads(at)
         for aj in actors_j.values():
-            ai = [aj["id"], pd.read_csv(dirpath / aj["csv"]), aj["csv"], aj["ls"], aj["ps"],
+            ai = [aj["id"], pd.read_csv(dirpath / aj["csv"]), None, aj["csv"], aj["ls"], aj["ps"],
                   aj["pm"]]
             actors.append(actor.Actor(*ai))
     else:
@@ -153,7 +153,7 @@ def load(dirpath, data_format):
         for f in sorted(actor_files):
             at = f.read_text()
             aj = json.loads(at)
-            ai = [aj["id"], pd.read_json(aj["df"]), aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
+            ai = [aj["id"], pd.read_json(aj["df"]), None, aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
             actors.append(actor.Actor(*ai))
 
     # Give actors knowledge of the cluster they belong to
