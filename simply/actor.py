@@ -170,7 +170,7 @@ class Actor:
         # development to be certain
         # ToDo Make sure that the balance of schedule and bought energy does not charge
         # or discharge more power than the max c rate
-        self.battery.charge(self.pred.schedule[0])
+        # self.battery.charge(self.pred.schedule[0])
 
     def generate_order(self):
         """
