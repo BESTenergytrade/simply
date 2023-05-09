@@ -256,7 +256,7 @@ if __name__ == "__main__":
 
     # Build config object using configuration file
     cfg = Config(args.config)
-    cfg.path = Path('../') / cfg.path
+    cfg.path = Path().parent / cfg.path
     # Reset save location directory
     remove_existing_dir(cfg.path)
     sc = create_scenario_from_config(args.scenario_config, args.network, data_dirpath=args.data_dir,
