@@ -567,8 +567,6 @@ class Actor:
 
         # assumes schedule is positive when pv is produced, Assertion error useful during
         # development to be certain
-        # ToDo: Remove for release
-        assert self.pred.schedule[0] == self.pred.pv[0] - self.pred.load[0]
         # ToDo Make sure that the balance of schedule and bought energy does not charge
         # or discharge more power than the max c rate
         self.battery.charge(self.pred.schedule[0] + self.matched_energy_current_step)
@@ -686,6 +684,8 @@ class Actor:
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
         save_df = self.data[["load", "pv", "schedule", "price"]]
+        save_df["load"] /= self.load_scale
+        save_df["pv"] /= self.pv_scale if self.pv_scale else 1
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
@@ -715,7 +715,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     ps = random.uniform(1, 7)
     # Probability of an actor to possess a PV, here 40%
     pv_prob = 0.4
-    ps = random.choices([0, ps], [1 - pv_prob, pv_prob], k=1)
+    ps = random.choices([0, ps], [1 - pv_prob, pv_prob], k=1)[0]
     df["schedule"] = ps * df["pv"] - ls * df["load"]
     max_price = 0.3
     df["price"] *= max_price
