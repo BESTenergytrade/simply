@@ -93,7 +93,6 @@ class Actor:
         self.t = cfg.config.start
 
         self.horizon = cfg.config.horizon
-        self.planning_horizon = self.horizon-1
 
         self._steps_per_hour = _steps_per_hour
         # Let the actor have a reference to the scenario
@@ -235,7 +234,7 @@ class Actor:
         default_market_schedule[0] -= self.battery.energy()
         return default_market_schedule
 
-    def predict_socs(self, clip=False, clip_value=1):
+    def predict_socs(self, clip=False, clip_value=1, planning_horizon=None):
         """ Returns prediction of future socs based on schedule and market schedule
 
         Creates a prediction for the planning horizon, which is not necessarily the horizon.
@@ -243,13 +242,16 @@ class Actor:
         which contains the amount the actor plans to buy or sell in a future time slot.
         Setting clip to true, does not allow values over the clipping value
 
+        :param planning_horizon: how far in the future should socs be predicted
         :param clip: should the values be clipped
         :param clip_value: value where socs are clipped to
         :return: soc prediction for planning horizon
         """
+        if planning_horizon is None:
+            planning_horizon = self.horizon - 1
         cum_energy_demand = (self.pred.schedule.cumsum() + self.market_schedule.cumsum() +
-                             self.battery.soc * self.battery.capacity)[:self.planning_horizon+1]
-        soc_prediction = np.ones(self.planning_horizon+1) * self.battery.soc \
+                             self.battery.soc * self.battery.capacity)[:planning_horizon+1]
+        soc_prediction = np.ones(planning_horizon+1) * self.battery.soc \
             + (cum_energy_demand - self.battery.soc * self.battery.capacity) / self.battery.capacity
 
         last_val = 0
@@ -277,6 +279,8 @@ class Actor:
         self.market_schedule = np.roll(self.market_schedule, -1)
         self.market_schedule[-1] = 0
         soc_prediction = self.predict_socs(clip=True)
+        planning_horizon = self.horizon - 1
+
         # Go through the cumulated demands, deducting the demand if we plan on buying energy
         for i, _ in enumerate(soc_prediction):
             energy = soc_prediction[i] * self.battery.capacity
@@ -333,10 +337,10 @@ class Actor:
             # be skipped
             if max(soc_prediction[:i+1]) >= 1-cfg.config.EPS:
                 # set planning horizon for soc_prediction
-                self.planning_horizon = i
+                planning_horizon = i
                 break
 
-        soc_prediction = self.predict_socs(clip=False)
+        soc_prediction = self.predict_socs(clip=False, planning_horizon=planning_horizon)
         self.predicted_soc = soc_prediction
 
         return self.market_schedule
@@ -350,10 +354,8 @@ class Actor:
         multiple time slots will be used to sell the energy.
         :return: market_schedule
         """
-        # set planning horizon for soc_prediction
-        self.planning_horizon = self.horizon-1
         soc_prediction = self.predict_socs(clip=False)
-        soc_prediction = soc_prediction[:self.planning_horizon+1]
+        soc_prediction = soc_prediction[:self.horizon]
 
         # ToDo selling is not capped by max c-rate of battery
         # iterate over socs
@@ -362,7 +364,7 @@ class Actor:
             overcharge = energy - self.battery.capacity
             # if overcharge is found, find the possible prices to sell this energy
             while overcharge > 0:
-                possible_prices = self.pred.selling_price.copy()[:self.planning_horizon+1]
+                possible_prices = self.pred.selling_price.copy()[:self.horizon]
                 possible_prices[soc_prediction < 0 + cfg.config.EPS] = float('-inf')
                 # in between now and the peak, the right most/latest zero soc does not allow
                 # reducing the soc before. Energy most be sold afterwards
@@ -403,19 +405,19 @@ class Actor:
         # planning to trade for the current time step is only possible until a soc of 1 is reached.
         planning_horizon = np.argwhere([soc_prediction >= 1-cfg.config.EPS])
         if planning_horizon.size == 0:
-            pass
+            planning_horizon = self.horizon - 1
         else:
-            self.planning_horizon = planning_horizon[0, 1]-1
-        soc_prediction = soc_prediction[:self.planning_horizon+1]
-        buy_prices = np.array(self.pred.price.values)[:self.planning_horizon+1]
-        sell_prices = np.array(self.pred.selling_price.values)[:self.planning_horizon+1]
+            planning_horizon = planning_horizon[0, 1]-1
+        soc_prediction = soc_prediction[:planning_horizon+1]
+        buy_prices = np.array(self.pred.price.values)[:planning_horizon+1]
+        sell_prices = np.array(self.pred.selling_price.values)[:planning_horizon+1]
         # ToDo selling is not capped by max c-rate of battery
         # ++++++++++++++++++++
         sorted_buy_indexes = np.argsort(buy_prices)
         # go through all buying possibilities starting from the lowest price
         for buy_index in sorted_buy_indexes:
             buying_price = buy_prices[buy_index]
-            possible_prices = sell_prices.copy()[:self.planning_horizon+1]
+            possible_prices = sell_prices.copy()[:planning_horizon+1]
 
             # prices before buying can not be used for selling
             possible_prices[:buy_index + 1] = float("-inf")
@@ -475,7 +477,7 @@ class Actor:
                 assert storable_energy > 0
                 self.market_schedule[buy_index] += storable_energy
                 self.market_schedule[found_sell_index] -= storable_energy
-                soc_prediction = self.predict_socs(clip=False)
+                soc_prediction = self.predict_socs(clip=False, planning_horizon=planning_horizon)
                 assert 1 >= max(soc_prediction)-cfg.config.EPS
                 assert 0 <= min(soc_prediction[:-1])+cfg.config.EPS
         self.predicted_soc = soc_prediction
@@ -588,7 +590,6 @@ class Actor:
             self.socs.append(self.battery.soc)
         self.t += 1
         self.matched_energy_current_step = 0
-        self.planning_horizon = self.horizon-1
         self.create_prediction()
 
     def receive_market_results(self, time, sign, energy, price):
