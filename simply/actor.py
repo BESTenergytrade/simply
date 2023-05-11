@@ -41,11 +41,16 @@ class Actor:
 
     :param int actor_id: unique identifier of the actor
     :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "price" are processed
+    :param .battery.Battery() battery: Battery used by the actor
     :param str csv: Filename in which this actor's data should be stored
     :param float ls: (optional) Scaling factor for load time series
     :param float ps: (optional) Scaling factor for photovoltaic time series
     :param dict pm: (optional) Prediction multiplier used to manipulate prediction time series based
         on the data time series
+    :param int cluster: cluster in which actor is located
+    :param int strategy: Number for strategy [0-3]
+    :param .scenario.Scenario() scenario: Scenario reference for the actor
+    :param int _steps_per_hour: Frequency of data per hour
 
     Members:
 
@@ -57,7 +62,7 @@ class Actor:
         Actor's current time slot should equal current market time slot (init default: 0)
     horizon : int
         Horizon up to which energy management is considered
-        (default: cfg.parser.get("actor", "horizon", fallback=24))
+        (default defined in simply.config)
     load_scale : float
         Scaling factor for load time series (default: init ls)
     pv_scale : float
@@ -78,6 +83,30 @@ class Actor:
     self.traded : dict
         Dictionary of received trading results per time slot including matched energy and clearing
         prices
+    self.cluster: int
+        cluster in which actor is located
+    self.strategy: int
+        Number for strategy [0-3]
+    self.scenario: .scenario.Scenario()
+        Scenario reference for the actor
+    self.steps_per_hour: int
+        Frequency of data per hour
+    self.battery: .battery.Battery()
+        Battery used by the actor
+    self.bank: float
+        cumulated earnings and costs of this actor similar to a bank account balance
+    self.matched_energy_current_step: float
+        Amount of matched energy by orders of this actor in the current time step
+    self.predicted_soc: np.array()
+        predicted soc values for future time steps based on the battery state and planned actor
+        behaviour
+    self.market_schedule: np.array()
+        planed energy amounts for interaction with the market_maker and basis of order generation
+
+
+
+
+
     """
 
     def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1, pm={}, cluster=None,

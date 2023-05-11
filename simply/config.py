@@ -36,7 +36,7 @@ class Config:
         - energy_unit: size of energy units to be traded individually [0.01]\n
         - weight_factor: conversion factor from grid fees to power network node weight [0.1]\n
     [actor]
-        - horizon - number of timesteps to look ahead for prediction [24]
+        - horizon - number of time steps to look ahead for prediction [24]
 
     :param cfg_file: configuration file path with the attributes listed above.
     :type cfg_file: str
@@ -84,12 +84,6 @@ class Config:
         self.EPS = parser.getfloat("default", "EPS", fallback=1e-6)
 
         # --------------------------
-        # actor
-        # --------------------------
-        # strategy that every actor uses
-        self.actor_strategy = parser.getint("default", "actor_strategy", fallback=None)
-
-        # --------------------------
         # market
         # --------------------------
         # market type to be use
@@ -111,8 +105,14 @@ class Config:
         # list of timesteps in simulation
         # not read from file but created from above information
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
-        # actor section
+
+        # --------------------------
+        # actor
+        # --------------------------
+        # Horizon up to which energy management is considered and predictions are made
         self.horizon = parser.getint("default", "horizon", fallback=24)
+        # strategy that every actor uses
+        self.actor_strategy = parser.getint("default", "actor_strategy", fallback=None)
 
         # --------------------------
         # output
