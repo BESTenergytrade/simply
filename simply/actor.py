@@ -586,7 +586,6 @@ class Actor:
         if self.battery and not self.pred.empty:
             self.update_battery()
             self.socs.append(self.battery.soc)
-        print(self.pred.schedule[0], self.market_schedule[0], self.matched_energy_current_step)
         self.t += 1
         self.matched_energy_current_step = 0
         self.planning_horizon = self.horizon-1
@@ -683,7 +682,6 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     df["price"] = df.apply(lambda slot: slot["price"] - (slot["schedule"] > 0)
                            * net_price_factor * slot["price"], axis=1)
     # makes sure that the battery capacity is big enough, even if no useful trading takes place
-    # todo randomize if generate order takes care of meeting demands through a market strategy
     battery_capacity = max(random.random()*10, 2 * cfg.config.energy_unit)
     return Actor(actor_id, df, battery=Battery(capacity=battery_capacity), ls=ls, ps=ps)
 

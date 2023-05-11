@@ -66,9 +66,9 @@ if __name__ == "__main__":
 
     list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
 
-    # Actors generate their order prices from the market maker prices. These need to be the same
-    # for each actor. In the future market maker prices should be stored in a single data structure,
-    # eg. market object, a market maker instance or something similar.
+    # Actors generate their order prices based on the prices communicated by the market maker.
+    # These need to be the same for each actor. This is guaranteed by the loop below.
+    # ToDo: Store market maker in a single data structure, e.g. market or scenario object
     for a in sc.actors:
         a.data.selling_price = sc.actors[0].data.selling_price
         a.data.price = sc.actors[0].data.price
@@ -77,7 +77,10 @@ if __name__ == "__main__":
     for t in list_ts:
         m.t = t
         for a in sc.actors:
+            # actor calculates strategy based market interaction with the market maker
             a.get_market_schedule()
+            # orders are generated based on the flexibility towards the planned market interaction
+            # and a pricing scheme
             order = a.generate_order()
             if order:
                 m.accept_order(order, callback=a.receive_market_results)

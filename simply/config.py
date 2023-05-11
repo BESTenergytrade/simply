@@ -50,6 +50,9 @@ class Config:
         parser = ConfigParser()
         if not cfg_file:
             warnings.warn("No Configuration file path was provided. Default values will be used.")
+        elif not Path(cfg_file).is_file():
+            warnings.warn(f"{cfg_file} was provided as Configuration file, but this file does not "
+                          "exist. Default values will be used.")
         try:
             parser.read(cfg_file)
         except MissingSectionHeaderError:
@@ -79,6 +82,12 @@ class Config:
 
         # Tolerance value for assertions, comparison and so on
         self.EPS = parser.getfloat("default", "EPS", fallback=1e-6)
+
+        # --------------------------
+        # actor
+        # --------------------------
+        # strategy that every actor uses
+        self.actor_strategy = parser.getint("default", "actor_strategy", fallback=None)
 
         # --------------------------
         # market
