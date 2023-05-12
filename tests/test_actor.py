@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import pytest
 
-
+import simply.battery
 from simply.actor import Actor, create_random, Order
 from simply.battery import Battery
 from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD
@@ -123,7 +123,31 @@ class TestActor:
         # time series is longer than one day
         assert a.data.index[0].date() != a.data.index[-1].date()
 
-    def test_no_strategy(self):
+    def test_default_battery(self):
+        pn = PowerNetwork("", nx.random_tree(1))
+        scenario = Scenario(pn, [], None, steps_per_hour=4)
+        battery = Battery(
+            capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        actor = Actor(0, self.example_df, battery=None, scenario=scenario)
+        assert actor.battery is not None
+        assert isinstance(actor.battery, simply.battery.Battery)
+        assert actor.battery.capacity == cfg.config.energy_unit*2
+
+        actor = Actor(0, self.example_df, scenario=scenario)
+        assert actor.battery is not None
+        assert isinstance(actor.battery, simply.battery.Battery)
+        assert actor.battery.capacity == cfg.config.energy_unit*2
+
+        battery = Battery(
+            capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
+        assert actor.battery is not None
+        assert isinstance(actor.battery, simply.battery.Battery)
+        assert actor.battery.capacity == BAT_CAPACITY
+
+
+
+    def test_no_strategy(self, caplog):
         # overwrite strategy 0 with zero buys/sells. Assert that the simulation throws an error
         pn = PowerNetwork("", nx.random_tree(1))
 
@@ -133,20 +157,28 @@ class TestActor:
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
         m = BestMarket(0, self.pn)
 
-        # make sure error is thrown
-        with pytest.raises(AssertionError):
-            # iterate over time steps
-            for t in range(NR_STEPS):
-                m.t = t
-                actor.get_market_schedule(strategy=0)
+        foo = "foo"
+        with pytest.warns(UserWarning, match=foo):
+            actor.get_market_schedule(strategy=foo)
 
-                # nullify market schedule
-                actor.market_schedule *= 0
-                market_step(actor, m, t)
+        # having an actor strategy should not overwrite the explicit strategy call
+        actor.strategy = 3
+        with pytest.warns(UserWarning, match=foo):
+            actor.get_market_schedule(strategy=foo)
 
-                for a in scenario.actors:
-                    # update all actors for the next market time slot
-                    a.next_time_step()
+        # assert that the strategy used when no strategy is given as argument, that the default
+        # market_schedule is different
+        strategy_3 = actor.get_market_schedule().copy()
+        strategy_0_explicit = actor.get_market_schedule(strategy=0).copy()
+        actor.strategy = 0
+        strategy_0_implicit = actor.get_market_schedule().copy()
+
+        # at least one value has to be different
+        assert (strategy_0_explicit != strategy_3).any()
+
+        # all values must be equal
+        assert (strategy_0_implicit == strategy_0_explicit).all()
+
 
     def test_rule_based_strategy_0(self):
         # the simplest strategy which buys or sells exactly the amount of the schedule at the time

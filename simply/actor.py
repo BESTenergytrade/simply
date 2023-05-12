@@ -103,10 +103,6 @@ class Actor:
     self.market_schedule: np.array()
         planed energy amounts for interaction with the market_maker and basis of order generation
 
-
-
-
-
     """
 
     def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1, pm={}, cluster=None,
