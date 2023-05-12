@@ -414,7 +414,13 @@ class Actor:
                     soc_prediction = self.predict_socs(clip=False)
                     break
 
-                soc_to_zero = min(np.min(soc_prediction[highest_price_index:i + 1]), 1)
+                # the time span in which energy could be sold to reduce the overcharge ends with
+                # the overcharge itself and goes back for as long as no 0 soc is found. this is
+                # the possible starting point. In this time span the highest price was found at
+                # the highest_price_index. At this index only as much energy can be sold as the min
+                # predicted soc in between this index and the time of overcharge provides.
+                soc_to_zero = np.min(soc_prediction[highest_price_index:i + 1])
+                assert soc_to_zero <= 1
                 energy_to_zero = soc_to_zero * self.battery.capacity
                 sellable_energy = min(energy_to_zero, overcharge)
                 self.market_schedule[highest_price_index] -= sellable_energy
@@ -601,8 +607,8 @@ class Actor:
         # TODO take flexibility into account to generate the bid
 
         # TODO replace order type by enum
-        # +1 as sign --> ask
-        # -1 as sign --> bid
+        # +1 as sign --> ask  i.e. wanting to sell
+        # -1 as sign --> bid  i.e. wanting to buy
         # Therefore the sign is the negative of the sign of the energy
         new = Order(np.sign(-energy), self.t, self.id, self.cluster, abs(energy), price)
         self.orders.append(new)
