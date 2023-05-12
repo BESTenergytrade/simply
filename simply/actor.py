@@ -408,17 +408,21 @@ class Actor:
                 possible_prices[:right_most_peak] = float('-inf')
                 highest_price_index = np.argmax(possible_prices[:i + 1])
 
-                # if the energy is sold at the time of production no storage is needed
+                # best price is at the time of energy generation, therefore no restrictions towards
+                # amounts of energy apply
                 if highest_price_index == i:
                     self.market_schedule[i] -= overcharge
                     soc_prediction = self.predict_socs(clip=False)
                     break
 
+                # if the energy is NOT sold at the time of production storage limitations need to be
+                # taken into account
+
                 # the time span in which energy could be sold to reduce the overcharge ends with
-                # the overcharge itself and goes back for as long as no 0 soc is found. this is
-                # the possible starting point. In this time span the highest price was found at
-                # the highest_price_index. At this index only as much energy can be sold as the min
-                # predicted soc in between this index and the time of overcharge provides.
+                # the overcharge itself and goes back for as long as no 0 soc is found. This is
+                # the possible starting point for selling. In this time span the highest price was
+                # found at the highest_price_index. At this index only as much energy can be sold as
+                # the min predicted soc, in between this index and the time of overcharge, provides.
                 soc_to_zero = np.min(soc_prediction[highest_price_index:i + 1])
                 assert soc_to_zero <= 1
                 energy_to_zero = soc_to_zero * self.battery.capacity
@@ -807,6 +811,20 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
 
 
 def clip_soc(soc_prediction, upper_clipping):
+    """ Clip the soc values above the upper_clipping threshold.
+
+    SOC predictions can be useful with and without soc restrictions. One restriction is that socs
+    can not rise above a certain threshold, mostly 1. If this should be regarded, clipping of the
+    socs is necessary. This is a more complex operation than just setting above 1 values to 1, since
+    following values depend on the previous history, e.g. the socs history without clipping
+    socs = [0.5, 1.0, 1.5, 1.8, 1.2, 1.3] in the clipped state is not [0.5, 1.0, 1.0, 1.0, 1.0, 1.0]
+    but [0.5, 1.0, 1.0, 1.0, 0.4, 0.5]
+
+    :param soc_prediction: soc_values which are clipped in place
+    :type soc_prediction: np.array()
+    :param upper_clipping: value above socs are clipped
+    :type upper_clipping: float
+    """
     soc_max = np.max(soc_prediction)
     while soc_max > upper_clipping:
         # descending array
