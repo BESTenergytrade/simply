@@ -74,7 +74,8 @@ class TestActor:
                      -1.208, -1.072, -0.277, -0.274, -0.813, -0.131, -0.844, 0.013, 0.071, -0.027,
                      -0.005, 1.08, 1.065, 1.406, 1.403, 1.341, 1.096, 1.098]
 
-    # Note: Positive load values lead to negative schedule values.
+    # Note: Splitting schedule into load and generation:
+    # Positive load values lead to negative schedule values.
     # Positive PV values lead to positive schedule values
     example_df = pd.DataFrame(
         list(zip([abs(val) if val < 0 else 0 for val in test_schedule],
@@ -203,8 +204,18 @@ class TestActor:
 
             # tolerance due to energy_unit differences
             tol = 2*cfg.config.energy_unit
+
+            # strategy 0 is fulfilling the schedule just in time. therefore the battery should not
+            # be in use, only minor fluctuations due to differences in between the energy unit
+            # and the schedule are allowed.
             assert actor.battery.energy() < tol
+
+            # in principle the market_schedule has the same values as the schedule with opposite
+            # signs. An energy need with negative sign in the schedule is met with buying energy in
+            # the market_schedule which has a positive sign.
             assert -actor.market_schedule[0] == approx(actor.pred.schedule[0], abs=tol)
+            # make sure every iteration an order is placed and also matched. Pricing must guarantee
+            # order fulfillment
             assert len(m.matches)-1 == nr_of_matches
             nr_of_matches = len(m.matches)
 

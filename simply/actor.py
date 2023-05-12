@@ -248,7 +248,8 @@ class Actor:
         """ Return the default market schedule
 
         The default market schedule is the schedule with flipped signs and minor adjustments
-        to make use of residual energy in the battery
+        to make use of residual energy in the battery. An energy need with negative sign in the
+        schedule is met with buying energy in the market_schedule which has a positive sign
 
         :return: default market schedule
         """
@@ -263,9 +264,9 @@ class Actor:
         """ Returns prediction of future socs based on schedule and market schedule
 
         Creates a prediction for the planning horizon, which is not necessarily the horizon.
-        The prediction is based on the soc of the battery the schedule and the market schedule,
+        The prediction is based on the soc of the battery, the schedule and the market schedule,
         which contains the amount the actor plans to buy or sell in a future time slot.
-        Setting clip to true, does not allow values over the clipping value
+        Setting clip to true, does not allow values above the clipping value.
 
         :param planning_horizon: how far in the future should socs be predicted
         :param clip: should the values be clipped
@@ -274,16 +275,22 @@ class Actor:
         """
         if planning_horizon is None:
             planning_horizon = self.horizon - 1
+
+        # cumulative scheduled energy per time step plus battery energy up to the planning horizon
         cum_energy_demand = (self.pred.schedule.cumsum() + self.market_schedule.cumsum() +
                              self.battery.soc * self.battery.capacity)[:planning_horizon+1]
+        #  Effect the cumulative schedule would have on SOC
         soc_prediction = np.ones(planning_horizon+1) * self.battery.soc \
             + (cum_energy_demand - self.battery.soc * self.battery.capacity) / self.battery.capacity
 
         last_val = 0
+
+        # find the last value, which is a proper value
         for counter in range(len(soc_prediction)-1, -1, -1):
             if not np.isnan(soc_prediction[counter]):
                 last_val = soc_prediction[counter]
                 break
+        # this value is used to fill up nan array values
         soc_prediction[counter:] = last_val
         if clip:
             clip_soc(soc_prediction, clip_value)
@@ -390,12 +397,12 @@ class Actor:
             # if overcharge is found, find the possible prices to sell this energy
             while overcharge > 0:
                 possible_prices = self.pred.selling_price.copy()[:self.horizon]
-                possible_prices[soc_prediction < 0 + cfg.config.EPS] = float('-inf')
+                # possible_prices[soc_prediction < 0 + cfg.config.EPS] = float('-inf')
                 # in between now and the peak, the right most/latest zero soc does not allow
                 # reducing the soc before. Energy most be sold afterwards
-                zero_soc_indices = np.where(soc_prediction[:i] < 0 + cfg.config.EPS)
-                if np.any(zero_soc_indices):
-                    right_most_peak = np.max(zero_soc_indices)
+                zero_soc_indices,  = np.where(soc_prediction[:i] < 0 + cfg.config.EPS)
+                if zero_soc_indices.size > 0:
+                    right_most_peak = np.max(zero_soc_indices)+1
                 else:
                     right_most_peak = 0
                 possible_prices[:right_most_peak] = float('-inf')
