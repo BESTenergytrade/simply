@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import pytest
 
-import simply.battery
 from simply.actor import Actor, create_random, Order
 from simply.battery import Battery
 from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD
@@ -131,19 +130,19 @@ class TestActor:
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=None, scenario=scenario)
         assert actor.battery is not None
-        assert isinstance(actor.battery, simply.battery.Battery)
+        assert isinstance(actor.battery, Battery)
         assert actor.battery.capacity == cfg.config.energy_unit*2
 
         actor = Actor(0, self.example_df, scenario=scenario)
         assert actor.battery is not None
-        assert isinstance(actor.battery, simply.battery.Battery)
+        assert isinstance(actor.battery, Battery)
         assert actor.battery.capacity == cfg.config.energy_unit*2
 
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
         assert actor.battery is not None
-        assert isinstance(actor.battery, simply.battery.Battery)
+        assert isinstance(actor.battery, Battery)
         assert actor.battery.capacity == BAT_CAPACITY
 
     def test_no_strategy(self):
@@ -440,7 +439,7 @@ class TestActor:
         socs = actor.predict_socs()
         assert max(socs) > 1
         socs_clipped = actor.predict_socs(clip=True, clip_value=1)
-        assert max(socs_clipped) >= 1
+        assert max(socs_clipped) <= 1
 
         # iterate over time steps
         for t in range(NR_STEPS):
@@ -458,7 +457,9 @@ class TestActor:
     def test_clip_soc(self):
         battery = Battery(capacity=10, soc_initial=0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
+        # constant load leads to a decrease after clipping
         actor.data.load[:] = actor.data.load * 0 + 1
+        # punctual generation exceeds battery capacity, otherwise 0
         actor.data.pv = actor.data.pv * 0
         actor.data.pv[[0, 1, 5, 7]] = 11
         actor.data.schedule = actor.data.pv - actor.data.load
