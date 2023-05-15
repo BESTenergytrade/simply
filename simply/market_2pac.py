@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 
 from simply.market import Market
+import simply.config as cfg
 
 
 class TwoSidedPayAsClear(Market):
@@ -49,13 +50,13 @@ class TwoSidedPayAsClear(Market):
                     "energy": energy,
                     "price": ask.price
                 })
-                if bid.energy < self.energy_unit:
+                if bid.energy < cfg.config.energy_unit:
                     # bid finished: next bid
                     try:
                         bid_id, bid = next(bid_iter)
                     except StopIteration:
                         bid = None
-                if ask.energy < self.energy_unit:
+                if ask.energy < cfg.config.energy_unit:
                     # ask finished: next ask
                     break
 
