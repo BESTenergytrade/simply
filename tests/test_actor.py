@@ -411,7 +411,7 @@ class TestActor:
 
         # custom pricing strategy
         # A pricing_strategy can ba a function with the inputs index, meaning time steps until some
-        # market interaction in planned in the market_schedule, the price this interaction would use
+        # market interaction is planned in the market_schedule, the price this interaction would use
         # (e.g. selling or buying price) and the energy amount, which is positive when energy is
         # bought
         # Note that the energy used is the adjusted and limited energy which is the energy
@@ -560,7 +560,7 @@ class TestActor:
 
     def test_market_schedule_adjustment(self):
         # test if the market schedule is properly adjusted when orders are matched with the pricing
-        # strategy. Pricing strategies allow for meeting
+        # strategy.
         battery = Battery(capacity=10, max_c_rate=2, soc_initial=0.0)
         # with this soc and capacity it means max 0.1 energy can be stored
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4, cluster=0)
@@ -577,7 +577,7 @@ class TestActor:
         m.accept_order(Order(1, 0, 'other_actor', 0, 4, 0.0001))
         m.clear()
 
-        # the order energy is limited to the capacity of the battery
+        # the order energy is limited by the order of "other_actor"
         assert actor.market_schedule[2] == pytest.approx(1)
 
         actor.market_schedule[1] = -5
@@ -586,7 +586,7 @@ class TestActor:
         order = actor.generate_order()
         m = BestMarket(0, self.pn)
         m.accept_order(order, callback=actor.receive_market_results)
-        # Generate  order as ask
+        # Generate order as ask
         m.accept_order(Order(-1, 0, 'other_actor', 0, 4, 9999))
         m.clear()
         assert actor.market_schedule[1] == pytest.approx(-1)
