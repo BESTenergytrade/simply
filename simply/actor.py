@@ -942,7 +942,7 @@ def get_price(pricing_strategy, index, final_price, energy):
     if callable(pricing_strategy):
         return pricing_strategy(index, final_price, energy)
 
-    if isinstance(pricing_strategy, type(dict())):
+    if not isinstance(pricing_strategy, type(dict())):
         raise TypeError("pricing_strategy is neither a callable function nor a dictionary.")
 
     # pricing strategy can be linear
