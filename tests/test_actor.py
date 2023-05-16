@@ -192,7 +192,6 @@ class TestActor:
             # and the schedule are allowed.
             assert actor.battery.energy() < tol
 
-
             # make sure every iteration an order is placed and also matched. Pricing must guarantee
             # order fulfillment
             assert len(m.matches)-1 == nr_of_matches
@@ -514,7 +513,7 @@ class TestActor:
         actor.market_schedule[check_index] = -1
         order = actor.generate_order()
         assert order.price == 1.6
-        ## 1.6 / 1 =-> reciprocal value 0.625. Therefore 10 * 0.625 ==6.25
+        # 1.6 / 1 =-> reciprocal value 0.625. Therefore 10 * 0.625 ==6.25
 
         # check that prices are still properly generated for current time step energy
         actor.market_schedule[:] = 0
@@ -591,7 +590,6 @@ class TestActor:
         m.accept_order(Order(-1, 0, 'other_actor', 0, 4, 9999))
         m.clear()
         assert actor.market_schedule[1] == pytest.approx(-1)
-
 
     def test_predict_soc(self):
         # without schedule and with no price difference, the profit an actor can make, is dependent
@@ -691,6 +689,3 @@ class TestActor:
         # Values of soc are NOT bound to 1. Overcharge is possible. Therefore soc keeps on rising
         assert 1 == socs[0] < socs[1] < socs[5] < socs[7]
         assert 1 < socs[2] < socs[6]
-
-TestActor().test_limiting_energy()
-TestActor().test_predict_soc()

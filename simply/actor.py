@@ -1,5 +1,4 @@
 import random
-import sys
 import warnings
 
 import numpy as np
@@ -614,10 +613,8 @@ class Actor:
         # get the price by using the pricing strategy
         price = self.get_price(index, final_price, energy)
 
-
         # TODO simulate strategy: manipulation, etc.
         # TODO take flexibility into account to generate the bid
-
         # TODO replace order type by enum
         # +1 as sign --> ask  i.e. wanting to sell
         # -1 as sign --> bid  i.e. wanting to buy
@@ -650,8 +647,9 @@ class Actor:
         if energy > 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
-            if self.battery.energy() + self.pred.schedule[0:index+1].sum() + \
-                    ((energy+cfg.config.EPS) // cfg.config.energy_unit * cfg.config.energy_unit) < 0:
+            if (self.battery.energy() + self.pred.schedule[0:index+1].sum() +
+                    ((energy+cfg.config.EPS) // cfg.config.energy_unit *
+                     cfg.config.energy_unit) < 0):
                 energy += cfg.config.energy_unit
 
         # selling energy
@@ -663,7 +661,6 @@ class Actor:
                     cfg.config.energy_unit) > self.battery.capacity:
                 energy -= cfg.config.energy_unit
         return energy
-
 
     def next_time_step(self):
         """Update actor and schedule and for next time step.
@@ -934,7 +931,7 @@ def get_price(pricing_strategy, index, final_price, energy):
     if callable(pricing_strategy):
         return pricing_strategy(index, final_price, energy)
 
-    if type(pricing_strategy)==type(dict()):
+    if type(pricing_strategy) == (dict()):
         if pricing_strategy["name"] == "linear":
             try:
                 m = pricing_strategy["param"][0]
@@ -984,8 +981,7 @@ def get_price(pricing_strategy, index, final_price, energy):
             # no symmetric_bound_factor was provided
             return geometric_price
 
-        if sign == True:
+        if sign > 0:
             return max(geometric_price, symmetric_bound_cap*final_price)
         else:
             return min(geometric_price, 1/symmetric_bound_cap*final_price)
-

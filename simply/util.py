@@ -41,8 +41,12 @@ def get_all_data(df, col="pv"):
     """
     return df.iloc[:, df.columns.get_level_values(1) == col]
 
+
 def actor_print(actor, header=False, _header=dict()):
-    """ Print several actor properties. First call of the function prints a header as well
+    """ Print several actor properties.
+
+    A header describing the properties as column names is printed the first call or when the
+    argument "header" is set to True.
 
     :param actor: Actor that is printed
     :type actor: actor.Actor()
@@ -54,12 +58,12 @@ def actor_print(actor, header=False, _header=dict()):
 
     if header or actor not in _header:
         header_string = ("Battery Energy, "
-                  "Actor Schedule, "
-                  "Actor Market Schedule, "
-                  "Battery SOC, "
-                  "Actor Bank, "
-                  "Buying Price, "
-                  "Matched Energy")
+                         "Actor Schedule, "
+                         "Actor Market Schedule, "
+                         "Battery SOC, "
+                         "Actor Bank, "
+                         "Buying Price, "
+                         "Matched Energy")
         print(header_string)
     _header[actor] = True
 
