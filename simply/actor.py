@@ -920,6 +920,18 @@ def clip_soc(soc_prediction, upper_clipping):
 
 
 def get_price(pricing_strategy, index, final_price, energy):
+    """ Returns the price at the current time step to generate an order early
+
+    :param pricing_strategy: strategy name and parameters or function with arguments index, price
+        and energy amount
+    :type pricing_strategy: dict() or function
+    :param index: amount of time step until interaction with market maker is planned
+    :param final_price: price of the market maker interaction
+    :param energy: amount of energy that is planned for trading. Positive amounts are buying and
+        negative amounts are selling energy
+    :return: current price for order generation
+    :rtype: float
+    """
     # the market schedule demands to buy or sell power in the current time slot. Therefore
     # pricing will be adjusted to market maker prices, i.e. the final price will be used.
     if index == 0:
@@ -932,6 +944,7 @@ def get_price(pricing_strategy, index, final_price, energy):
         return pricing_strategy(index, final_price, energy)
 
     if type(pricing_strategy) == (dict()):
+        # pricing strategy can be linear
         if pricing_strategy["name"] == "linear":
             try:
                 m = pricing_strategy["param"][0]
@@ -940,6 +953,9 @@ def get_price(pricing_strategy, index, final_price, energy):
             sign = np.sign(energy)
             return final_price - sign * index * m * final_price
 
+        # pricing strategy can be harmonic
+        # harmonic pricing changes the price according to the harmonic series meaning
+        # 1, 1/2, 1/3, 1/4, 1/5 ... and so on.
         if pricing_strategy["name"] == "harmonic":
             sign = np.sign(energy)
             # the half_life_index is the index where the price is 50% of the final price for buys.
