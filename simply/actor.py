@@ -1,4 +1,5 @@
 import random
+import sys
 import warnings
 
 import numpy as np
@@ -634,11 +635,7 @@ class Actor:
             return energy
 
         # look at all the time steps before the energy is traded with the market maker
-        self.planning_horizon = index-1
-
-
-        socs = self.predict_socs()
-        self.planning_horizon = self.horizon - 1
+        socs = self.predict_socs(planning_horizon=index-1)
 
         # buying energy
         if energy > 0:
@@ -706,17 +703,33 @@ class Actor:
         self.matched_energy_current_step += energy*sign
         # Buying energy therefore decreases the bank
         self.bank += energy*(-sign)*price
-        delta_energy = sign*energy
-        i = -1
+
+        # if there is no market planning, e.g. market_schedule, no adjustment has to take place
+        if self.market_schedule is None:
+            return
+
+        # if there is a market_schedule the matched energy has to be taken into account
         # iterate over the market schedule to reduce the market schedule according to
         # received energy
+        delta_energy = sign*energy
+        i = -1
         while np.sign(delta_energy) == sign and delta_energy != 0:
             i += 1
+            if i == len(self.market_schedule):
+                # energy amount of match was not found inside of the market schedule. Testing,
+                # unexpected behaviour or self defined orders might be the reason. In this case give
+                # warning and do not adjust market_schedule
+                warnings.warn("Matched energy does not match planned energy.")
+                return
             planned_energy = self.market_schedule[i]
-            if planned_energy != 0:
-                assert np.sign(delta_energy) == np.sign(planned_energy)
-            else:
+            if planned_energy == 0:
                 continue
+
+            # make sure that the order that got placed and matched follows the sign of the
+            # next energy need. Ignore small energies since difference occur due to energy unit
+            if (not np.sign(delta_energy) == np.sign(planned_energy)
+                    and abs(planned_energy) > 2 * cfg.config.energy_unit):
+                warnings.warn("Matched energy does not match planned energy.")
             self.market_schedule[i] -= sign*min(abs(delta_energy), abs(planned_energy))
             delta_energy -= planned_energy
 

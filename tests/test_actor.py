@@ -17,30 +17,6 @@ SELL_MULT = 0.9
 BAT_CAPACITY = 3
 
 
-def actor_print(actor, header=False, _header=dict()):
-    if not header or actor in _header:
-        pass
-    else:
-        header = ("Battery Energy, "
-                  "Actor Schedule, "
-                  "Actor Market Schedule, "
-                  "Battery SOC, "
-                  "Actor Bank, "
-                  "Buying Price, "
-                  "Matched Energy")
-        print(header)
-    _header[actor] = True
-
-    print(f"{actor.t},"
-          f"{round(actor.battery.energy(),4)}, "
-          f"{round(actor.pred.schedule[0],4)}, "
-          f"{round(actor.market_schedule[0],4)}, "
-          f"{round(actor.battery.soc,4)}, "
-          f"{round(actor.bank,4)},"
-          f"{round(actor.pred.price[0],4)},"
-          f"{round(actor.matched_energy_current_step,4)}")
-
-
 def market_step(actor, market, step_time):
     order = actor.generate_order()
     # Get the order into the market
@@ -191,24 +167,32 @@ class TestActor:
 
         m = BestMarket(0, self.pn)
         nr_of_matches = 0
+
+        # tolerance due to energy_unit differences
+        tol = 2 * cfg.config.energy_unit
+
         # iterate through time steps
         for t in range(NR_STEPS):
             m.t = t
             actor.get_market_schedule(strategy=0)
+
+            # in principle the market_schedule has the same values as the schedule with opposite
+            # signs. An energy need with negative sign in the schedule is met with buying energy in
+            # the market_schedule which has a positive sign.
+            assert -actor.market_schedule[0] == approx(actor.pred.schedule[0], abs=tol)
             market_step(actor, m, t)
 
-            # tolerance due to energy_unit differences
-            tol = 2*cfg.config.energy_unit
+            # after the market step including matching and dis/charging the battery. the market
+            # schedule is adjusted, meaning the market_schedule is reduced by the matched energy
+            # Therefore the 1st element should be close to zero
+            assert -actor.market_schedule[0] == approx(0, abs=tol)
 
             # strategy 0 is fulfilling the schedule just in time. therefore the battery should not
             # be in use, only minor fluctuations due to differences in between the energy unit
             # and the schedule are allowed.
             assert actor.battery.energy() < tol
 
-            # in principle the market_schedule has the same values as the schedule with opposite
-            # signs. An energy need with negative sign in the schedule is met with buying energy in
-            # the market_schedule which has a positive sign.
-            assert -actor.market_schedule[0] == approx(actor.pred.schedule[0], abs=tol)
+
             # make sure every iteration an order is placed and also matched. Pricing must guarantee
             # order fulfillment
             assert len(m.matches)-1 == nr_of_matches
@@ -390,7 +374,7 @@ class TestActor:
         # the market plan is to buy 10 energy in 5 time steps in the future
         actor.market_schedule[5] = 10
         order = actor.generate_order()
-        # the order energy is limited to the capacity of the battery
+        # the order energy is limited to 1% capacity of the battery which is initialized at 99%
         assert order.energy == pytest.approx(0.1)
 
         # vice versa if the plan was to sell energy only 9.9 energy could be sold at this point
@@ -651,13 +635,13 @@ class TestActor:
         for t in range(NR_STEPS):
             m.t = t
             market_step(actor, m, t)
+            # reset market_schedule
+            actor.market_schedule[:] = -1
             actor.next_time_step()
             assert socs[t] == pytest.approx(actor.battery.soc)
             print(socs[t], actor.battery.soc)
 
         # check production and clipping
-        # check if prediction of soc lines up with actual soc when the schedule and market schedule
-        # has values
         m = BestMarket(0, self.pn)
         battery = Battery(capacity=10, soc_initial=0)
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
@@ -678,7 +662,6 @@ class TestActor:
             market_step(actor, m, t)
             actor.next_time_step()
             assert socs[t] == pytest.approx(actor.battery.soc)
-            print(socs[t], actor.battery.soc)
 
         # check if planning horizon is working as intended
         planning_horizon = 12
@@ -708,3 +691,6 @@ class TestActor:
         # Values of soc are NOT bound to 1. Overcharge is possible. Therefore soc keeps on rising
         assert 1 == socs[0] < socs[1] < socs[5] < socs[7]
         assert 1 < socs[2] < socs[6]
+
+TestActor().test_limiting_energy()
+TestActor().test_predict_soc()

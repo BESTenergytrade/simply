@@ -40,3 +40,34 @@ def get_all_data(df, col="pv"):
     :return: DataFrame with single column level comprising all columns of equal sub-column name col
     """
     return df.iloc[:, df.columns.get_level_values(1) == col]
+
+def actor_print(actor, header=False, _header=dict()):
+    """ Print several actor properties. First call of the function prints a header as well
+
+    :param actor: Actor that is printed
+    :type actor: actor.Actor()
+    :param header: Should the header be printed
+    :type header: bool
+    :param _header: do not use, private dictionary
+    :type _header: dict()
+    """
+
+    if header or actor not in _header:
+        header_string = ("Battery Energy, "
+                  "Actor Schedule, "
+                  "Actor Market Schedule, "
+                  "Battery SOC, "
+                  "Actor Bank, "
+                  "Buying Price, "
+                  "Matched Energy")
+        print(header_string)
+    _header[actor] = True
+
+    print(f"{actor.t},"
+          f"{round(actor.battery.energy(),4)}, "
+          f"{round(actor.pred.schedule[0],4)}, "
+          f"{round(actor.market_schedule[0],4)}, "
+          f"{round(actor.battery.soc,4)}, "
+          f"{round(actor.bank,4)},"
+          f"{round(actor.pred.price[0],4)},"
+          f"{round(actor.matched_energy_current_step,4)}")
