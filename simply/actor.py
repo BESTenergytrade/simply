@@ -592,7 +592,6 @@ class Actor:
         # better than guaranteed prices
         if energy == 0:
             index = None
-            final_price = None
             for i, energy in enumerate(self.market_schedule):
                 if energy != 0:
                     index = i
@@ -943,44 +942,46 @@ def get_price(pricing_strategy, index, final_price, energy):
     if callable(pricing_strategy):
         return pricing_strategy(index, final_price, energy)
 
-    if type(pricing_strategy) == (dict()):
-        # pricing strategy can be linear
-        if pricing_strategy["name"] == "linear":
-            try:
-                m = pricing_strategy["param"][0]
-            except TypeError:
-                m = pricing_strategy["param"]
-            sign = np.sign(energy)
-            return final_price - sign * index * m * final_price
+    if isinstance(pricing_strategy, type(dict())):
+        raise TypeError("pricing_strategy is neither a callable function nor a dictionary.")
 
-        # pricing strategy can be harmonic
-        # harmonic pricing changes the price according to the harmonic series meaning
-        # 1, 1/2, 1/3, 1/4, 1/5 ... and so on.
-        if pricing_strategy["name"] == "harmonic":
-            sign = np.sign(energy)
-            # the half_life_index is the index where the price is 50% of the final price for buys.
-            # if energy is supposed to be sold, its 200% instead
-            half_life_index = pricing_strategy["param"][0]
-            error = "Harmonic series needs a positive non zero float value as first parameter"
-            assert half_life_index > 0, error
-            factor = ((index / half_life_index) + 1)**-1
-            try:
-                symmetric_bound_factor = pricing_strategy["param"][1]
-            except IndexError:
-                # no symmetric_bound_factor was provided
-                return factor ** sign * final_price
+    # pricing strategy can be linear
+    if pricing_strategy["name"] == "linear":
+        try:
+            m = pricing_strategy["param"][0]
+        except TypeError:
+            m = pricing_strategy["param"]
+        sign = np.sign(energy)
+        return final_price - sign * index * m * final_price
 
-            # symmetric bound is always smaller than 1 and represents the convergence value of the
-            # harmonic series. The default harmonic series convergences to 0 or diverges to infinity
-            # if a symmetric_bound as second parameter is given the series will converge to
-            # lim --> symmetric_bound_factor*final price instead
-            # for sells it diverges to 1/symmetric_bound_factor*final price
-            if symmetric_bound_factor > 1:
-                symmetric_bound_factor = 1/symmetric_bound_factor
-            delta_price = (1-symmetric_bound_factor)*final_price
-            buy_price = (delta_price * factor + (final_price-delta_price))
-            price = (buy_price/final_price)**sign * final_price
-            return price
+    # pricing strategy can be harmonic
+    # harmonic pricing changes the price according to the harmonic series meaning
+    # 1, 1/2, 1/3, 1/4, 1/5 ... and so on.
+    if pricing_strategy["name"] == "harmonic":
+        sign = np.sign(energy)
+        # the half_life_index is the index where the price is 50% of the final price for buys.
+        # if energy is supposed to be sold, its 200% instead
+        half_life_index = pricing_strategy["param"][0]
+        error = "Harmonic series needs a positive non zero float value as first parameter"
+        assert half_life_index > 0, error
+        factor = ((index / half_life_index) + 1)**-1
+        try:
+            symmetric_bound_factor = pricing_strategy["param"][1]
+        except IndexError:
+            # no symmetric_bound_factor was provided
+            return factor ** sign * final_price
+
+        # symmetric bound is always smaller than 1 and represents the convergence value of the
+        # harmonic series. The default harmonic series convergences to 0 or diverges to infinity
+        # if a symmetric_bound as second parameter is given the series will converge to
+        # lim --> symmetric_bound_factor*final price instead
+        # for sells it diverges to 1/symmetric_bound_factor*final price
+        if symmetric_bound_factor > 1:
+            symmetric_bound_factor = 1/symmetric_bound_factor
+        delta_price = (1-symmetric_bound_factor)*final_price
+        buy_price = (delta_price * factor + (final_price-delta_price))
+        price = (buy_price/final_price)**sign * final_price
+        return price
 
     if pricing_strategy["name"] == "geometric":
         sign = np.sign(energy)
@@ -1001,3 +1002,6 @@ def get_price(pricing_strategy, index, final_price, energy):
             return max(geometric_price, symmetric_bound_cap*final_price)
         else:
             return min(geometric_price, 1/symmetric_bound_cap*final_price)
+
+    raise ValueError("pricing_strategy is a dictionary but does not contain a valid strategy under "
+                     "the key 'name'.")
