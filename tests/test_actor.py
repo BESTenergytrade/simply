@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import pytest
 
-
 from simply.actor import Actor, create_random, Order
 from simply.battery import Battery
 from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD
@@ -74,7 +73,8 @@ class TestActor:
                      -1.208, -1.072, -0.277, -0.274, -0.813, -0.131, -0.844, 0.013, 0.071, -0.027,
                      -0.005, 1.08, 1.065, 1.406, 1.403, 1.341, 1.096, 1.098]
 
-    # Note: Positive load values lead to negative schedule values.
+    # Note: Splitting schedule into load and generation:
+    # Positive load values lead to negative schedule values.
     # Positive PV values lead to positive schedule values
     example_df = pd.DataFrame(
         list(zip([abs(val) if val < 0 else 0 for val in test_schedule],
@@ -123,6 +123,28 @@ class TestActor:
         # time series is longer than one day
         assert a.data.index[0].date() != a.data.index[-1].date()
 
+    def test_default_battery(self):
+        pn = PowerNetwork("", nx.random_tree(1))
+        scenario = Scenario(pn, [], None, steps_per_hour=4)
+        battery = Battery(
+            capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        actor = Actor(0, self.example_df, battery=None, scenario=scenario)
+        assert actor.battery is not None
+        assert isinstance(actor.battery, Battery)
+        assert actor.battery.capacity == cfg.config.energy_unit*2
+
+        actor = Actor(0, self.example_df, scenario=scenario)
+        assert actor.battery is not None
+        assert isinstance(actor.battery, Battery)
+        assert actor.battery.capacity == cfg.config.energy_unit*2
+
+        battery = Battery(
+            capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
+        assert actor.battery is not None
+        assert isinstance(actor.battery, Battery)
+        assert actor.battery.capacity == BAT_CAPACITY
+
     def test_no_strategy(self):
         # overwrite strategy 0 with zero buys/sells. Assert that the simulation throws an error
         pn = PowerNetwork("", nx.random_tree(1))
@@ -131,22 +153,28 @@ class TestActor:
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
-        m = BestMarket(0, self.pn)
 
-        # make sure error is thrown
-        with pytest.raises(AssertionError):
-            # iterate over time steps
-            for t in range(NR_STEPS):
-                m.t = t
-                actor.get_market_schedule(strategy=0)
+        foo = "foo"
+        with pytest.warns(UserWarning, match=foo):
+            actor.get_market_schedule(strategy=foo)
 
-                # nullify market schedule
-                actor.market_schedule *= 0
-                market_step(actor, m, t)
+        # having an actor strategy should not overwrite the explicit strategy call
+        actor.strategy = 3
+        with pytest.warns(UserWarning, match=foo):
+            actor.get_market_schedule(strategy=foo)
 
-                for a in scenario.actors:
-                    # update all actors for the next market time slot
-                    a.next_time_step()
+        # assert that the strategy used when no strategy is given as argument, that the default
+        # market_schedule is different
+        strategy_3 = actor.get_market_schedule().copy()
+        strategy_0_explicit = actor.get_market_schedule(strategy=0).copy()
+        actor.strategy = 0
+        strategy_0_implicit = actor.get_market_schedule().copy()
+
+        # at least one value has to be different
+        assert (strategy_0_explicit != strategy_3).any()
+
+        # all values must be equal
+        assert (strategy_0_implicit == strategy_0_explicit).all()
 
     def test_rule_based_strategy_0(self):
         # the simplest strategy which buys or sells exactly the amount of the schedule at the time
@@ -170,9 +198,19 @@ class TestActor:
             market_step(actor, m, t)
 
             # tolerance due to energy_unit differences
-            tol = 2*actor.energy_unit
+            tol = 2*cfg.config.energy_unit
+
+            # strategy 0 is fulfilling the schedule just in time. therefore the battery should not
+            # be in use, only minor fluctuations due to differences in between the energy unit
+            # and the schedule are allowed.
             assert actor.battery.energy() < tol
+
+            # in principle the market_schedule has the same values as the schedule with opposite
+            # signs. An energy need with negative sign in the schedule is met with buying energy in
+            # the market_schedule which has a positive sign.
             assert -actor.market_schedule[0] == approx(actor.pred.schedule[0], abs=tol)
+            # make sure every iteration an order is placed and also matched. Pricing must guarantee
+            # order fulfillment
             assert len(m.matches)-1 == nr_of_matches
             nr_of_matches = len(m.matches)
 
@@ -570,4 +608,103 @@ class TestActor:
         m.clear()
         assert actor.market_schedule[1] == pytest.approx(-1)
 
-TestActor().test_market_schedule_adjustment()
+
+    def test_predict_soc(self):
+        # without schedule and with no price difference, the profit an actor can make, is dependent
+        # on the cumulated sum of positive price gradients and the battery capacity
+        m = BestMarket(0, self.pn)
+        battery = Battery(capacity=10, soc_initial=1)
+        actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
+        actor.data.load[:] = actor.data.load * 0 + 1
+        actor.data.pv = actor.data.pv * 0
+        actor.data.schedule = actor.data.pv - actor.data.load
+        actor.create_prediction()
+        actor.get_market_schedule(strategy=0)
+        actor.market_schedule[:] = 0
+        socs = actor.predict_socs()
+
+        # number of steps depends on data input. assertion only works if last step ends on price
+        # maximum, since only then the actor makes use of stored energy by selling it
+        NR_STEPS = 10
+        # iterate over time steps
+
+        # check if prediction of soc lines up with actual soc when only the schedule has values
+        for t in range(NR_STEPS):
+            m.t = t
+            market_step(actor, m, t)
+            actor.next_time_step()
+            assert socs[t] == pytest.approx(actor.battery.soc)
+
+        # check if prediction of soc lines up with actual soc when the schedule and market schedule
+        # has values
+        m = BestMarket(0, self.pn)
+        battery = Battery(capacity=20, soc_initial=1)
+        actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
+        actor.data.load[:] = actor.data.load * 0 + 1
+        actor.data.pv = actor.data.pv * 0
+        actor.data.schedule = actor.data.pv - actor.data.load
+        actor.create_prediction()
+        actor.get_market_schedule(strategy=0)
+        actor.market_schedule[:] = -1
+        socs = actor.predict_socs()
+        # iterate over time steps
+        for t in range(NR_STEPS):
+            m.t = t
+            market_step(actor, m, t)
+            actor.next_time_step()
+            assert socs[t] == pytest.approx(actor.battery.soc)
+            print(socs[t], actor.battery.soc)
+
+        # check production and clipping
+        # check if prediction of soc lines up with actual soc when the schedule and market schedule
+        # has values
+        m = BestMarket(0, self.pn)
+        battery = Battery(capacity=10, soc_initial=0)
+        actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
+        actor.data.load[:] = actor.data.load * 0
+        actor.data.pv = actor.data.pv * 0 + 1
+        actor.data.schedule = actor.data.pv - actor.data.load
+        actor.create_prediction()
+        actor.get_market_schedule(strategy=0)
+        actor.market_schedule[:] = 0
+        socs = actor.predict_socs()
+        assert max(socs) > 1
+        socs_clipped = actor.predict_socs(clip=True, clip_value=1)
+        assert max(socs_clipped) <= 1
+
+        # iterate over time steps
+        for t in range(NR_STEPS):
+            m.t = t
+            market_step(actor, m, t)
+            actor.next_time_step()
+            assert socs[t] == pytest.approx(actor.battery.soc)
+            print(socs[t], actor.battery.soc)
+
+        # check if planning horizon is working as intended
+        planning_horizon = 12
+        socs = actor.predict_socs(planning_horizon=planning_horizon)
+        assert len(socs) == planning_horizon+1
+
+    def test_clip_soc(self):
+        battery = Battery(capacity=10, soc_initial=0)
+        actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
+        # constant load leads to a decrease after clipping
+        actor.data.load[:] = actor.data.load * 0 + 1
+        # punctual generation exceeds battery capacity, otherwise 0
+        actor.data.pv = actor.data.pv * 0
+        actor.data.pv[[0, 1, 5, 7]] = 11
+        actor.data.schedule = actor.data.pv - actor.data.load
+        actor.create_prediction()
+        actor.get_market_schedule(strategy=0)
+        actor.market_schedule[:] = 0
+
+        socs = actor.predict_socs(clip=True, clip_value=1)
+        # Values of soc are bound to 1. Overcharge is not possible. Therefore soc drops below 1
+        # right after production events at 0,1,5,7
+        assert socs[0] == socs[1] == socs[5] == socs[7] == 1
+        assert socs[2] == socs[6] < 1
+
+        socs = actor.predict_socs(clip=False)
+        # Values of soc are NOT bound to 1. Overcharge is possible. Therefore soc keeps on rising
+        assert 1 == socs[0] < socs[1] < socs[5] < socs[7]
+        assert 1 < socs[2] < socs[6]

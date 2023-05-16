@@ -6,7 +6,6 @@ import pandas as pd
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
-from simply.scenario import EPS
 from simply.battery import Battery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
@@ -42,11 +41,16 @@ class Actor:
 
     :param int actor_id: unique identifier of the actor
     :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "price" are processed
+    :param .battery.Battery() battery: Battery used by the actor
     :param str csv: Filename in which this actor's data should be stored
     :param float ls: (optional) Scaling factor for load time series
     :param float ps: (optional) Scaling factor for photovoltaic time series
     :param dict pm: (optional) Prediction multiplier used to manipulate prediction time series based
         on the data time series
+    :param int cluster: cluster in which actor is located
+    :param int strategy: Number for strategy [0-3]
+    :param .scenario.Scenario() scenario: Scenario reference for the actor
+    :param int _steps_per_hour: Frequency of data per hour
 
     Members:
 
@@ -57,8 +61,8 @@ class Actor:
     t : int
         Actor's current time slot should equal current market time slot (init default: 0)
     horizon : int
-        [unused] Horizon up to which energy management is considered
-        (default: cfg.parser.get("actor", "horizon", fallback=24))
+        Horizon up to which energy management is considered
+        (default defined in simply.config)
     load_scale : float
         Scaling factor for load time series (default: init ls)
     pv_scale : float
@@ -66,7 +70,7 @@ class Actor:
     error_scale : float
         [unused] Noise scaling factor (default: 0)
     battery : object
-        [unused] Representation of a battery (default: None)
+        Representation of a battery (default: None)
     data : pandas.DataFrame()
         Actual generation and load time series as would be measured (default: init df)
     pred : pandas.DataFrame()
@@ -79,6 +83,26 @@ class Actor:
     self.traded : dict
         Dictionary of received trading results per time slot including matched energy and clearing
         prices
+    self.cluster: int
+        cluster in which actor is located
+    self.strategy: int
+        Number for strategy [0-3]
+    self.scenario: .scenario.Scenario()
+        Scenario reference for the actor
+    self.steps_per_hour: int
+        Frequency of data per hour
+    self.battery: .battery.Battery()
+        Battery used by the actor
+    self.bank: float
+        cumulated earnings and costs of this actor similar to a bank account balance
+    self.matched_energy_current_step: float
+        Amount of matched energy by orders of this actor in the current time step
+    self.predicted_soc: np.array()
+        predicted soc values for future time steps based on the battery state and planned actor
+        behaviour
+    self.market_schedule: np.array()
+        planed energy amounts for interaction with the market_maker and basis of order generation
+
     """
 
     def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1, pm={}, cluster=None,
@@ -91,11 +115,9 @@ class Actor:
         self.id = actor_id
         self.grid_id = None
         self.cluster = cluster
-        self.t = cfg.parser.getint("default", "start", fallback=0)
-        self.horizon = cfg.parser.getint("default", "horizon", fallback=24)
-        self.planning_horizon = self.horizon-1
-        # ToDo: Use reference to scenario or market
-        self.energy_unit = cfg.parser.getfloat("default", "energy_unit", fallback=0.01)
+        self.t = cfg.config.start
+
+        self.horizon = cfg.config.horizon
 
         self._steps_per_hour = _steps_per_hour
         # Let the actor have a reference to the scenario
@@ -117,7 +139,7 @@ class Actor:
         self.error_scale = 0
         self.battery = battery
         if self.battery is None:
-            self.battery = Battery(capacity=0)
+            self.battery = Battery(capacity=2*cfg.config.energy_unit)
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -227,7 +249,8 @@ class Actor:
         """ Return the default market schedule
 
         The default market schedule is the schedule with flipped signs and minor adjustments
-        to make use of residual energy in the battery
+        to make use of residual energy in the battery. An energy need with negative sign in the
+        schedule is met with buying energy in the market_schedule which has a positive sign
 
         :return: default market schedule
         """
@@ -238,28 +261,37 @@ class Actor:
         default_market_schedule[0] -= self.battery.energy()
         return default_market_schedule
 
-    def predict_socs(self, clip=False, clip_value=1):
+    def predict_socs(self, clip=False, clip_value=1, planning_horizon=None):
         """ Returns prediction of future socs based on schedule and market schedule
 
         Creates a prediction for the planning horizon, which is not necessarily the horizon.
-        The prediction is based on the soc of the battery the schedule and the market schedule,
+        The prediction is based on the soc of the battery, the schedule and the market schedule,
         which contains the amount the actor plans to buy or sell in a future time slot.
-        Setting clip to true, does not allow values over the clipping value
+        Setting clip to true, does not allow values above the clipping value.
 
+        :param planning_horizon: how far in the future should socs be predicted
         :param clip: should the values be clipped
         :param clip_value: value where socs are clipped to
         :return: soc prediction for planning horizon
         """
+        if planning_horizon is None:
+            planning_horizon = self.horizon - 1
+
+        # cumulative scheduled energy per time step plus battery energy up to the planning horizon
         cum_energy_demand = (self.pred.schedule.cumsum() + self.market_schedule.cumsum() +
-                             self.battery.soc * self.battery.capacity)[:self.planning_horizon+1]
-        soc_prediction = np.ones(self.planning_horizon+1) * self.battery.soc \
+                             self.battery.soc * self.battery.capacity)[:planning_horizon+1]
+        #  Effect the cumulative schedule would have on SOC
+        soc_prediction = np.ones(planning_horizon+1) * self.battery.soc \
             + (cum_energy_demand - self.battery.soc * self.battery.capacity) / self.battery.capacity
 
         last_val = 0
+
+        # find the last value, which is a proper value
         for counter in range(len(soc_prediction)-1, -1, -1):
             if not np.isnan(soc_prediction[counter]):
                 last_val = soc_prediction[counter]
                 break
+        # this value is used to fill up nan array values
         soc_prediction[counter:] = last_val
         if clip:
             clip_soc(soc_prediction, clip_value)
@@ -280,6 +312,8 @@ class Actor:
         self.market_schedule = np.roll(self.market_schedule, -1)
         self.market_schedule[-1] = 0
         soc_prediction = self.predict_socs(clip=True)
+        planning_horizon = self.horizon - 1
+
         # Go through the cumulated demands, deducting the demand if we plan on buying energy
         for i, _ in enumerate(soc_prediction):
             energy = soc_prediction[i] * self.battery.capacity
@@ -289,10 +323,8 @@ class Actor:
                 # is needed
                 possible_global_prices = np.ones(self.horizon) * float('inf')
                 # prices are set where the soc in not full yet
-                # possible_global_prices[(0- EPS<=soc_prediction )* (soc_prediction < 1 + EPS)] = \
-                #     self.prices[(0 -EPS<soc_prediction )* (soc_prediction < 1 + EPS)]
-                possible_global_prices[(soc_prediction < 1 - EPS)] = \
-                    self.pred.price[(soc_prediction < 1 - EPS)]
+                possible_global_prices[(soc_prediction < 1 - cfg.config.EPS)] = \
+                    self.pred.price[(soc_prediction < 1 - cfg.config.EPS)]
 
                 # index for the last inf value between now and energy demand
                 last_inf_index = np.argwhere(possible_global_prices[:i + 1] >= float('inf'))
@@ -336,12 +368,12 @@ class Actor:
             # if the predicted soc is 1 for the time steps before the current one, it is not
             # possible to buy energy before. Since planning used only for time step 0, rest can
             # be skipped
-            if max(soc_prediction[:i+1]) >= 1-EPS:
+            if max(soc_prediction[:i+1]) >= 1-cfg.config.EPS:
                 # set planning horizon for soc_prediction
-                self.planning_horizon = i
+                planning_horizon = i
                 break
 
-        soc_prediction = self.predict_socs(clip=False)
+        soc_prediction = self.predict_socs(clip=False, planning_horizon=planning_horizon)
         self.predicted_soc = soc_prediction
 
         return self.market_schedule
@@ -355,10 +387,8 @@ class Actor:
         multiple time slots will be used to sell the energy.
         :return: market_schedule
         """
-        # set planning horizon for soc_prediction
-        self.planning_horizon = self.horizon-1
         soc_prediction = self.predict_socs(clip=False)
-        soc_prediction = soc_prediction[:self.planning_horizon+1]
+        soc_prediction = soc_prediction[:self.horizon]
 
         # ToDo selling is not capped by max c-rate of battery
         # iterate over socs
@@ -367,25 +397,34 @@ class Actor:
             overcharge = energy - self.battery.capacity
             # if overcharge is found, find the possible prices to sell this energy
             while overcharge > 0:
-                possible_prices = self.pred.selling_price.copy()[:self.planning_horizon+1]
-                possible_prices[soc_prediction < 0 + EPS] = float('-inf')
+                possible_prices = self.pred.selling_price.copy()[:self.horizon]
                 # in between now and the peak, the right most/latest zero soc does not allow
                 # reducing the soc before. Energy most be sold afterwards
-                zero_soc_indices = np.where(soc_prediction[:i] < 0 + EPS)
-                if np.any(zero_soc_indices):
-                    right_most_peak = np.max(zero_soc_indices)
+                zero_soc_indices,  = np.where(soc_prediction[:i] < 0 + cfg.config.EPS)
+                if zero_soc_indices.size > 0:
+                    right_most_peak = np.max(zero_soc_indices)+1
                 else:
                     right_most_peak = 0
                 possible_prices[:right_most_peak] = float('-inf')
                 highest_price_index = np.argmax(possible_prices[:i + 1])
 
-                # if the energy is sold at the time of production no storage is needed
+                # best price is at the time of energy generation, therefore no restrictions towards
+                # amounts of energy apply
                 if highest_price_index == i:
                     self.market_schedule[i] -= overcharge
                     soc_prediction = self.predict_socs(clip=False)
                     break
 
-                soc_to_zero = min(np.min(soc_prediction[highest_price_index:i + 1]), 1)
+                # if the energy is NOT sold at the time of production storage limitations need to be
+                # taken into account
+
+                # the time span in which energy could be sold to reduce the overcharge ends with
+                # the overcharge itself and goes back for as long as no 0 soc is found. This is
+                # the possible starting point for selling. In this time span the highest price was
+                # found at the highest_price_index. At this index only as much energy can be sold as
+                # the min predicted soc, in between this index and the time of overcharge, provides.
+                soc_to_zero = np.min(soc_prediction[highest_price_index:i + 1])
+                assert soc_to_zero <= 1
                 energy_to_zero = soc_to_zero * self.battery.capacity
                 sellable_energy = min(energy_to_zero, overcharge)
                 self.market_schedule[highest_price_index] -= sellable_energy
@@ -393,7 +432,7 @@ class Actor:
                 soc_prediction = self.predict_socs(clip=False)
 
             # early breaking in case of reaching zero soc
-            if min(soc_prediction[:i+1]) <= 0+EPS:
+            if min(soc_prediction[:i+1]) <= 0+cfg.config.EPS:
                 break
 
         soc_prediction = self.predict_socs(clip=False)
@@ -406,21 +445,21 @@ class Actor:
         soc_prediction = self.predict_socs(clip=False)
 
         # planning to trade for the current time step is only possible until a soc of 1 is reached.
-        planning_horizon = np.argwhere([soc_prediction >= 1-EPS])
+        planning_horizon = np.argwhere([soc_prediction >= 1-cfg.config.EPS])
         if planning_horizon.size == 0:
-            pass
+            planning_horizon = self.horizon - 1
         else:
-            self.planning_horizon = planning_horizon[0, 1]-1
-        soc_prediction = soc_prediction[:self.planning_horizon+1]
-        buy_prices = np.array(self.pred.price.values)[:self.planning_horizon+1]
-        sell_prices = np.array(self.pred.selling_price.values)[:self.planning_horizon+1]
+            planning_horizon = planning_horizon[0, 1]-1
+        soc_prediction = soc_prediction[:planning_horizon+1]
+        buy_prices = np.array(self.pred.price.values)[:planning_horizon+1]
+        sell_prices = np.array(self.pred.selling_price.values)[:planning_horizon+1]
         # ToDo selling is not capped by max c-rate of battery
         # ++++++++++++++++++++
         sorted_buy_indexes = np.argsort(buy_prices)
         # go through all buying possibilities starting from the lowest price
         for buy_index in sorted_buy_indexes:
             buying_price = buy_prices[buy_index]
-            possible_prices = sell_prices.copy()[:self.planning_horizon+1]
+            possible_prices = sell_prices.copy()[:planning_horizon+1]
 
             # prices before buying can not be used for selling
             possible_prices[:buy_index + 1] = float("-inf")
@@ -430,15 +469,15 @@ class Actor:
                 sell_indices = sell_indices.squeeze(axis=1)
             # if there are possible selling points of energy and there is the possibility of
             # storing energy in between, i.e soc<1
-            while sell_indices.size > 0 and soc_prediction[
-                                             buy_index:sell_indices[0]+1].max() < 1 - EPS:
+            while (sell_indices.size > 0 and
+                    soc_prediction[buy_index:sell_indices[0]+1].max() < 1 - cfg.config.EPS):
 
                 found_sell_index = None
 
                 # make sure selling is not considered for sell_indices which lie behind an soc==1
                 # event. They can not be used, since the battery can not be charged higher.
                 socs = np.array(soc_prediction)
-                soc_idx_almost_one = np.argwhere(socs[buy_index:] > 1 - EPS) + buy_index
+                soc_idx_almost_one = np.argwhere(socs[buy_index:] > 1 - cfg.config.EPS) + buy_index
                 if soc_idx_almost_one.size > 0:
                     soc_idx_almost_one = soc_idx_almost_one.squeeze(axis=1)
                     left_most_soc_to_buy_index = min(soc_idx_almost_one)
@@ -480,9 +519,9 @@ class Actor:
                 assert storable_energy > 0
                 self.market_schedule[buy_index] += storable_energy
                 self.market_schedule[found_sell_index] -= storable_energy
-                soc_prediction = self.predict_socs(clip=False)
-                assert 1 >= max(soc_prediction)-EPS
-                assert 0 <= min(soc_prediction[:-1])+EPS
+                soc_prediction = self.predict_socs(clip=False, planning_horizon=planning_horizon)
+                assert 1 >= max(soc_prediction)-cfg.config.EPS
+                assert 0 <= min(soc_prediction[:-1])+cfg.config.EPS
         self.predicted_soc = soc_prediction
         return self.market_schedule
 
@@ -509,7 +548,7 @@ class Actor:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
     def update_battery(self, _cache=dict()):
-        """Update the battery state depending on the currently scheduled planning time step.
+        """Update the battery state with the current schedule and the matched energy in this step.
 
         This function needs to be called once per time step to track the energy inside of the
         battery. It takes the planned, i.e. predicted, schedule and changes the battery's SOC
@@ -574,12 +613,13 @@ class Actor:
         # get the price by using the pricing strategy
         price = self.get_price(index, final_price, energy)
 
+
         # TODO simulate strategy: manipulation, etc.
         # TODO take flexibility into account to generate the bid
 
         # TODO replace order type by enum
-        # +1 as sign --> ask
-        # -1 as sign --> bid
+        # +1 as sign --> ask  i.e. wanting to sell
+        # -1 as sign --> bid  i.e. wanting to buy
         # Therefore the sign is the negative of the sign of the energy
         new = Order(np.sign(-energy), self.t, self.id, self.cluster, abs(energy), price)
         self.orders.append(new)
@@ -614,16 +654,17 @@ class Actor:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
             if self.battery.energy() + self.pred.schedule[0:index+1].sum() + \
-                    ((energy+EPS) // self.energy_unit * self.energy_unit) < 0:
-                energy += self.energy_unit
+                    ((energy+cfg.config.EPS) // cfg.config.energy_unit * cfg.config.energy_unit) < 0:
+                energy += cfg.config.energy_unit
 
         # selling energy
         elif energy < 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or over 1 socs.
             # In these cases decrease the order by one energy unit, i.e. sell more energy
             if self.battery.energy() + self.pred.schedule[0:index+1].sum() + (
-                    ((energy+EPS) // self.energy_unit + 1) * self.energy_unit) > self.battery.capacity:
-                energy -= self.energy_unit
+                    ((energy+cfg.config.EPS) // cfg.config.energy_unit + 1) *
+                    cfg.config.energy_unit) > self.battery.capacity:
+                energy -= cfg.config.energy_unit
         return energy
 
 
@@ -639,10 +680,8 @@ class Actor:
         if self.battery and not self.pred.empty:
             self.update_battery()
             self.socs.append(self.battery.soc)
-        print(self.pred.schedule[0], self.market_schedule[0], self.matched_energy_current_step)
         self.t += 1
         self.matched_energy_current_step = 0
-        self.planning_horizon = self.horizon-1
         self.create_prediction()
 
     def receive_market_results(self, time, sign, energy, price):
@@ -749,9 +788,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     df["price"] = df.apply(lambda slot: slot["price"] - (slot["schedule"] > 0)
                            * net_price_factor * slot["price"], axis=1)
     # makes sure that the battery capacity is big enough, even if no useful trading takes place
-    # todo randomize if generate order takes care of meeting demands through a market strategy
-    energy_unit = cfg.parser.getfloat("default", "energy_unit", fallback=0.01)
-    battery_capacity = max(random.random()*10, 2 * energy_unit)
+    battery_capacity = max(random.random()*10, 2 * cfg.config.energy_unit)
     return Actor(actor_id, df, battery=Battery(capacity=battery_capacity), ls=ls, ps=ps)
 
 
@@ -837,6 +874,20 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
 
 
 def clip_soc(soc_prediction, upper_clipping):
+    """ Clip the soc values above the upper_clipping threshold.
+
+    SOC predictions can be useful with and without soc restrictions. One restriction is that socs
+    can not rise above a certain threshold, mostly 1. If this should be regarded, clipping of the
+    socs is necessary. This is a more complex operation than just setting above 1 values to 1, since
+    following values depend on the previous history, e.g. the socs history without clipping
+    socs = [0.5, 1.0, 1.5, 1.8, 1.2, 1.3] in the clipped state is not [0.5, 1.0, 1.0, 1.0, 1.0, 1.0]
+    but [0.5, 1.0, 1.0, 1.0, 0.4, 0.5]
+
+    :param soc_prediction: soc_values which are clipped in place
+    :type soc_prediction: np.array()
+    :param upper_clipping: value above socs are clipped
+    :type upper_clipping: float
+    """
     soc_max = np.max(soc_prediction)
     while soc_max > upper_clipping:
         # descending array

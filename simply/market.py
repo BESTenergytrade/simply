@@ -17,23 +17,20 @@ class Market:
     This class provides a basic matching strategy which may be overridden.
     """
 
-    def __init__(self, time, network=None, grid_fee_matrix=None, default_grid_fee=0):
+    def __init__(self, time, network=None, grid_fee_matrix=None):
         self.orders = pd.DataFrame(columns=Order._fields)
         self.t = time
         self.trades = None
         self.matches = []
-        self.energy_unit = cfg.parser.getfloat("default", "energy_unit", fallback=0.01)
         self.actor_callback = {}
         self.network = network
-        self.save_csv = cfg.parser.getboolean("default", "save_csv", fallback=False)
-        self.csv_path = Path(cfg.parser.get("default", "path", fallback="./scenarios/default"))
-        self.default_grid_fee = default_grid_fee
+        self.save_csv = cfg.config.save_csv
+        self.csv_path = Path(cfg.config.path)
         self.grid_fee_matrix = grid_fee_matrix
         if network is not None and grid_fee_matrix is None:
             self.grid_fee_matrix = network.grid_fee_matrix
         if self.grid_fee_matrix:
             self.add_default_grid_fee()
-        self.EPS = 1e-10
         if self.save_csv:
             match_header = ["time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
                             "ask_cluster", "energy", "price", 'included_grid_fee']
@@ -43,8 +40,9 @@ class Market:
     def add_default_grid_fee(self):
         # append column and row containing the default grid fee
         for row in self.grid_fee_matrix:
-            row.append(self.default_grid_fee)
-        additional_row = [self.default_grid_fee for i in range((len(self.grid_fee_matrix) + 1))]
+            row.append(cfg.config.default_grid_fee)
+        additional_row = [cfg.config.default_grid_fee
+                          for _ in range((len(self.grid_fee_matrix) + 1))]
         self.grid_fee_matrix.append(additional_row)
 
     def get_bids(self):
@@ -98,9 +96,10 @@ class Market:
             order = order._replace(cluster=cluster)
 
         # make certain energy has step size of energy_unit
-        energy = ((order.energy + self.EPS) // self.energy_unit) * self.energy_unit
+        energy = (
+            (order.energy + cfg.config.EPS) // cfg.config.energy_unit) * cfg.config.energy_unit
         # make certain enough energy is traded
-        if energy < self.energy_unit:
+        if energy < cfg.config.energy_unit:
             return
         order = order._replace(energy=energy)
         # If an order ID parameter is not set,
@@ -145,7 +144,7 @@ class Market:
             self.orders = pd.DataFrame(columns=Order._fields)
         else:
             # remove fully matched orders
-            self.orders = self.orders[self.orders.energy >= self.energy_unit]
+            self.orders = self.orders[self.orders.energy >= cfg.config.energy_unit]
 
     def match(self, show=False):
         """
@@ -177,7 +176,7 @@ class Market:
                     continue
                 if self.grid_fee_matrix:
                     self.apply_grid_fee(ask, bid)
-                if ask.energy >= self.energy_unit and bid.energy >= self.energy_unit \
+                if ask.energy >= cfg.config.energy_unit and bid.energy >= cfg.config.energy_unit \
                         and ask.price <= bid.price:
                     # match ask and bid
                     energy = min(ask.energy, bid.energy)
@@ -274,4 +273,4 @@ class Market:
         except TypeError:
             # if an actor as none as cluster, e.g. the market maker, a TypeError will be thrown.
             # use default grid fee in this case.
-            ask.price += self.default_grid_fee
+            ask.price += cfg.config.default_grid_fee
