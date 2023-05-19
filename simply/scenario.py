@@ -1,13 +1,14 @@
 import json
 from networkx.readwrite import json_graph
 import pandas as pd
+import numpy as np
 import random
 import matplotlib.pyplot as plt
 
 from simply import actor
 from simply import power_network
 from simply.util import get_all_data
-
+from simply.market_maker import MarketMaker
 
 class Scenario:
     """
@@ -15,7 +16,15 @@ class Scenario:
      connected (power_network). RNG seed is preserved so results can be reproduced.
     """
 
-    def __init__(self, network, actors, map_actors, rng_seed=None, steps_per_hour=4):
+    def __init__(self,
+                 network,
+                 actors,
+                 map_actors,
+                 mm_buy_prices: np.array,
+                 rng_seed=None,
+                 steps_per_hour=4,
+                 **kwargs):
+
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
 
@@ -24,6 +33,8 @@ class Scenario:
         self.steps_per_hour = steps_per_hour
         # maps node ids to actors
         self.map_actors = map_actors
+        self.time_step = 0
+        self.market_maker = MarketMaker(scenario=self, buy_prices=mm_buy_prices, **kwargs)
 
     def from_config(self):
         pass
@@ -179,8 +190,9 @@ def create_random(num_nodes, num_actors, weight_factor):
     # Update shortest paths and the grid fee matrix
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
+    mm_buy_prices = np.random.random(100)
 
-    return Scenario(pn, actors, map_actors)
+    return Scenario(pn, actors, map_actors, mm_buy_prices=mm_buy_prices)
 
 
 def create_random2(num_nodes, num_actors):

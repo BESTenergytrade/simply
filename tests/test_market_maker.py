@@ -1,0 +1,76 @@
+import numpy as np
+import pytest
+from simply.market import ASK, BID, MARKET_MAKER_THRESHOLD
+from simply.market_maker import MarketMaker
+import simply.config as cfg
+
+class StubClass:
+    def __init__(self):
+        pass
+
+
+class TestMarketMaker:
+    cfg.Config("")
+    buy_prices = np.arange(1,100,1)
+    # For testing purposes a Stub Class of the scenario is helpful. This way market_maker
+    # construction can take place outside of scenario creation and a pseudo scenario is passed
+    # to the constructor
+    test_scenario = StubClass()
+    test_scenario.time_step = 0
+
+    def test_init(self):
+        market_maker = MarketMaker(scenario=self.test_scenario, buy_prices=self.buy_prices)
+
+    def test_price_comparison(self):
+        cfg.config.default_grid_fee = 1
+        market_maker = MarketMaker(scenario=self.test_scenario, buy_prices=self.buy_prices)
+
+        cfg.config.default_grid_fee = -1
+        # Assertion error should be thrown since mm would buy for higher prices than he would sell
+        # for
+        with pytest.raises(AssertionError):
+            market_maker = MarketMaker(scenario=self.test_scenario, buy_prices=self.buy_prices)
+            cfg.config.default_grid_fee = 0
+
+    def test_order_generation(self):
+        time_step = 0
+        self.test_scenario.time_step = time_step
+        grid_fee = 0.5
+        cfg.config.default_grid_fee = grid_fee
+        market_maker = MarketMaker(scenario=self.test_scenario, buy_prices=self.buy_prices)
+        orders = market_maker.generate_orders()
+        bid_order, = [order for order in orders if order.type == BID]
+        ask_order, = [order for order in orders if order.type == ASK]
+        assert bid_order.price == self.buy_prices[time_step]
+        assert ask_order.price == self.buy_prices[time_step] + grid_fee
+
+        # test if the energy amount is correct
+        assert bid_order.energy == MARKET_MAKER_THRESHOLD
+        assert ask_order.energy == MARKET_MAKER_THRESHOLD
+
+        # test if it works for different time steps
+        time_step = 5
+        self.test_scenario.time_step = time_step
+        market_maker.create_prediction()
+        orders = market_maker.generate_orders()
+        bid_order, = [order for order in orders if order.type == BID]
+        ask_order, = [order for order in orders if order.type == ASK]
+        assert bid_order.price == self.buy_prices[time_step]
+        assert ask_order.price == self.buy_prices[time_step] + grid_fee
+
+        # if no new prediction is created this should fail
+        time_step = 7
+        self.test_scenario.time_step = time_step
+        orders = market_maker.generate_orders()
+        bid_order, = [order for order in orders if order.type == BID]
+        ask_order, = [order for order in orders if order.type == ASK]
+        with pytest.raises(AssertionError):
+            assert bid_order.price == self.buy_prices[time_step]
+        with pytest.raises(AssertionError):
+            assert ask_order.price == self.buy_prices[time_step] + grid_fee
+
+
+
+
+
+

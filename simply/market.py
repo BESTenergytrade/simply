@@ -5,6 +5,10 @@ import csv
 import simply.config as cfg
 from simply.actor import Order
 
+LARGE_ORDER_THRESHOLD = 2**32
+MARKET_MAKER_THRESHOLD = 2**63-1
+ASK = +1
+BID = -1
 
 class Market:
     """

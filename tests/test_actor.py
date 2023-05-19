@@ -37,6 +37,7 @@ class TestActor:
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
+    scenario = Scenario(pn, [], None, [], steps_per_hour=4)
     test_prices = [0.082, 0.083, 0.087, 0.102, 0.112, 0.122, 0.107, 0.103, 0.1, 0.1, 0.09, 0.082,
                    0.083, 0.083, 0.094, 0.1, 0.11, 0.109, 0.106, 0.105, 0.1, 0.093, 0.084, 0.081,
                    0.078, 0.074, 0.074, 0.079, 0.081, 0.083, 0.079, 0.074, 0.07, 0.067, 0.065,
@@ -101,22 +102,21 @@ class TestActor:
 
     def test_default_battery(self):
         pn = PowerNetwork("", nx.random_tree(1))
-        scenario = Scenario(pn, [], None, steps_per_hour=4)
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=None, scenario=scenario)
+        actor = Actor(0, self.example_df, battery=None, scenario=self.scenario)
         assert actor.battery is not None
         assert isinstance(actor.battery, Battery)
         assert actor.battery.capacity == cfg.config.energy_unit*2
 
-        actor = Actor(0, self.example_df, scenario=scenario)
+        actor = Actor(0, self.example_df, scenario=self.scenario)
         assert actor.battery is not None
         assert isinstance(actor.battery, Battery)
         assert actor.battery.capacity == cfg.config.energy_unit*2
 
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
+        actor = Actor(0, self.example_df, battery=battery, scenario=self.scenario)
         assert actor.battery is not None
         assert isinstance(actor.battery, Battery)
         assert actor.battery.capacity == BAT_CAPACITY
@@ -124,11 +124,9 @@ class TestActor:
     def test_no_strategy(self):
         # overwrite strategy 0 with zero buys/sells. Assert that the simulation throws an error
         pn = PowerNetwork("", nx.random_tree(1))
-
-        scenario = Scenario(pn, [], None, steps_per_hour=4)
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
+        actor = Actor(0, self.example_df, battery=battery, scenario=self.scenario)
 
         foo = "foo"
         with pytest.warns(UserWarning, match=foo):
@@ -158,10 +156,11 @@ class TestActor:
         # line up with the traded_energy amount, e.g. schedule does not have 0.01 steps.
         pn = PowerNetwork("", nx.random_tree(1))
 
-        scenario = Scenario(pn, [], None, steps_per_hour=4)
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
+        self.scenario.actors=[]
+
+        actor = Actor(0, self.example_df, battery=battery, scenario=self.scenario)
         actor.data.selling_price *= SELL_MULT
         actor.create_prediction()
 
@@ -197,7 +196,7 @@ class TestActor:
             assert len(m.matches)-1 == nr_of_matches
             nr_of_matches = len(m.matches)
 
-            for a in scenario.actors:
+            for a in self.scenario.actors:
                 # update all actors for the next market time slot
                 a.next_time_step()
 
@@ -210,10 +209,9 @@ class TestActor:
         # buying only in the current time slots
         pn = PowerNetwork("", nx.random_tree(1))
 
-        scenario = Scenario(pn, [], None, steps_per_hour=4)
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=battery, scenario=scenario)
+        actor = Actor(0, self.example_df, battery=battery, scenario=self.scenario)
         actor.data.selling_price *= SELL_MULT
         actor.create_prediction()
         m = BestMarket(0, self.pn)
@@ -286,7 +284,6 @@ class TestActor:
             market_step(actor, m, t)
             assert len(m.matches)-1 == nr_of_matches
             nr_of_matches = len(m.matches)
-
             actor.next_time_step()
         ratings["strategy_2"] = actor.bank
         minimal_price = actor.data.selling_price.min()

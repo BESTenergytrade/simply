@@ -9,16 +9,16 @@ class TestScenario:
     def test_init(self):
         # network, actors, map_actors, [rng_seed]
         pn = PowerNetwork("", nx.random_tree(1))
-        s = Scenario(pn, [], None)
+        s = Scenario(pn, [], None, [])
         # random seed, but None
-        s = Scenario(pn, [], None)
+        s = Scenario(pn, [], None, [])
         assert s.rng_seed is not None
-        s = Scenario(pn, [], None, 0)
+        s = Scenario(pn, [], None, [], 0)
         assert s.rng_seed == 0
 
     def test_to_dict(self):
         pn = PowerNetwork("", nx.random_tree(1))
-        s = Scenario(pn, [], None)
+        s = Scenario(pn, [], None, [])
         assert set(s.to_dict()).issuperset({"rng_seed", "power_network", "actors", "map_actors"})
 
     def test_random(self):

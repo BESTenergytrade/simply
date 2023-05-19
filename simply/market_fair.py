@@ -2,8 +2,9 @@ import pandas as pd
 
 from simply.market import Market
 import simply.config as cfg
-LARGE_ORDER_THRESHOLD = 2**32
-MARKET_MAKER_THRESHOLD = 2**63-1
+
+from simply.market import LARGE_ORDER_THRESHOLD
+from simply.market import MARKET_MAKER_THRESHOLD
 
 
 class BestMarket(Market):
