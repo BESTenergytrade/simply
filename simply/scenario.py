@@ -4,11 +4,12 @@ import pandas as pd
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-
+import simply.config as cfg
 from simply import actor
 from simply import power_network
 from simply.util import get_all_data
 from simply.market_maker import MarketMaker
+
 
 class Scenario:
     """
@@ -20,6 +21,7 @@ class Scenario:
                  network,
                  actors,
                  map_actors,
+                 market: 'simply.market',
                  mm_buy_prices: np.array,
                  rng_seed=None,
                  steps_per_hour=4,
@@ -33,8 +35,25 @@ class Scenario:
         self.steps_per_hour = steps_per_hour
         # maps node ids to actors
         self.map_actors = map_actors
-        self.time_step = 0
+        self.time_step = cfg.config.start
+        self.market = market
         self.market_maker = MarketMaker(scenario=self, buy_prices=mm_buy_prices, **kwargs)
+
+    def market_step(self):
+        for actor_ in self.actors:
+            orders = actor_.generate_orders()
+            for order in orders:
+                self.market.accept_order(order, callback=actor_.receive_market_results)
+        self.market.clear()
+
+    def next_time_step(self):
+        for actor_ in self.actors:
+            actor_.next_time_step()
+
+        self.time_step += 1
+
+        for actor_ in self.actors:
+            actor_.create_prediction()
 
     def from_config(self):
         pass
@@ -207,8 +226,9 @@ def create_random2(num_nodes, num_actors):
 
     # TODO tbd if actors are already part of topology ore create additional nodes
     # pn.add_actors_map(map_actors)
+    mm_buy_prices = np.random.random(100)
 
-    return Scenario(pn, actors, map_actors)
+    return Scenario(pn, actors, map_actors, mm_buy_prices)
 
 
 def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_hour=4, nb_ts=None):

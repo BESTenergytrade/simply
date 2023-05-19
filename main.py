@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     # Fast forward to interesting start interval for PV energy trading
     for a in sc.actors:
-        a.t = cfg.start
+        a.t_step = cfg.start
 
     # generate requested market
     if "pac" in cfg.market_type:
@@ -81,7 +81,7 @@ if __name__ == "__main__":
             a.get_market_schedule()
             # orders are generated based on the flexibility towards the planned market interaction
             # and a pricing scheme
-            order = a.generate_order()
+            order = a.generate_orders()
             if order:
                 m.accept_order(order, callback=a.receive_market_results)
 

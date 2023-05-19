@@ -105,8 +105,8 @@ class Actor:
 
     """
 
-    def __init__(self, actor_id, df, battery=None, csv=None, ls=1, ps=1, pm={}, cluster=None,
-                 strategy: int = 0, scenario=None, _steps_per_hour=None, pricing_strategy=None):
+    def __init__(self, actor_id, df, scenario, battery=None, csv=None, ls=1, ps=1, pm={}, cluster=None,
+                 strategy: int = 0, _steps_per_hour=None, pricing_strategy=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -115,7 +115,6 @@ class Actor:
         self.id = actor_id
         self.grid_id = None
         self.cluster = cluster
-        self.t = cfg.config.start
 
         self.horizon = cfg.config.horizon
 
@@ -177,6 +176,11 @@ class Actor:
         self.traded = {}
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
+
+    def get_t_step(self):
+        return self.scenario.time_step
+    # creating a property object
+    t_step = property(get_t_step)
 
     # getter
     def get_steps_per_hour(self):
@@ -542,7 +546,7 @@ class Actor:
         for column in ["load", "pv", "price", "selling_price", "schedule"]:
             if column in self.data.columns:
                 self.pred[column] = \
-                    self.data[column].iloc[self.t: self.t + self.horizon].reset_index(drop=True) \
+                    self.data[column].iloc[self.t_step: self.t_step + self.horizon].reset_index(drop=True) \
                     + self.pm[column]
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
@@ -559,11 +563,11 @@ class Actor:
         # _cache keeps track of method calls by storing the last time of the method call at the
         # key of self/object reference. This makes sure that energy is only taken once per time step
         if self not in _cache:
-            _cache[self] = self.t
+            _cache[self] = self.t_step
         else:
             error = "Actor used the battery twice in a single time step"
-            assert _cache[self] < self.t, error
-            _cache[self] = self.t
+            assert _cache[self] < self.t_step, error
+            _cache[self] = self.t_step
 
         # assumes schedule is positive when pv is produced, Assertion error useful during
         # development to be certain
@@ -573,7 +577,7 @@ class Actor:
         # or discharge more power than the max c rate
         self.battery.charge(self.pred.schedule[0] + self.matched_energy_current_step)
 
-    def generate_order(self):
+    def generate_orders(self):
         """
         Generate new order for current time slot according to predicted schedule
         and both store and return it.
@@ -585,7 +589,7 @@ class Actor:
         energy = self.market_schedule[0]
 
         if energy == 0 and self.pricing_strategy is None or all(self.market_schedule == 0):
-            return None
+            return [None]
 
         # the market schedule does not demand to buy or sell energy at the current time slot, but
         # a pricing strategy is provided which allows to generate orders for future demands, with
@@ -618,9 +622,9 @@ class Actor:
         # +1 as sign --> ask  i.e. wanting to sell
         # -1 as sign --> bid  i.e. wanting to buy
         # Therefore the sign is the negative of the sign of the energy
-        new = Order(np.sign(-energy), self.t, self.id, self.cluster, abs(energy), price)
+        new = Order(np.sign(-energy), self.t_step, self.id, self.cluster, abs(energy), price)
         self.orders.append(new)
-        return new
+        return [new]
 
     def get_price(self, index, final_price, energy):
         return get_price(self.pricing_strategy, index, final_price, energy)
@@ -668,14 +672,12 @@ class Actor:
         Changes actor attributes according to the events in the current time step
         The events can be the impact of schedule and trading on the battery soc or the bank / cost
         for the actor in this time step.
-        Update the prediction horizon to the current time step."""
+        """
 
         if self.battery and not self.pred.empty:
             self.update_battery()
             self.socs.append(self.battery.soc)
-        self.t += 1
         self.matched_energy_current_step = 0
-        self.create_prediction()
 
     def receive_market_results(self, time, sign, energy, price):
         """
@@ -688,7 +690,7 @@ class Actor:
         """
 
         # order time and actor time have to be in sync
-        assert time == self.t
+        assert time == self.t_step
         # sign can only take two values
         assert sign in [-1, 1]
         # append traded energy and price to actor's trades
@@ -761,7 +763,7 @@ class Actor:
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
-def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
+def create_random(actor_id, scenario, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     """
     Create actor instance with random asset time series and random scaling factors
 
@@ -798,7 +800,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
                            * net_price_factor * slot["price"], axis=1)
     # makes sure that the battery capacity is big enough, even if no useful trading takes place
     battery_capacity = max(random.random()*10, 2 * cfg.config.energy_unit)
-    return Actor(actor_id, df, battery=Battery(capacity=battery_capacity), ls=ls, ps=ps)
+    return Actor(actor_id, df, scenario, battery=Battery(capacity=battery_capacity), ls=ls, ps=ps)
 
 
 def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,

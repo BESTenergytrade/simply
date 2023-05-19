@@ -18,7 +18,7 @@ BAT_CAPACITY = 3
 
 
 def market_step(actor, market, step_time):
-    order = actor.generate_order()
+    order, = actor.generate_orders()
     # Get the order into the market
     market.accept_order(order, callback=actor.receive_market_results)
     # Generate market maker order as ask
@@ -31,19 +31,31 @@ def market_step(actor, market, step_time):
     market.clear()
 
 
+class StubClass:
+    def __init__(self):
+        pass
+
+
 class TestActor:
+    stub_scenario = StubClass()
+    stub_scenario.time_step = 0
+    stub_scenario.actors = []
+
     df = pd.DataFrame(np.random.rand(24, 4), columns=["load", "pv", "price", "schedule"])
     cfg.Config("")
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
-    scenario = Scenario(pn, [], None, [], steps_per_hour=4)
+
     test_prices = [0.082, 0.083, 0.087, 0.102, 0.112, 0.122, 0.107, 0.103, 0.1, 0.1, 0.09, 0.082,
                    0.083, 0.083, 0.094, 0.1, 0.11, 0.109, 0.106, 0.105, 0.1, 0.093, 0.084, 0.081,
                    0.078, 0.074, 0.074, 0.079, 0.081, 0.083, 0.079, 0.074, 0.07, 0.067, 0.065,
                    0.067, 0.073, 0.075, 0.085, 0.095, 0.107, 0.107, 0.107, 0.107, 0.1, 0.094, 0.087,
                    0.08]
 
+    market = BestMarket(0, pn)
+
+    scenario = Scenario(pn, [], None, market, np.tile(test_prices, 10) , steps_per_hour=4)
     test_schedule = [0.164, 0.077, 0.019, -0.038, -0.281, -0.054, -0.814, -1.292, -1.301, -1.303,
                      -1.27, -1.228, -1.301, -0.392, -0.564, -0.411, 1.046, 1.385, 1.448, 1.553,
                      0.143, 0.123, 0.172, 0.094, 0.084, 0.075, -0.017, -0.071, -0.147, -0.23,
@@ -62,19 +74,21 @@ class TestActor:
 
     def test_init(self):
         # actor_id, dataframe, load_scale, power_scale, pm (?)
-        a = Actor(0, self.df)
+        a = Actor(0, self.df, self.stub_scenario)
         assert a is not None
 
     def test_generate_orders(self):
-        a = Actor(0, self.df)
-        o = a.generate_order()
+        a = Actor(0, self.df, self.stub_scenario)
+        o = a.generate_orders()
+        assert len(o) == 1
+
         assert len(a.orders) == 1
-        assert o.actor_id == 0
+        assert o[0].actor_id == 0
 
     def test_recv_market_results(self):
         # time, sign, energy, price
-        a = Actor(0, self.df)
-        o = a.generate_order()
+        a = Actor(0, self.df, self.stub_scenario)
+        o, = a.generate_orders()
         assert o.time == 0
         a.receive_market_results(o.time, o.type, o.energy / 4, o.price)
         # must be tuple at key 0 (current time)
@@ -91,20 +105,17 @@ class TestActor:
         assert len(a.traded[0][1]) == 2
 
     def test_create_random(self):
-        a = create_random(0)
+        a = create_random(0, self.stub_scenario)
         assert a.id == 0
 
     def test_create_random_multidays_halfhour(self):
         data_cfg = {"nb_ts": 96, "ts_hour": 2}
-        a = create_random(0, **data_cfg)
+        a = create_random(0, self.stub_scenario, **data_cfg)
         # time series is longer than one day
         assert a.data.index[0].date() != a.data.index[-1].date()
 
     def test_default_battery(self):
-        pn = PowerNetwork("", nx.random_tree(1))
-        battery = Battery(
-            capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=None, scenario=self.scenario)
+        actor = Actor(0, self.example_df,  self.stub_scenario, battery=None)
         assert actor.battery is not None
         assert isinstance(actor.battery, Battery)
         assert actor.battery.capacity == cfg.config.energy_unit*2
@@ -123,11 +134,11 @@ class TestActor:
 
     def test_no_strategy(self):
         # overwrite strategy 0 with zero buys/sells. Assert that the simulation throws an error
-        pn = PowerNetwork("", nx.random_tree(1))
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=self.scenario)
 
+        # Check if UserWarning correctly prints out the strategy name if the strategy is not found
         foo = "foo"
         with pytest.warns(UserWarning, match=foo):
             actor.get_market_schedule(strategy=foo)
@@ -154,11 +165,10 @@ class TestActor:
         # the simplest strategy which buys or sells exactly the amount of the schedule at the time
         # the energy is needed. A battery is still needed since schedule values do not necessarily
         # line up with the traded_energy amount, e.g. schedule does not have 0.01 steps.
-        pn = PowerNetwork("", nx.random_tree(1))
 
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        self.scenario.actors=[]
+        self.scenario.actors = []
 
         actor = Actor(0, self.example_df, battery=battery, scenario=self.scenario)
         actor.data.selling_price *= SELL_MULT
@@ -195,10 +205,7 @@ class TestActor:
             # order fulfillment
             assert len(m.matches)-1 == nr_of_matches
             nr_of_matches = len(m.matches)
-
-            for a in self.scenario.actors:
-                # update all actors for the next market time slot
-                a.next_time_step()
+            self.scenario.next_time_step()
 
         ratings["strategy_0"] = actor.bank
 
@@ -207,14 +214,19 @@ class TestActor:
         # predicted to be needed.
         # test that strategy 1 works without errors. Assert that price of energy is lower than
         # buying only in the current time slots
-        pn = PowerNetwork("", nx.random_tree(1))
 
+        # reset scenario
+        self.scenario.actors = []
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, scenario=self.scenario)
+        m = BestMarket(0, self.pn)
+        self.scenario.market = m
+        self.scenario.time_step = 0
+
         actor.data.selling_price *= SELL_MULT
         actor.create_prediction()
-        m = BestMarket(0, self.pn)
+
         nr_of_matches = 0
 
         cost_no_strat = 0
@@ -248,7 +260,7 @@ class TestActor:
             if actor.pred.schedule[0] > 0:
                 assert actor.pred.schedule[0] + actor.market_schedule[0] >= 0
             assert all(actor.market_schedule[1:] >= 0)
-            actor.next_time_step()
+            self.scenario.next_time_step()
 
         # make sure energy was bought for a lower price than just buying energy when it is needed.
         assert cost_with_strat < cost_no_strat
@@ -271,11 +283,17 @@ class TestActor:
         # exactly when the battery would reach an soc of 1 or higher.
         # Assert that price of energy is lower than
         # buying only in the current time slots
-        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
-        actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4)
+        # reset scenario
+        self.scenario.actors = []
+        battery = Battery(
+            capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
+        actor = Actor(0, self.example_df, battery=battery, scenario=self.scenario)
+        m = BestMarket(0, self.pn)
+        self.scenario.market = m
+        self.scenario.time_step = 0
+
         actor.data.selling_price *= SELL_MULT
         actor.create_prediction()
-        m = BestMarket(0, self.pn)
         nr_of_matches = 0
         # iterate over time steps
         for t in range(NR_STEPS):
@@ -284,7 +302,10 @@ class TestActor:
             market_step(actor, m, t)
             assert len(m.matches)-1 == nr_of_matches
             nr_of_matches = len(m.matches)
-            actor.next_time_step()
+
+            self.scenario.next_time_step()
+
+
         ratings["strategy_2"] = actor.bank
         minimal_price = actor.data.selling_price.min()
         bank_in_bat = minimal_price * actor.battery.energy()
@@ -369,7 +390,7 @@ class TestActor:
         actor.market_schedule[:] = 0
         # the market plan is to buy 10 energy in 5 time steps in the future
         actor.market_schedule[5] = 10
-        order = actor.generate_order()
+        order = actor.generate_orders()
         # the order energy is limited to 1% capacity of the battery which is initialized at 99%
         assert order.energy == pytest.approx(0.1)
 
@@ -378,7 +399,7 @@ class TestActor:
         actor.get_market_schedule(strategy=0)
         actor.market_schedule[:] = 0
         actor.market_schedule[5] = -10
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.energy == pytest.approx(9.9)
 
     def test_pricing(self):
@@ -403,7 +424,7 @@ class TestActor:
         actor.pricing_strategy = None
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = energy_amount
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order is None
 
         # custom pricing strategy
@@ -414,12 +435,12 @@ class TestActor:
         # Note that the energy used is the adjusted and limited energy which is the energy
         # in the order. this amount is limited by battery capacity
         actor.pricing_strategy = lambda index, final_price, energy: final_price/index + energy
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == buy_price/check_index + energy_amount
         actor.market_schedule[:] = 0
         energy_amount = - energy_amount
         actor.market_schedule[check_index] = energy_amount
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == sell_price/check_index + energy_amount
 
         # linear pricing function increases or decreases the order price by the given factor.
@@ -430,11 +451,11 @@ class TestActor:
         check_index = 4
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == buy_price - check_index*0.1*buy_price
 
         actor.market_schedule[check_index] = -1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == sell_price + check_index*0.1*sell_price
 
         # make sure final price is given when the next time step with energy needs is the current
@@ -442,17 +463,17 @@ class TestActor:
         check_index = 0
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == buy_price
 
         actor.market_schedule[check_index] = -1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == sell_price
 
         # negative prices are possible when buying
         actor.market_schedule[:] = 0
         actor.market_schedule[20] = 1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price < 0
 
         # test harmonic pricing
@@ -466,34 +487,34 @@ class TestActor:
         check_index = 0
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == buy_price
         actor.market_schedule[check_index] = -1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == sell_price
 
         # check that for index = half_life_index, the final price is halved
         check_index = 3
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == buy_price / 2
 
         # check that for index = half_life_index, the final price is doubled for selling
         actor.market_schedule[check_index] = -1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == sell_price * 2
 
         # double the half_life_index means a third of the final_price
         check_index = 6
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == pytest.approx(buy_price / 3)
 
         # and vice versa for selling
         actor.market_schedule[check_index] = -1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == sell_price * 3
 
         # harmonic pricing allows for a second parameter called symmetric_bound_factor. It leads to
@@ -503,24 +524,24 @@ class TestActor:
         check_index = 15
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == 6.25
 
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = -1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == 1.6
         # 1.6 / 1 =-> reciprocal value 0.625. Therefore 10 * 0.625 ==6.25
 
         # check that prices are still properly generated for current time step energy
         actor.market_schedule[:] = 0
         actor.market_schedule[0] = 1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == buy_price
 
         actor.market_schedule[:] = 0
         actor.market_schedule[0] = -1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == sell_price
 
         # test geometric series
@@ -531,12 +552,12 @@ class TestActor:
         check_index = 3
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == pytest.approx(buy_price*0.9**3)
 
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = -1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == pytest.approx(sell_price * (1/0.9) ** 3)
 
         # a second parameter can be used to cap the price to a factor of the final price
@@ -547,12 +568,12 @@ class TestActor:
         check_index = 6
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == 0.7*buy_price
 
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = -1
-        order = actor.generate_order()
+        order = actor.generate_orders()
         assert order.price == pytest.approx(1/0.7 * sell_price)
 
     def test_market_schedule_adjustment(self):
@@ -567,7 +588,7 @@ class TestActor:
         actor.pred.schedule[[2, 12, 13]] = -5
         actor.get_market_schedule(strategy=0)
         assert actor.market_schedule[2] == 5
-        order = actor.generate_order()
+        order = actor.generate_orders()
         m = BestMarket(0, self.pn)
         m.accept_order(order, callback=actor.receive_market_results)
         # Generate  order as ask
@@ -580,7 +601,7 @@ class TestActor:
         actor.market_schedule[1] = -5
         # order will only be generated if the soc actually has energy to sell
         actor.battery.charge(7)
-        order = actor.generate_order()
+        order = actor.generate_orders()
         m = BestMarket(0, self.pn)
         m.accept_order(order, callback=actor.receive_market_results)
         # Generate order as ask
@@ -686,3 +707,5 @@ class TestActor:
         # Values of soc are NOT bound to 1. Overcharge is possible. Therefore soc keeps on rising
         assert 1 == socs[0] < socs[1] < socs[5] < socs[7]
         assert 1 < socs[2] < socs[6]
+
+# TestActor().test_rule_based_strategy_1()

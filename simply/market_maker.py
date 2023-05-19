@@ -40,6 +40,12 @@ class MarketMaker:
         self.horizon = cfg.config.horizon
         self.pred = pd.DataFrame()
         self.create_prediction()
+        self.traded = {}
+        self.sold_energy = [0]
+        self.bought_energy = [0]
+
+        if self not in self.scenario.actors:
+            self.scenario.actors.append(self)
 
     def get_t_step(self):
         return self.scenario.time_step
@@ -79,3 +85,27 @@ class MarketMaker:
         orders = [mm_sell_order, mm_buy_order]
         return orders
 
+    def receive_market_results(self, time, sign, energy, price):
+        """
+        Callback function when order is matched. Updates the actor's individual trading result.
+
+        :param str time: time slot of market results
+        :param int sign: for energy sold or bought represented by -1 or +1  respectively
+        :param float energy: energy volume that was successfully traded
+        :param float price: achieved clearing price for the stated energy
+        """
+
+        # append traded energy and price to actor's trades
+        post = (sign * energy, price)
+        pre = self.traded.get(time, ([], []))
+        self.traded[time] = tuple(e + [post[i]] for i, e in enumerate(pre))
+        if sign == -1:
+            self.sold_energy[-1] += energy
+        elif sign == +1:
+            self.bought_energy[-1] += energy
+        else:
+            raise ValueError
+
+    def next_time_step(self):
+        self.sold_energy.append(0)
+        self.bought_energy.append(0)
