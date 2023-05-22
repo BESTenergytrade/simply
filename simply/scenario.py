@@ -1,4 +1,6 @@
 import json
+import warnings
+
 from networkx.readwrite import json_graph
 import pandas as pd
 import numpy as np
@@ -9,6 +11,23 @@ from simply import actor
 from simply import power_network
 from simply.util import get_all_data
 from simply.market_maker import MarketMaker
+from simply.actor import Actor
+from simply.market import Market
+
+
+class Environment:
+    """
+    Representation of the environment which is visible to all actors. Decouples scenario information
+    from actors.
+    """
+
+    def __init__(self, buy_prices, steps_per_hour, add_actor_to_scenario, **kwargs):
+        self.time_step = cfg.config.start
+        self.steps_per_hour = steps_per_hour
+        self.add_actor_to_scenario = add_actor_to_scenario
+
+        self.market_maker = MarketMaker(environment=self, buy_prices=buy_prices, **kwargs)
+
 
 
 class Scenario:
@@ -22,22 +41,28 @@ class Scenario:
                  actors,
                  map_actors,
                  market: 'simply.market',
-                 mm_buy_prices: np.array,
+                 buy_prices: np.array,
                  rng_seed=None,
                  steps_per_hour=4,
                  **kwargs):
 
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
-
+        self.market = market
         self.power_network = network
         self.actors = list(actors)
-        self.steps_per_hour = steps_per_hour
         # maps node ids to actors
         self.map_actors = map_actors
-        self.time_step = cfg.config.start
-        self.market = market
-        self.market_maker = MarketMaker(scenario=self, buy_prices=mm_buy_prices, **kwargs)
+        self._buy_prices = buy_prices.copy()
+        self.kwargs = kwargs
+
+        self.environment = Environment(buy_prices, steps_per_hour, self.add_actor, **kwargs)
+
+    def add_actor(self, new_actor):
+        actor_or_market_maker = isinstance(new_actor, Actor) or isinstance(new_actor, MarketMaker)
+        assert actor_or_market_maker
+        if actor not in self.actors:
+            self.actors.append(new_actor)
 
     def market_step(self):
         for actor_ in self.actors:
@@ -50,7 +75,7 @@ class Scenario:
         for actor_ in self.actors:
             actor_.next_time_step()
 
-        self.time_step += 1
+        self.environment.time_step += 1
 
         for actor_ in self.actors:
             actor_.create_prediction()
@@ -138,6 +163,17 @@ class Scenario:
         load_df[~mask].sum(axis=1).plot(ax=ax[2])
         ax[2].legend(["pv", "load"])
         plt.show()
+
+    def reset(self):
+        """ Reset the scenario after a simulation is run"""
+        # Remove previous actors
+        self.actors = []
+        # But add the market maker
+        self.market.reset()
+        self.environment.market_maker = MarketMaker(
+            environment=self.environment, buy_prices=self._buy_prices.copy())
+        self.environment.time_step = cfg.config.start
+
 
 
 def from_dict(scenario_dict):
@@ -281,3 +317,4 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
     pn.generate_grid_fee_matrix(weight_factor)
 
     return Scenario(pn, actors, map_actors, steps_per_hour=ts_hour)
+

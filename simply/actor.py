@@ -49,8 +49,7 @@ class Actor:
         on the data time series
     :param int cluster: cluster in which actor is located
     :param int strategy: Number for strategy [0-3]
-    :param .scenario.Scenario() scenario: Scenario reference for the actor
-    :param int _steps_per_hour: Frequency of data per hour
+    :param .scenario.Environment() Environment: Environment reference for the actor
 
     Members:
 
@@ -87,10 +86,8 @@ class Actor:
         cluster in which actor is located
     self.strategy: int
         Number for strategy [0-3]
-    self.scenario: .scenario.Scenario()
-        Scenario reference for the actor
-    self.steps_per_hour: int
-        Frequency of data per hour
+    self.environment: .scenario.Environment()
+        environment reference for the actor
     self.battery: .battery.Battery()
         Battery used by the actor
     self.bank: float
@@ -105,8 +102,8 @@ class Actor:
 
     """
 
-    def __init__(self, actor_id, df, scenario, battery=None, csv=None, ls=1, ps=1, pm={}, cluster=None,
-                 strategy: int = 0, _steps_per_hour=None, pricing_strategy=None):
+    def __init__(self, actor_id, df, environment, battery=None, csv=None, ls=1, ps=1, pm={},
+                 cluster=None, strategy: int = 0, pricing_strategy=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -118,17 +115,10 @@ class Actor:
 
         self.horizon = cfg.config.horizon
 
-        self._steps_per_hour = _steps_per_hour
-        # Let the actor have a reference to the scenario
-        self.scenario = scenario
-        # Add the actor to the scenario
-        if self.scenario:
-            if self not in self.scenario.actors:
-                self.scenario.actors.append(self)
-        else:
-            warnings.warn(f"Actor with id: {actor_id} was not added to a scenario during "
-                          "initialization. Running the simulation through the scenario object "
-                          "might not work as intended")
+        # Let the actor have a reference to the environment and add it to the other scenario actors
+        self.environment = environment
+        environment.add_actor_to_scenario(self)
+
         self.bank = 0
         self.matched_energy_current_step = 0
         self.socs = []
@@ -148,19 +138,9 @@ class Actor:
             self.csv_file = csv
         else:
             self.csv_file = f'actor_{actor_id}.csv'
-        for column, scale in [("load", ls), ("pv", ps),
-                              ("price", 1), ("selling_price", 1), ("schedule", 1)]:
-            try:
-                self.data[column] = scale * df[column]
-            except KeyError:
-                # Catch cases were no selling prices were provided for backwards compatibility
-                if column == "selling_price":
-                    warnings.warn(
-                        "The provided data does not contain a column with 'selling_price'. The "
-                        "column will be created using the same values as 'price' (for buying).")
-                    self.data[column] = scale * df["price"]
-                else:
-                    raise KeyError
+        # ToDo remove schedule from input or only allow either (load and pv) OR (schedule)
+        for column, scale in [("load", ls), ("pv", ps), ("schedule", 1)]:
+            self.data[column] = scale * df[column]
             try:
                 self.pm[column] = np.array(pm[column])
             except KeyError:
@@ -177,32 +157,26 @@ class Actor:
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
 
+    def get_mm_buy_prices(self):
+        return self.environment.market_maker.buy_prices
+    # creating a property object
+    mm_buy_prices = property(get_mm_buy_prices)
+
+    def get_mm_sell_prices(self):
+        return self.environment.market_maker.sell_prices
+
+    # creating a property object
+    mm_sell_prices = property(get_mm_sell_prices)
+
     def get_t_step(self):
-        return self.scenario.time_step
+        return self.environment.time_step
     # creating a property object
     t_step = property(get_t_step)
 
     # getter
     def get_steps_per_hour(self):
-        if self.scenario is None:
-            return self._steps_per_hour
-        else:
-            if self._steps_per_hour is not None:
-                warnings.warn(
-                    f"Actor with id: {self.id} will use the steps_per_hour value from the scenario "
-                    "object. The _steps_per_hour value of the actor will be ignored.")
-            return self.scenario.steps_per_hour
-
-    # setter
-    def set_steps_per_hour(self, value):
-        if self.scenario is None:
-            self._steps_per_hour = value
-        else:
-            warnings.warn(
-                f"Trying to set steps_per_hour for actor with id: {self.id}. This is prohibited, "
-                "since the actor uses the time step value provided by the scenario object.")
-    # creating a property object
-    steps_per_hour = property(get_steps_per_hour, set_steps_per_hour)
+        return self.environment.steps_per_hour
+    steps_per_hour = property(get_steps_per_hour)
 
     def get_market_schedule(self, strategy=None):
         """ Generates a market_schedule for the actor which represents the strategy of the actor
@@ -328,7 +302,7 @@ class Actor:
                 possible_global_prices = np.ones(self.horizon) * float('inf')
                 # prices are set where the soc in not full yet
                 possible_global_prices[(soc_prediction < 1 - cfg.config.EPS)] = \
-                    self.pred.price[(soc_prediction < 1 - cfg.config.EPS)]
+                    self.mm_sell_prices[(soc_prediction < 1 - cfg.config.EPS)]
 
                 # index for the last inf value between now and energy demand
                 last_inf_index = np.argwhere(possible_global_prices[:i + 1] >= float('inf'))
@@ -401,7 +375,7 @@ class Actor:
             overcharge = energy - self.battery.capacity
             # if overcharge is found, find the possible prices to sell this energy
             while overcharge > 0:
-                possible_prices = self.pred.selling_price.copy()[:self.horizon]
+                possible_prices = self.mm_buy_prices.copy()[:self.horizon]
                 # in between now and the peak, the right most/latest zero soc does not allow
                 # reducing the soc before. Energy most be sold afterwards
                 zero_soc_indices,  = np.where(soc_prediction[:i] < 0 + cfg.config.EPS)
@@ -455,8 +429,9 @@ class Actor:
         else:
             planning_horizon = planning_horizon[0, 1]-1
         soc_prediction = soc_prediction[:planning_horizon+1]
-        buy_prices = np.array(self.pred.price.values)[:planning_horizon+1]
-        sell_prices = np.array(self.pred.selling_price.values)[:planning_horizon+1]
+        # Note: Sell prices of the market maker are buy prices for the actor and vice versa
+        buy_prices = np.array(self.mm_sell_prices)[:planning_horizon+1]
+        sell_prices = np.array(self.mm_buy_prices)[:planning_horizon+1]
         # ToDo selling is not capped by max c-rate of battery
         # ++++++++++++++++++++
         sorted_buy_indexes = np.argsort(buy_prices)
@@ -543,7 +518,7 @@ class Actor:
     def create_prediction(self):
         """Reset asset and schedule prediction horizon to the current planning time step self.t"""
         # ToDo add selling price
-        for column in ["load", "pv", "price", "selling_price", "schedule"]:
+        for column in ["load", "pv", "schedule"]:
             if column in self.data.columns:
                 self.pred[column] = \
                     self.data[column].iloc[self.t_step: self.t_step + self.horizon].reset_index(drop=True) \
@@ -579,17 +554,17 @@ class Actor:
 
     def generate_orders(self):
         """
-        Generate new order for current time slot according to predicted schedule
+        Generate new orders for current time slot according to predicted schedule
         and both store and return it.
 
-        :return: generated new order
-        :rtype: Order
+        :return: generated new orders
+        :rtype: list(Order)
         """
 
         energy = self.market_schedule[0]
 
         if energy == 0 and self.pricing_strategy is None or all(self.market_schedule == 0):
-            return [None]
+            return []
 
         # the market schedule does not demand to buy or sell energy at the current time slot, but
         # a pricing strategy is provided which allows to generate orders for future demands, with
@@ -604,9 +579,9 @@ class Actor:
             index = 0
 
         if energy > 0:
-            final_price = self.pred.price[index]
+            final_price = self.mm_sell_prices[index]
         else:
-            final_price = self.pred.selling_price[index]
+            final_price = self.mm_buy_prices[index]
 
         # Make sure not to over charge the battery since market schedule calculated the amount
         # for a later time slot
@@ -763,7 +738,7 @@ class Actor:
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
-def create_random(actor_id, scenario, start_date="2021-01-01", nb_ts=24, ts_hour=1):
+def create_random(actor_id, environment, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     """
     Create actor instance with random asset time series and random scaling factors
 
@@ -800,7 +775,7 @@ def create_random(actor_id, scenario, start_date="2021-01-01", nb_ts=24, ts_hour
                            * net_price_factor * slot["price"], axis=1)
     # makes sure that the battery capacity is big enough, even if no useful trading takes place
     battery_capacity = max(random.random()*10, 2 * cfg.config.energy_unit)
-    return Actor(actor_id, df, scenario, battery=Battery(capacity=battery_capacity), ls=ls, ps=ps)
+    return Actor(actor_id, df, environment, battery=Battery(capacity=battery_capacity), ls=ls, ps=ps)
 
 
 def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,

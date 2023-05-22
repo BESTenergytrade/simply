@@ -112,7 +112,7 @@ class BestMarket(Market):
                     if ask.adjusted_price <= bid.price:
                         # bid and ask match: append to local solution
                         _matches.append({
-                            "time": self.t,
+                            "time": self.t_step,
                             "bid_id": bid_id,
                             "ask_id": ask_id,
                             "bid_actor": bid.actor_id,
@@ -208,7 +208,7 @@ class BestMarket(Market):
             asks = asks[asks["price"] <= bid_mm.price]
             for ask_id, ask in asks.iterrows():
                 matches.append({
-                    "time": self.t,
+                    "time": self.t_step,
                     "bid_id": bid_mm_id,
                     "ask_id": ask_id,
                     "bid_actor": bid_mm.actor_id,
@@ -231,7 +231,7 @@ class BestMarket(Market):
             bids = bids[bids["price"] >= ask_mm.price]
             for bid_id, bid in bids.iterrows():
                 matches.append({
-                    "time": self.t,
+                    "time": self.t_step,
                     "bid_id": bid_id,
                     "ask_id": ask_mm_id,
                     "bid_actor": bid.actor_id,

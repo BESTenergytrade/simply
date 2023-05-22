@@ -1,3 +1,5 @@
+import warnings
+
 import pandas as pd
 from pathlib import Path
 import csv
@@ -10,6 +12,7 @@ MARKET_MAKER_THRESHOLD = 2**63-1
 ASK = +1
 BID = -1
 
+
 class Market:
     """
     Representation of a market. Collects orders, implements a matching strategy for clearing,
@@ -20,10 +23,13 @@ class Market:
 
     This class provides a basic matching strategy which may be overridden.
     """
-
-    def __init__(self, time, network=None, grid_fee_matrix=None):
+    def __init__(self, scenario, network=None, grid_fee_matrix=None):
         self.orders = pd.DataFrame(columns=Order._fields)
-        self.t = time
+        self.scenario = scenario
+        if self.scenario.market is not None:
+            warnings.warn("Existing market in Scenario is overwritten with new market")
+        self.scenario.market = self
+
         self.trades = None
         self.matches = []
         self.actor_callback = {}
@@ -62,6 +68,11 @@ class Market:
         print(self.get_bids())
         print(self.get_asks())
 
+    def reset(self):
+        self.matches = []
+        self.trades = None
+        self.actor_callback = {}
+
     def accept_order(self, order, order_id=None, callback=None):
         """
         Handle new order.
@@ -81,7 +92,7 @@ class Market:
         if order is None:
             return
 
-        if order.time != self.t:
+        if order.time != self.t_step:
             raise ValueError("Wrong order time ({}), market is at time {}".format(order.time,
                                                                                   self.t))
         # Ignore Orders without energy volume
@@ -140,9 +151,9 @@ class Market:
             energy = match["energy"]
             price = match["price"]
             if bid_actor_callback is not None:
-                bid_actor_callback(self.t, 1, energy, price)
+                bid_actor_callback(self.t_step, 1, energy, price)
             if ask_actor_callback is not None:
-                ask_actor_callback(self.t, -1, energy, price)
+                ask_actor_callback(self.t_step, -1, energy, price)
         if reset:
             # don't retain orders for next cycle
             self.orders = pd.DataFrame(columns=Order._fields)
@@ -189,7 +200,7 @@ class Market:
                     self.orders.loc[ask_id] = ask
                     self.orders.loc[bid_id] = bid
                     matches.append({
-                        "time": self.t,
+                        "time": self.t_step,
                         "bid_id": bid_id,
                         "ask_id": ask_id,
                         "bid_actor": bid.actor_id,
@@ -278,3 +289,8 @@ class Market:
             # if an actor as none as cluster, e.g. the market maker, a TypeError will be thrown.
             # use default grid fee in this case.
             ask.price += cfg.config.default_grid_fee
+
+    def get_t_step(self):
+        return self.scenario.environment.time_step
+    # creating a property object
+    t_step = property(get_t_step)

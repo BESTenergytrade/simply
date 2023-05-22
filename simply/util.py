@@ -67,7 +67,7 @@ def actor_print(actor, header=False, _header=dict()):
         print(header_string)
     _header[actor] = True
 
-    print(f"{actor.t},"
+    print(f"{actor.t_step},"
           f"{round(actor.battery.energy(),4)}, "
           f"{round(actor.pred.schedule[0],4)}, "
           f"{round(actor.market_schedule[0],4)}, "

@@ -7,8 +7,16 @@ from simply.battery import Battery
 from simply.config import Config
 
 
+class StubClass:
+    def __init__(self):
+        pass
+
 class TestBattery:
     Config("")
+
+    stub_scenario = StubClass()
+    stub_scenario.time_step = 0
+    stub_scenario.actors = []
 
     def test_battery_creation(self):
         battery = Battery(capacity=1)
@@ -40,13 +48,13 @@ class TestBattery:
 
         df = pd.DataFrame(data=zip(load, pv, schedule, price),
                           columns=["load", "pv", "schedule", "price"])
-        a = Actor(actor_id="1", df=df, battery=Battery(capacity=10))
+        a = Actor(actor_id="1", df=df, scenario=self.stub_scenario, battery=Battery(capacity=10))
 
         # Get energy for the first time step. The actor charges the battery with the amount in the
         # schedule. If the schedule is negative battery gets discharged.
         a.update_battery()
         # Increase time step and get energy again --> No error
-        a.t += 1
+        a.t_step += 1
         a.update_battery()
         # If the time step is not increased an error should be thrown
         with pytest.raises(AssertionError):
