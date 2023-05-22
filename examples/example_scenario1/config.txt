@@ -4,7 +4,7 @@
 # scenario
 #--------------------------
 # path of scenario file to load and/or store
-path = examples/example_scenario
+path = examples/example_scenario1/scenario
 # load existing scenario
 load_scenario = False
 # possible data_formats: json, csv

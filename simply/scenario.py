@@ -49,6 +49,7 @@ class Scenario:
         """
         # create target directory
         dirpath.mkdir(parents=True, exist_ok=True)
+        test = dirpath
 
         # save meta information
         dirpath.joinpath('_meta.inf').write_text(json.dumps({"rng_seed": self.rng_seed}, indent=2))
