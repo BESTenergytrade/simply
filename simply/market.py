@@ -125,6 +125,9 @@ class Market:
     def clear(self, reset=True):
         """
         Clear market. Match orders, call callbacks of matched orders, reset/tidy up dataframes.
+
+        :param reset: not retaining orders for next market cycle
+        :return: None
         """
         # TODO match bids
         matches = self.match(show=cfg.config.show_plots)
