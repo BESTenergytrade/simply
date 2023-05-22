@@ -1,77 +1,96 @@
 {
-  "random": {
+  "example_network": {
     "directed": false,
     "multigraph": false,
     "graph": {},
     "nodes": [
       {
-        "id": 0
+        "id": "N01"
       },
       {
-        "id": 1
+        "id": "N02"
       },
       {
-        "id": 2
+        "id": "N03"
       },
       {
-        "id": 3
+        "id": "N04"
       },
       {
-        "id": "H2"
+        "id": "N05"
       },
       {
-        "id": "H0"
+        "id": "residential_1"
       },
       {
-        "id": "H1"
+        "id": "residential_2"
       },
       {
-        "id": "H3"
+        "id": "residential_3"
       },
       {
-        "id": "H4"
+        "id": "industrial_1"
+      },
+      {
+        "id": "market_maker"
+      },
+      {
+        "id": "market_maker_buy"
+      },
+      {
+        "id": "market_maker_sell"
       }
     ],
     "links": [
       {
         "weight": 0,
-        "source": 0,
-        "target": 1
-      },
-      {
-        "weight": 0.1,
-        "source": 0,
-        "target": 3
+        "source": "N01",
+        "target": "N02"
       },
       {
         "weight": 0,
-        "source": 1,
-        "target": "H2"
+        "source": "N02",
+        "target": "N03"
       },
       {
         "weight": 0,
-        "source": 1,
-        "target": "H0"
+        "source": "N02",
+        "target": "industrial_1"
       },
       {
         "weight": 0,
-        "source": 1,
-        "target": "H3"
+        "source": "N03",
+        "target": "N04"
       },
       {
         "weight": 0,
-        "source": 2,
-        "target": 3
+        "source": "N04",
+        "target": "N05"
       },
       {
         "weight": 0,
-        "source": 2,
-        "target": "H1"
+        "source": "N04",
+        "target": "residential_1"
       },
       {
         "weight": 0,
-        "source": 2,
-        "target": "H4"
+        "source": "N04",
+        "target": "residential_2"
+      },
+      {
+        "weight": 0,
+        "source": "N04",
+        "target": "residential_3"
+      },
+      {
+        "weight": 0,
+        "source": "market_maker",
+        "target": "market_maker_buy"
+      },
+      {
+        "weight": 0,
+        "source": "market_maker",
+        "target": "market_maker_sell"
       }
     ]
   }

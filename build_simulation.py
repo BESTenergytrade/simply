@@ -235,13 +235,20 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 
 
 if __name__ == "__main__":
+    # ToDo: Specify the path to the scenario (dirname) e.g. by the terminal, and then have the
+    #  other paths relative to this
     # Store default configuration files and directories paths
     dirname = Path(__file__).parent
-    config_json_path = dirname / Path('example_config.json')
-    network_path = dirname / Path('example_network.json')
-    config_path = dirname / Path('config.txt')
-    loads_dir_path = dirname / Path('loads_dir.csv')
-    data_dirpath = Path("../sample")
+    # ToDo: Hardcoded for example_scenario1, will change later
+    # ToDo: hardocde filename e.g. scenario_config and then specifiy directory path
+    config_json_path = dirname / Path('examples/example_scenario1/example_config.json')
+    network_path = dirname / Path('examples/example_scenario1/example_network.json')
+    # ToDo: Hardcoded for example_scenario1, will change later - if there is not specified, use default values (or throw error and specify)
+    config_path = dirname / Path('examples/example_scenario1/config.txt')
+    # ToDo: Hardcoded for example_scenario1, will change later
+    loads_dir_path = dirname / Path('examples/example_scenario1/scenario_inputs/loads_dir.csv')
+    # ToDo: Hardcoded for example_scenario1, will change later
+    data_dirpath = Path("examples/example_scenario1/scenario_inputs")
 
     # Parse configuration files and directories paths as arguments
     parser = ArgumentParser(description='Entry point for market simulation')
@@ -257,6 +264,8 @@ if __name__ == "__main__":
     # Build config object using configuration file
     cfg = Config(args.config)
     cfg.path = Path().parent / cfg.path
+    print(cfg)
+    print(cfg.path)
     # Reset save location directory
     remove_existing_dir(cfg.path)
     sc = create_scenario_from_config(args.scenario_config, args.network, data_dirpath=args.data_dir,

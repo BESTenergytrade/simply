@@ -1,42 +1,50 @@
 {
-  "H0": {
-    "id": "H0",
+  "residential_1": {
+    "id": "residential_1",
     "df": {},
-    "csv": "actor_H0.csv",
-    "ls": 0.7,
-    "ps": 1.5,
+    "csv": "actor_residential_1.csv",
+    "ls": 1,
+    "ps": 1,
     "pm": {}
   },
-  "H1": {
-    "id": "H1",
+  "residential_2": {
+    "id": "residential_2",
     "df": {},
-    "csv": "actor_H1.csv",
-    "ls": 0.7,
-    "ps": 1.5,
+    "csv": "actor_residential_2.csv",
+    "ls": 1,
+    "ps": 1,
     "pm": {}
   },
-  "H2": {
-    "id": "H2",
+  "residential_3": {
+    "id": "residential_3",
     "df": {},
-    "csv": "actor_H2.csv",
-    "ls": 0.7,
-    "ps": 1.5,
+    "csv": "actor_residential_3.csv",
+    "ls": 1,
+    "ps": 1,
     "pm": {}
   },
-  "H3": {
-    "id": "H3",
+  "industrial_1": {
+    "id": "industrial_1",
     "df": {},
-    "csv": "actor_H3.csv",
-    "ls": 0.7,
-    "ps": 1.5,
+    "csv": "actor_industrial_1.csv",
+    "ls": 1,
+    "ps": 1,
     "pm": {}
   },
-  "H4": {
-    "id": "H4",
+  "market_maker_buy": {
+    "id": "market_maker",
     "df": {},
-    "csv": "actor_H4.csv",
-    "ls": 0.7,
-    "ps": 1.5,
+    "csv": "actor_market_maker_buy.csv",
+    "ls": 1,
+    "ps": 1,
+    "pm": {}
+  },
+  "market_maker_sell": {
+    "id": "market_maker",
+    "df": {},
+    "csv": "actor_market_maker_sell.csv",
+    "ls": 1,
+    "ps": 1,
     "pm": {}
   }
 }
