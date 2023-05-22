@@ -8,6 +8,8 @@ from abc import ABC, abstractmethod
 from simply.config import Config
 
 # default config
+from simply.scenario import Scenario
+
 Config('')
 
 ENERGY_UNIT_CONVERSION_FACTOR = 1  # simply: kW
@@ -55,6 +57,7 @@ class MatchingAlgorithm(ABC):
         :param mycoDict: hierarchical dictionary with market name and time slot each containing a
             dict with bids and offers in lists {'bids': [], 'offers': []}
         :type mycoDict: dict
+        # ToDo Market object? Is it not a Market constructor?
         :param market: Market object that implements the matching algorithm
         :param grid_fee_matrix: two-dimensional nXn list used to calculate grid-fees e.g.,
             [[0,1],[1,0]]
@@ -62,11 +65,14 @@ class MatchingAlgorithm(ABC):
         """
 
         recommendations = []
+        scenario = Scenario(None, [], None, [])
+        environment = scenario.environment
+        # Market is coupled with scenario and environment data. Market looks up time in environment.
 
         for market_id, market_name in mycoDict.items():
             for time, orders in market_name.items():
-
-                m = market(time=time, grid_fee_matrix=grid_fee_matrix)
+                environment.time_step = time
+                m = market(scenario=scenario, grid_fee_matrix=grid_fee_matrix)
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 

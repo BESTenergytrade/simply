@@ -25,8 +25,11 @@ class Environment:
         self.time_step = cfg.config.start
         self.steps_per_hour = steps_per_hour
         self.add_actor_to_scenario = add_actor_to_scenario
+        if buy_prices.size==0:
+            self.market_maker = None
+        else:
+            self.market_maker = MarketMaker(environment=self, buy_prices=buy_prices, **kwargs)
 
-        self.market_maker = MarketMaker(environment=self, buy_prices=buy_prices, **kwargs)
 
 
 
@@ -40,7 +43,7 @@ class Scenario:
                  network,
                  actors,
                  map_actors,
-                 buy_prices: np.array,
+                 buy_prices: np.array = None,
                  rng_seed=None,
                  steps_per_hour=4,
                  **kwargs):
@@ -52,6 +55,10 @@ class Scenario:
         self.actors = list(actors)
         # maps node ids to actors
         self.map_actors = map_actors
+        if buy_prices is None:
+            buy_prices = np.array(())
+        else:
+            buy_prices=np.array(buy_prices)
         self._buy_prices = buy_prices.copy()
         self.kwargs = kwargs
 

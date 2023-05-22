@@ -264,7 +264,7 @@ class TestPayAsBid:
     def test_prices_matrix(self):
         # test prices with a given grid fee matrix
         # example: cost 1 for trade between clusters
-        m = Market(0, grid_fee_matrix=[[0, 1], [1, 0]])
+        m = Market(self.scenario, grid_fee_matrix=[[0, 1], [1, 0]])
 
         # grid-fees between nodes only allow for partial matching
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
@@ -280,7 +280,7 @@ class TestPayAsBid:
         nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
         pn = PowerNetwork("", nw, weight_factor=2)
         grid_fee_matrix = [[0, 1], [1, 0]]
-        m = Market(0, network=pn, grid_fee_matrix=grid_fee_matrix)
+        m = Market(self.scenario, network=pn, grid_fee_matrix=grid_fee_matrix)
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
         m.accept_order(Order(1, 0, 0, 1, 1, 2))
         matches = m.match()
