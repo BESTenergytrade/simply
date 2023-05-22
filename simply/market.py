@@ -23,12 +23,14 @@ class Market:
 
     This class provides a basic matching strategy which may be overridden.
     """
-    def __init__(self, scenario, network=None, grid_fee_matrix=None):
+    def __init__(self, scenario=None, network=None, grid_fee_matrix=None):
         self.orders = pd.DataFrame(columns=Order._fields)
         self.scenario = scenario
-        if self.scenario.market is not None:
-            warnings.warn("Existing market in Scenario is overwritten with new market")
-        self.scenario.market = self
+
+        if self.scenario is not None:
+            if self.scenario.market is not None:
+                warnings.warn("Existing market in Scenario is overwritten with new market")
+            self.scenario.market = self
 
         self.trades = None
         self.matches = []
@@ -94,7 +96,7 @@ class Market:
 
         if order.time != self.t_step:
             raise ValueError("Wrong order time ({}), market is at time {}".format(order.time,
-                                                                                  self.t))
+                                                                                  self.t_step))
         # Ignore Orders without energy volume
         if order.energy == 0:
             return

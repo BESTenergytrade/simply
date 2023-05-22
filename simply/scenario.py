@@ -40,7 +40,6 @@ class Scenario:
                  network,
                  actors,
                  map_actors,
-                 market: 'simply.market',
                  buy_prices: np.array,
                  rng_seed=None,
                  steps_per_hour=4,
@@ -48,7 +47,7 @@ class Scenario:
 
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
-        self.market = market
+        self.market = None
         self.power_network = network
         self.actors = list(actors)
         # maps node ids to actors
@@ -237,17 +236,19 @@ def load(dirpath, data_format):
 
 def create_random(num_nodes, num_actors, weight_factor):
     pn = power_network.create_random(num_nodes)
-    actors = [actor.create_random("H" + str(i)) for i in range(num_actors)]
-
     # Add actor nodes at random position (leaf node) in the network
     # One network node can contain several actors (using random.choices method)
-    map_actors = pn.add_actors_random(actors)
+
     # Update shortest paths and the grid fee matrix
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
     mm_buy_prices = np.random.random(100)
-
-    return Scenario(pn, actors, map_actors, mm_buy_prices=mm_buy_prices)
+    scenario = Scenario(pn, [], None, buy_prices=mm_buy_prices)
+    environment = scenario.environment
+    actors = [actor.create_random("H" + str(i), environment=environment) for i in range(num_actors)]
+    map_actors = pn.add_actors_random(actors)
+    scenario.map_actors = map_actors
+    return scenario
 
 
 def create_random2(num_nodes, num_actors):

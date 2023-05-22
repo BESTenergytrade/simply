@@ -7,9 +7,8 @@ from simply.power_network import PowerNetwork
 class TestScenario:
 
     def test_init(self):
-        # network, actors, map_actors, [rng_seed]
+        # network, actors, map_actors, market, buy_prices [rng_seed]
         pn = PowerNetwork("", nx.random_tree(1))
-        s = Scenario(pn, [], None, [])
         # random seed, but None
         s = Scenario(pn, [], None, [])
         assert s.rng_seed is not None
@@ -23,7 +22,9 @@ class TestScenario:
 
     def test_random(self):
         # num nodes, num actors
-        s = create_random(3, 2, 1)
-        assert len(s.actors) == 2
+        num_actors = 2
+        s = create_random(3, num_actors, 1)
+        # actors are generated plus 1 market_maker
+        assert len(s.actors) == num_actors + 1
         assert len(s.map_actors) == 2
         assert len(s.power_network.network.nodes) == 3 + 2

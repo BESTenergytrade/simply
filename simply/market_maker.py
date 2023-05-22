@@ -50,6 +50,17 @@ class MarketMaker:
         self.bought_energy = [0]
         self.environment.add_actor_to_scenario(self)
 
+    def to_dict(self):
+        """
+        Builds dictionary for saving.
+
+        """
+        return {
+            "id": "MarketMaker",
+            "sell_prices": self.all_sell_prices,
+            "buy_prices": self.all_buy_prices
+            }
+
     def get_t_step(self):
         return self.environment.time_step
     # creating a property object
