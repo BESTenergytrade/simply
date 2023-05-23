@@ -1,5 +1,4 @@
 import json
-import warnings
 
 from networkx.readwrite import json_graph
 import pandas as pd
@@ -12,7 +11,6 @@ from simply import power_network
 from simply.util import get_all_data
 from simply.market_maker import MarketMaker
 from simply.actor import Actor
-from simply.market import Market
 
 
 class Environment:
@@ -25,12 +23,10 @@ class Environment:
         self.time_step = cfg.config.start
         self.steps_per_hour = steps_per_hour
         self.add_actor_to_scenario = add_actor_to_scenario
-        if buy_prices.size==0:
+        if buy_prices.size == 0:
             self.market_maker = None
         else:
             self.market_maker = MarketMaker(environment=self, buy_prices=buy_prices, **kwargs)
-
-
 
 
 class Scenario:
@@ -58,7 +54,7 @@ class Scenario:
         if buy_prices is None:
             buy_prices = np.array(())
         else:
-            buy_prices=np.array(buy_prices)
+            buy_prices = np.array(buy_prices)
         self._buy_prices = buy_prices.copy()
         self.kwargs = kwargs
 
@@ -179,7 +175,6 @@ class Scenario:
         self.environment.market_maker = MarketMaker(
             environment=self.environment, buy_prices=self._buy_prices.copy())
         self.environment.time_step = cfg.config.start
-
 
 
 def from_dict(scenario_dict):
@@ -325,4 +320,3 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
     pn.generate_grid_fee_matrix(weight_factor)
 
     return Scenario(pn, actors, map_actors, steps_per_hour=ts_hour)
-

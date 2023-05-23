@@ -8,29 +8,29 @@ from simply.scenario import Scenario
 
 class TestMarketMaker:
     cfg.Config("")
-    buy_prices = np.arange(1,100,1)
+    buy_prices = np.arange(1, 100, 1)
     scenario = Scenario(None, [], None, buy_prices)
-    environment = scenario.environment
+    env = scenario.environment
 
     def test_init(self):
-        market_maker = MarketMaker(environment=self.environment, buy_prices=self.buy_prices)
+        MarketMaker(environment=self.env, buy_prices=self.buy_prices)
 
     def test_price_comparison(self):
         cfg.config.default_grid_fee = 1
-        market_maker = MarketMaker(environment=self.environment, buy_prices=self.buy_prices)
+        MarketMaker(environment=self.env, buy_prices=self.buy_prices)
 
         cfg.config.default_grid_fee = -1
         # Assertion error should be thrown since mm would buy for higher prices than he would sell
         # for
         with pytest.raises(AssertionError):
-            market_maker = MarketMaker(environment=self.environment, buy_prices=self.buy_prices)
+            MarketMaker(environment=self.env, buy_prices=self.buy_prices)
             cfg.config.default_grid_fee = 0
 
     def test_order_generation(self):
-        time_step = self.environment.time_step
+        time_step = self.env.time_step
         grid_fee = 0.5
         cfg.config.default_grid_fee = grid_fee
-        market_maker = MarketMaker(environment=self.environment, buy_prices=self.buy_prices)
+        market_maker = MarketMaker(environment=self.env, buy_prices=self.buy_prices)
         orders = market_maker.generate_orders()
         bid_order, = [order for order in orders if order.type == BID]
         ask_order, = [order for order in orders if order.type == ASK]
@@ -43,7 +43,7 @@ class TestMarketMaker:
 
         # test if it works for different time steps
         time_step = 5
-        self.environment.time_step = time_step
+        self.env.time_step = time_step
         market_maker.create_prediction()
         orders = market_maker.generate_orders()
         bid_order, = [order for order in orders if order.type == BID]
@@ -53,7 +53,7 @@ class TestMarketMaker:
 
         # if no new prediction is created this should fail
         time_step = 7
-        self.environment.time_step = time_step
+        self.env.time_step = time_step
         orders = market_maker.generate_orders()
         bid_order, = [order for order in orders if order.type == BID]
         ask_order, = [order for order in orders if order.type == ASK]
@@ -63,21 +63,21 @@ class TestMarketMaker:
             assert ask_order.price == self.buy_prices[time_step] + grid_fee
 
         # test use of sell prices
-        kwarg = dict(sell_prices = self.buy_prices * 2)
-        market_maker = MarketMaker(environment=self.environment, buy_prices=self.buy_prices, **kwarg)
+        kwarg = dict(sell_prices=self.buy_prices * 2)
+        market_maker = MarketMaker(environment=self.env, buy_prices=self.buy_prices, **kwarg)
         time_step = 0
-        self.environment.time_step = time_step
+        self.env.time_step = time_step
         market_maker.create_prediction()
         orders = market_maker.generate_orders()
         bid_order, = [order for order in orders if order.type == BID]
         ask_order, = [order for order in orders if order.type == ASK]
-        assert bid_order.price * 2 ==  ask_order.price
+        assert bid_order.price * 2 == ask_order.price
 
         # if both options of data and function are given, data is used
-        kwarg = dict(sell_prices = self.buy_prices * 2, buy_to_sell_function= lambda x: x +1)
-        market_maker = MarketMaker(environment=self.environment, buy_prices=self.buy_prices, **kwarg)
+        kwarg = dict(sell_prices=self.buy_prices * 2, buy_to_sell_function=lambda x: x + 1)
+        market_maker = MarketMaker(environment=self.env, buy_prices=self.buy_prices, **kwarg)
         time_step = 0
-        self.environment.time_step = time_step
+        self.env.time_step = time_step
         market_maker.create_prediction()
         orders = market_maker.generate_orders()
         bid_order, = [order for order in orders if order.type == BID]
@@ -85,20 +85,12 @@ class TestMarketMaker:
         assert bid_order.price * 2 == ask_order.price
 
         # if only function is given, function is used
-        kwarg = dict(buy_to_sell_function= lambda x: x + 1.5)
-        market_maker = MarketMaker(environment=self.environment, buy_prices=self.buy_prices, **kwarg)
+        kwarg = dict(buy_to_sell_function=lambda x: x + 1.5)
+        market_maker = MarketMaker(environment=self.env, buy_prices=self.buy_prices, **kwarg)
         time_step = 0
-        self.environment.time_step = time_step
+        self.env.time_step = time_step
         market_maker.create_prediction()
         orders = market_maker.generate_orders()
         bid_order, = [order for order in orders if order.type == BID]
         ask_order, = [order for order in orders if order.type == ASK]
         assert bid_order.price + 1.5 == ask_order.price
-
-
-
-
-
-
-
-

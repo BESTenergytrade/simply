@@ -158,6 +158,7 @@ class TestMarket:
 
 class TestPayAsBid:
     scenario = Scenario(None, [], None, [])
+
     def test_basic(self):
         """
         Tests the basic functionality of the Market object to accept bids and asks via the
