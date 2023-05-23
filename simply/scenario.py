@@ -76,7 +76,7 @@ class Scenario:
             orders = actor_.generate_orders()
             for order in orders:
                 self.market.accept_order(order, callback=actor_.receive_market_results)
-        self.market.clear()
+        self.market.clear(reset=cfg.config.reset_market)
 
     def next_time_step(self):
         for actor_ in self.actors:

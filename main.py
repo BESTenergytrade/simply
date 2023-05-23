@@ -51,53 +51,25 @@ if __name__ == "__main__":
         sc.power_network.plot()
         sc.plot_actor_data()
 
-    # Fast forward to interesting start interval for PV energy trading
-    for a in sc.actors:
-        a.t_step = cfg.start
-
     # generate requested market
     if "pac" in cfg.market_type:
-        m = market_2pac.TwoSidedPayAsClear(0, network=sc.power_network)
+        m = market_2pac.TwoSidedPayAsClear(scenario=sc, network=sc.power_network)
     elif cfg.market_type in ["fair", "merit"]:
-        m = market_fair.BestMarket(0, sc.power_network)
+        m = market_fair.BestMarket(scenario=sc, network=sc.power_network)
     else:
         # default
-        m = market.Market(0, network=sc.power_network)
+        m = market.Market(scenario=sc, network=sc.power_network)
 
-    list_ts = linspace(cfg.start, cfg.start + cfg.nb_ts - 1, cfg.nb_ts)
+    for _ in range(cfg.nb_ts):
+        # actors calculate strategy based market interaction with the market maker
+        sc.create_strategies()
 
-    # Actors generate their order prices based on the prices communicated by the market maker.
-    # These need to be the same for each actor. This is guaranteed by the loop below.
-    # ToDo: Store market maker in a single data structure, e.g. market or scenario object
-    for a in sc.actors:
-        a.data.selling_price = sc.actors[0].data.selling_price
-        a.data.price = sc.actors[0].data.price
-        a.create_prediction()
+        # orders are generated based on the flexibility towards the planned market interaction
+        # and a pricing scheme. Orders are matched at the end
+        sc.market_step()
 
-    for t in list_ts:
-        m.t = t
-        for a in sc.actors:
-            # actor calculates strategy based market interaction with the market maker
-            a.get_market_schedule()
-            # orders are generated based on the flexibility towards the planned market interaction
-            # and a pricing scheme
-            order = a.generate_orders()
-            if order:
-                m.accept_order(order, callback=a.receive_market_results)
-
-        # Generate market maker order as ask
-        m.accept_order(
-            Order(1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD,
-                  sc.actors[0].pred.price[0]))
-        # Generate market maker order as bid
-        m.accept_order(
-            Order(-1, t, 'market_maker', None, MARKET_MAKER_THRESHOLD,
-                  sc.actors[0].pred.selling_price[0]))
-
-        m.clear(reset=cfg.reset_market)
-        for a in sc.actors:
-            # Update all actors for the next market time slot
-            a.next_time_step()
+        # actors are prepared for the next time step by changing socs, banks and predictions
+        sc.next_time_step()
 
         if cfg.show_prints:
             print("Matches of bid/ask ids: {}".format(m.matches))
