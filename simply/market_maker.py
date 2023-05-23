@@ -2,10 +2,13 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
 import simply.config as cfg
 from simply.actor import Order
 from simply.market import MARKET_MAKER_THRESHOLD, ASK, BID
+if TYPE_CHECKING:
+    from simply.scenario import Environment
+
 
 class MarketMaker:
     """ The MarketMaker represents the market maker and implements methods accordingly. This
@@ -17,7 +20,7 @@ class MarketMaker:
     """
 
     def __init__(self,
-                 environment: 'simply.scenario.Environment',
+                 environment: 'Environment',
                  buy_prices: Iterable[float],
                  sell_prices: np.array = None,
                  buy_to_sell_function=None):

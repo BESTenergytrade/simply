@@ -520,9 +520,9 @@ class Actor:
         # ToDo add selling price
         for column in ["load", "pv", "schedule"]:
             if column in self.data.columns:
-                self.pred[column] = \
-                    self.data[column].iloc[self.t_step: self.t_step + self.horizon].reset_index(drop=True) \
-                    + self.pm[column]
+                self.pred[column] = (
+                        self.data[column].iloc[self.t_step: self.t_step + self.horizon].
+                        reset_index(drop=True) + self.pm[column])
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
@@ -742,6 +742,8 @@ def create_random(actor_id, environment, start_date="2021-01-01", nb_ts=24, ts_h
     """
     Create actor instance with random asset time series and random scaling factors
 
+    :param environment: scenario.Environment environment: Object that contains visible information
+        for objects within the simulation.
     :param str actor_id: unique actor identifier
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
@@ -774,8 +776,8 @@ def create_random(actor_id, environment, start_date="2021-01-01", nb_ts=24, ts_h
     df["price"] = df.apply(lambda slot: slot["price"] - (slot["schedule"] > 0)
                            * net_price_factor * slot["price"], axis=1)
     # makes sure that the battery capacity is big enough, even if no useful trading takes place
-    battery_capacity = max(random.random()*10, 2 * cfg.config.energy_unit)
-    return Actor(actor_id, df, environment, battery=Battery(capacity=battery_capacity), ls=ls, ps=ps)
+    bat_capacity = max(random.random()*10, 2 * cfg.config.energy_unit)
+    return Actor(actor_id, df, environment, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
 
 
 def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
