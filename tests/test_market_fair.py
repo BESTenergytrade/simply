@@ -12,6 +12,7 @@ class TestBestMarket:
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
     scenario = Scenario(None, [], None, [])
+
     def test_basic(self):
         """Tests the basic functionality of the BestMarket object to accept bids and asks via the
         accept_order method and correctly match asks and bids when the match method is called."""
