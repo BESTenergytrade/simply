@@ -66,6 +66,11 @@ class Scenario:
         if actor not in self.actors:
             self.actors.append(new_actor)
 
+    def create_strategies(self):
+        for actor_ in self.actors:
+            if isinstance(actor_, Actor):
+                actor_.get_market_schedule()
+
     def market_step(self):
         for actor_ in self.actors:
             orders = actor_.generate_orders()
