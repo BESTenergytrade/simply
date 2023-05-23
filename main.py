@@ -3,12 +3,10 @@
 from argparse import ArgumentParser
 
 from simply import market, market_2pac, market_fair
-from simply.actor import Order
 from simply.scenario import load, create_random
 from simply.config import Config
 from simply.util import summerize_actor_trading
-from numpy import linspace
-from simply.market_fair import MARKET_MAKER_THRESHOLD
+
 
 """
 Entry point for standalone functionality.
