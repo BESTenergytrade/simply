@@ -1,4 +1,5 @@
 import json
+import warnings
 
 from networkx.readwrite import json_graph
 import pandas as pd
@@ -29,6 +30,8 @@ class Environment:
         self.get_grid_fee = Market().get_grid_fee
         if buy_prices.size == 0:
             self.market_maker = None
+            warnings.warn("Environment was created without a market maker since no buy_prices, "
+                          "were provided.")
         else:
             self.market_maker = MarketMaker(environment=self, buy_prices=buy_prices, **kwargs)
 
