@@ -288,7 +288,7 @@ class Market:
         try:
             ask.price += self.grid_fee_matrix[bid.cluster][ask.cluster]
         except TypeError:
-            # if an actor as none as cluster, e.g. the market maker, a TypeError will be thrown.
+            # if an actor has none as cluster, e.g. the market maker, a TypeError will be thrown.
             # use default grid fee in this case.
             ask.price += cfg.config.default_grid_fee
 
