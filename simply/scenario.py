@@ -51,7 +51,7 @@ class Scenario:
         random.seed(self.rng_seed)
         self.market = None
         self.power_network = network
-        self.actors = list(actors)
+        self.market_participants = list(actors)
         # maps node ids to actors
         self.map_actors = map_actors
         if buy_prices is None:
@@ -62,48 +62,48 @@ class Scenario:
         self.kwargs = kwargs
 
 
-        self.environment = Environment(buy_prices, steps_per_hour, self.add_actor, **kwargs)
+        self.environment = Environment(buy_prices, steps_per_hour, self.add_participant, **kwargs)
 
-    def add_actor(self, new_actor):
-        actor_or_market_maker = isinstance(new_actor, Actor) or isinstance(new_actor, MarketMaker)
-        assert actor_or_market_maker
-        if actor not in self.actors:
-            self.actors.append(new_actor)
+    def add_participant(self, participant):
+        is_participant = isinstance(participant, Actor) or isinstance(participant, MarketMaker)
+        assert is_participant
+        if actor not in self.market_participants:
+            self.market_participants.append(participant)
 
     def create_strategies(self):
-        for actor_ in self.actors:
+        for actor_ in self.market_participants:
             if isinstance(actor_, Actor):
                 actor_.get_market_schedule()
 
     def market_step(self):
-        for actor_ in self.actors:
+        for actor_ in self.market_participants:
             orders = actor_.generate_orders()
             for order in orders:
                 self.market.accept_order(order, callback=actor_.receive_market_results)
         self.market.clear(reset=cfg.config.reset_market)
 
     def next_time_step(self):
-        for actor_ in self.actors:
-            actor_.next_time_step()
+        for participant in self.market_participants:
+            participant.next_time_step()
 
         self.environment.time_step += 1
 
-        for actor_ in self.actors:
-            actor_.create_prediction()
+        for participant in self.market_participants:
+            participant.create_prediction()
 
     def from_config(self):
         pass
 
     def __str__(self):
         return "Scenario(network: {}, actors: {}, map_actors: {})".format(
-            self.power_network, self.actors, self.map_actors
+            self.power_network, self.market_participants, self.map_actors
         )
 
     def to_dict(self):
         return {
             "rng_seed": self.rng_seed,
             "power_network": {self.power_network.name: self.power_network.to_dict()},
-            "actors": {a.id: a.to_dict() for a in self.actors},
+            "actors": {a.id: a.to_dict() for a in self.market_participants},
             "map_actors": self.map_actors,
         }
 
@@ -131,13 +131,13 @@ class Scenario:
         if data_format == "csv":
             # Save data in separate csv file and all actors in one config file
             a_dict = {}
-            for actor_variable in self.actors:
+            for actor_variable in self.market_participants:
                 a_dict[actor_variable.id] = actor_variable.to_dict(external_data=True)
                 actor_variable.save_csv(dirpath)
             dirpath.joinpath('actors.json').write_text(json.dumps(a_dict, indent=2))
         else:
             # Save config and data per actor in a single file
-            for actor_variable in self.actors:
+            for actor_variable in self.market_participants:
                 dirpath.joinpath(f'actor_{actor_variable.id}.{data_format}').write_text(
                     json.dumps(actor_variable.to_dict(external_data=False), indent=2)
                 )
@@ -147,20 +147,20 @@ class Scenario:
 
         self.power_network.to_image(dirpath)
 
-    def concat_actor_data(self):
+    def concat_participant_data(self):
         """
         Create a list of all actor data DataFrames and concatenate them using multi-column keys
         :return: DataFrame with multi-column-index (actor-level, asset-level)
         """
-        data = [a.data for a in self.actors]
-        return pd.concat(data, keys=range(len(self.actors)), axis=1)
+        data = [a.data for a in self.market_participants]
+        return pd.concat(data, keys=range(len(self.market_participants)), axis=1)
 
-    def plot_actor_data(self):
+    def plot_participant_data(self):
         """
         Extracts asset data from all actors of the scenario and plots all time series per asset type
         as well as the aggregated sum per asset.
         """
-        actor_data = self.concat_actor_data()
+        actor_data = self.concat_participant_data()
         fig, ax = plt.subplots(3, sharex=True)
         ax[0].set_title("PV")
         ax[1].set_title("Load")
@@ -178,7 +178,7 @@ class Scenario:
     def reset(self):
         """ Reset the scenario after a simulation is run"""
         # Remove previous actors
-        self.actors = []
+        self.market_participants = []
         # But add the market maker
         self.market.reset()
         self.environment.market_maker = MarketMaker(
