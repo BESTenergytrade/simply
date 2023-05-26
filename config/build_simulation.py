@@ -27,7 +27,7 @@ convert string dates to datetime dtype, and build a pandas dataframe from the co
 
 
 # Helper functions
-def get_mm_prices(dirpath,start_date, end_date):
+def get_mm_prices(dirpath, start_date, end_date):
     csv_df = pd.read_csv(dirpath, sep=',', parse_dates=['Time'], dayfirst=True,
                          index_col=['Time'])
     try:
@@ -42,7 +42,6 @@ def get_mm_prices(dirpath,start_date, end_date):
         else:
             raise Exception("Prices data file does not contain column named 'prices' and the "
                             "second column is not numeric, which would be used otherwise.")
-
 
 
 def insert_market_maker_id(dirpath):
@@ -116,8 +115,8 @@ def read_config_json(config_json):
     return config_df
 
 
-def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2016-01-01", nb_ts=None,
-                             ts_hour=1, cols=["load", "pv", "schedule", "price"],
+def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2016-01-01",
+                             nb_ts=None, ts_hour=1, cols=["load", "pv", "schedule", "price"],
                              ps=None, ls=None):
     """
     Create Actor with an ID and given asset time series shifted to a specified start time and
@@ -197,7 +196,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         pn.plot()
 
     start_date, end_date = dates_to_datetime(start_date, nb_ts, ts_hour)
-    buy_prices = get_mm_prices(price_path / price_filename,start_date,start_date )
+    buy_prices = get_mm_prices(price_path / price_filename, start_date, start_date)
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
     scenario = Scenario(None, [], None, buy_prices=buy_prices)
@@ -227,9 +226,8 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         asset_dict['price'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
         # actors are automatically added to the scenario environment
         _ = create_actor_from_config(actor_row['prosumerName'], scenario.environment,
-                                         asset_dict=asset_dict, start_date=start_date,
-                                         nb_ts=nb_ts, ts_hour=ts_hour, ps=ps, ls=ls)
-
+                                     asset_dict=asset_dict, start_date=start_date,
+                                     nb_ts=nb_ts, ts_hour=ts_hour, ps=ps, ls=ls)
         print(f'{i} actor added')
         print(f'{file_dict["load"]}')
 
