@@ -266,4 +266,4 @@ if __name__ == "__main__":
 
     if cfg.show_plots:
         sc.power_network.plot()
-        sc.plot_actor_data()
+        sc.plot_participant_data()

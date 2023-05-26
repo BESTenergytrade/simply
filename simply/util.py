@@ -19,12 +19,12 @@ def daily(df, daily_ts=24):
 def summerize_actor_trading(sc):
     # Check if at least one trade has happened
     empty = True
-    for i in [a.traded for a in sc.actors]:
+    for i in [a.traded for a in sc.market_participants]:
         if len(i) != 0:
             empty = False
     if not empty:
         return (
-            pd.DataFrame.from_dict([a.traded for a in sc.actors])
+            pd.DataFrame.from_dict([a.traded for a in sc.market_participants])
             .unstack()
             .apply(pd.Series)
             .rename({0: "energy", 1: "avg_price"}, axis=1)

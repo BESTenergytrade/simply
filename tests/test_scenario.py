@@ -25,6 +25,6 @@ class TestScenario:
         num_actors = 2
         s = create_random(3, num_actors, 1)
         # actors are generated plus 1 market_maker
-        assert len(s.actors) == num_actors + 1
+        assert len(s.market_participants) == num_actors + 1
         assert len(s.map_actors) == 2
         assert len(s.power_network.network.nodes) == 3 + 2
