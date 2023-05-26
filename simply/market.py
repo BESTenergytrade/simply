@@ -245,21 +245,28 @@ class Market:
             writer = csv.writer(f)
             writer.writerow(headers)
 
-    def get_grid_fee(self, match):
+    def get_grid_fee(self, match=None, bid_cluster=None, ask_cluster=None):
         """
         Returns the grid fee associated with the bid and ask clusters of a given match.
 
         :param match: a dictionary representing a match, with keys 'bid_cluster' and 'ask_cluster'
+        :param ask_cluster: cluster id of bid
+        :param bid_cluster: cluster id of ask
         :return: the grid fee associated with the given bid and ask clusters
         """
+        if match is not None:
+            # if match is given, data from the match is used. In other cases bid
+            bid_cluster = match['bid_cluster']
+            ask_cluster = match['ask_cluster']
+
         if not self.grid_fee_matrix:
             return 0
         else:
-            if match['bid_cluster'] is None or match['ask_cluster'] is None:
+            if bid_cluster is None or ask_cluster is None:
                 # default grid fee
                 return self.grid_fee_matrix[0][-1]
             else:
-                return self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
+                return self.grid_fee_matrix[bid_cluster][ask_cluster]
 
     def add_grid_fee_info(self, matches):
         """
