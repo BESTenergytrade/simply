@@ -13,6 +13,7 @@ from simply.market_maker import MarketMaker
 from simply.actor import Actor
 from simply.market import Market
 
+
 class Environment:
     """
     Representation of the environment which is visible to all actors. Decouples scenario information
@@ -60,7 +61,6 @@ class Scenario:
             buy_prices = np.array(buy_prices)
         self._buy_prices = buy_prices.copy()
         self.kwargs = kwargs
-
 
         self.environment = Environment(buy_prices, steps_per_hour, self.add_participant, **kwargs)
 

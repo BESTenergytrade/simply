@@ -1,12 +1,12 @@
 import numpy as np
 import pytest
 
-from simply.battery import Battery
 from simply.market import ASK, BID, MARKET_MAKER_THRESHOLD
 from simply.market_maker import MarketMaker
 import simply.config as cfg
 from simply.scenario import Scenario
 from simply.actor import create_random
+
 
 class TestMarketMaker:
     cfg.Config("")
@@ -24,7 +24,6 @@ class TestMarketMaker:
         with pytest.raises(AssertionError):
             MarketMaker(environment=self.env, buy_prices=self.buy_prices,
                         sell_prices=self.buy_prices - 1)
-
 
     def test_order_generation(self):
         time_step = self.env.time_step

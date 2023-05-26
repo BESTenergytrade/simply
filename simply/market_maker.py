@@ -38,7 +38,7 @@ class MarketMaker:
             if buy_to_sell_function is None:
                 # if no specific function to calculate sell_prices is provided
                 # the grid fee will be added to all the buy_price
-                warnings.warn(f"Market Maker selling prices are set equal to buying prices")
+                warnings.warn("Market Maker selling prices are set equal to buying prices")
                 self.all_sell_prices = self.all_buy_prices.copy()
             else:
                 # if a specific function is provided, it is used to calculate sell_prices from
@@ -107,8 +107,10 @@ class MarketMaker:
         # ask  i.e. wanting to sell
         # bid  i.e. wanting to buy
         # Therefore the sign is the negative of the sign of the energy
-        mm_sell_order = Order(ASK, self.t_step, self.id, self.cluster, energy, self.current_sell_price)
-        mm_buy_order = Order(BID, self.t_step, self.id, self.cluster, energy, self.current_buy_price)
+        mm_sell_order = Order(
+            ASK, self.t_step, self.id, self.cluster, energy, self.current_sell_price)
+        mm_buy_order = Order(
+            BID, self.t_step, self.id, self.cluster, energy, self.current_buy_price)
         orders = [mm_sell_order, mm_buy_order]
         return orders
 
