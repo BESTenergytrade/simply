@@ -23,9 +23,11 @@ class MarketMaker:
                  environment: 'Environment',
                  buy_prices: Iterable[float],
                  sell_prices: np.array = None,
-                 buy_to_sell_function=None):
+                 buy_to_sell_function=None,
+                 **kwargs):
         self.environment = environment
         self.id = "MARKET_MAKER"
+        self.cluster = kwargs.get("cluster", None)
         # All prices the market maker is paying to buy energy. Mostly the prediction of these
         # values is used and provided via property
         self.all_buy_prices = np.array(buy_prices)
@@ -36,9 +38,8 @@ class MarketMaker:
             if buy_to_sell_function is None:
                 # if no specific function to calculate sell_prices is provided
                 # the grid fee will be added to all the buy_price
-                warnings.warn(f"Market Maker Selling prices use the default grid fee of "
-                              f"{cfg.config.default_grid_fee}")
-                self.all_sell_prices = self.all_buy_prices.copy() + cfg.config.default_grid_fee
+                warnings.warn(f"Market Maker selling prices are set equal to buying prices")
+                self.all_sell_prices = self.all_buy_prices.copy()
             else:
                 # if a specific function is provided, it is used to calculate sell_prices from
                 # the buy_prices
@@ -106,8 +107,8 @@ class MarketMaker:
         # ask  i.e. wanting to sell
         # bid  i.e. wanting to buy
         # Therefore the sign is the negative of the sign of the energy
-        mm_sell_order = Order(ASK, self.t_step, self.id, None, energy, self.current_sell_price)
-        mm_buy_order = Order(BID, self.t_step, self.id, None, energy, self.current_buy_price)
+        mm_sell_order = Order(ASK, self.t_step, self.id, self.cluster, energy, self.current_sell_price)
+        mm_buy_order = Order(BID, self.t_step, self.id, self.cluster, energy, self.current_buy_price)
         orders = [mm_sell_order, mm_buy_order]
         return orders
 

@@ -31,6 +31,7 @@ class Market:
             if self.scenario.market is not None:
                 warnings.warn("Existing market in Scenario is overwritten with new market")
             self.scenario.market = self
+            self.scenario.environment.get_grid_fee = self.get_grid_fee
 
         self.trades = None
         self.matches = []
@@ -260,7 +261,7 @@ class Market:
             ask_cluster = match['ask_cluster']
 
         if not self.grid_fee_matrix:
-            return 0
+            return cfg.config.default_grid_fee
         else:
             if bid_cluster is None or ask_cluster is None:
                 # default grid fee

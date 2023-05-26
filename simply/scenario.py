@@ -11,7 +11,7 @@ from simply import power_network
 from simply.util import get_all_data
 from simply.market_maker import MarketMaker
 from simply.actor import Actor
-
+from simply.market import Market
 
 class Environment:
     """
@@ -23,6 +23,9 @@ class Environment:
         self.time_step = cfg.config.start
         self.steps_per_hour = steps_per_hour
         self.add_actor_to_scenario = add_actor_to_scenario
+        # Get grid fee method of market to make grid fees accessible for actors. will be overwritten
+        # when market is added to scenario
+        self.get_grid_fee = Market().get_grid_fee
         if buy_prices.size == 0:
             self.market_maker = None
         else:
@@ -57,6 +60,7 @@ class Scenario:
             buy_prices = np.array(buy_prices)
         self._buy_prices = buy_prices.copy()
         self.kwargs = kwargs
+
 
         self.environment = Environment(buy_prices, steps_per_hour, self.add_actor, **kwargs)
 

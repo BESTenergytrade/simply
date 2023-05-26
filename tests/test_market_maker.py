@@ -1,10 +1,12 @@
 import numpy as np
 import pytest
+
+from simply.battery import Battery
 from simply.market import ASK, BID, MARKET_MAKER_THRESHOLD
 from simply.market_maker import MarketMaker
 import simply.config as cfg
 from simply.scenario import Scenario
-
+from simply.actor import create_random
 
 class TestMarketMaker:
     cfg.Config("")
@@ -16,15 +18,13 @@ class TestMarketMaker:
         MarketMaker(environment=self.env, buy_prices=self.buy_prices)
 
     def test_price_comparison(self):
-        cfg.config.default_grid_fee = 1
         MarketMaker(environment=self.env, buy_prices=self.buy_prices)
-
-        cfg.config.default_grid_fee = -1
         # Assertion error should be thrown since mm would buy for higher prices than he would sell
         # for
         with pytest.raises(AssertionError):
-            MarketMaker(environment=self.env, buy_prices=self.buy_prices)
-            cfg.config.default_grid_fee = 0
+            MarketMaker(environment=self.env, buy_prices=self.buy_prices,
+                        sell_prices=self.buy_prices - 1)
+
 
     def test_order_generation(self):
         time_step = self.env.time_step
@@ -35,7 +35,11 @@ class TestMarketMaker:
         bid_order, = [order for order in orders if order.type == BID]
         ask_order, = [order for order in orders if order.type == ASK]
         assert bid_order.price == self.buy_prices[time_step]
-        assert ask_order.price == self.buy_prices[time_step] + grid_fee
+        assert ask_order.price == self.buy_prices[time_step]
+
+        actor = create_random("test_actor", environment=self.env)
+        assert actor.get_mm_buy_prices()[time_step] == bid_order.price - grid_fee
+        assert actor.get_mm_sell_prices()[time_step] == bid_order.price + grid_fee
 
         # test if the energy amount is correct
         assert bid_order.energy == MARKET_MAKER_THRESHOLD
@@ -49,7 +53,10 @@ class TestMarketMaker:
         bid_order, = [order for order in orders if order.type == BID]
         ask_order, = [order for order in orders if order.type == ASK]
         assert bid_order.price == self.buy_prices[time_step]
-        assert ask_order.price == self.buy_prices[time_step] + grid_fee
+        assert ask_order.price == self.buy_prices[time_step]
+
+        assert actor.get_mm_buy_prices()[time_step] == bid_order.price - grid_fee
+        assert actor.get_mm_sell_prices()[time_step] == bid_order.price + grid_fee
 
         # if no new prediction is created this should fail
         time_step = 7

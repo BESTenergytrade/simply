@@ -158,12 +158,18 @@ class Actor:
                      "pm": pm}
 
     def get_mm_buy_prices(self):
-        return self.environment.market_maker.buy_prices
+        env = self.environment
+        grid_fee = env.get_grid_fee(bid_cluster=env.market_maker.cluster, ask_cluster=self.cluster)
+        # the achievable prices the mm buys energy for from the actor are reduced by the grid fee
+        return env.market_maker.buy_prices-grid_fee
     # creating a property object
     mm_buy_prices = property(get_mm_buy_prices)
 
     def get_mm_sell_prices(self):
-        return self.environment.market_maker.sell_prices
+        env = self.environment
+        grid_fee = env.get_grid_fee(ask_cluster=env.market_maker.cluster, bid_cluster=self.cluster)
+        # the prices for which the mm sells energy to the actor are increased by the grid fee
+        return self.environment.market_maker.sell_prices+grid_fee
 
     # creating a property object
     mm_sell_prices = property(get_mm_sell_prices)
