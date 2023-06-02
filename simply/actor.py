@@ -994,62 +994,120 @@ def get_price(pricing_strategy, steps, final_price, energy):
 
     # pricing strategy can be linear
     if pricing_strategy["name"] == "linear":
-        try:
-            m = pricing_strategy["param"][0]
-        except TypeError:
-            m = pricing_strategy["param"]
-        sign = np.sign(energy)
-        return final_price - sign * steps * m * final_price
+        return get_linear_price(steps, final_price, energy, pricing_strategy["param"])
 
     # pricing strategy can be harmonic
     # harmonic pricing changes the price according to the harmonic series meaning
     # 1, 1/2, 1/3, 1/4, 1/5 ... and so on.
     if pricing_strategy["name"] == "harmonic":
-        sign = np.sign(energy)
-        # the half_life_steps is the steps where the price is 50% of the final price for buys.
-        # if energy is supposed to be sold, its 200% instead
-        # Note: This is not to be confused with an half-life time of an exponential decay function,
-        # which is the behaviour of a geometric series. (see below)
-        half_life_steps = pricing_strategy["param"][0]
-        error = "Harmonic series needs a positive non zero float value as first parameter"
-        assert half_life_steps > 0, error
-        factor = ((steps / half_life_steps) + 1) ** -1
-        try:
-            symmetric_bound_factor = pricing_strategy["param"][1]
-        except IndexError:
-            # no symmetric_bound_factor was provided
-            return factor ** sign * final_price
+        return get_harmonic_price(steps, final_price, energy, pricing_strategy["param"])
 
-        # symmetric bound is always smaller than 1 and represents the convergence value of the
-        # harmonic series. The default harmonic series convergences to 0 or diverges to infinity
-        # if a symmetric_bound as second parameter is given the series will converge to
-        # lim --> symmetric_bound_factor*final price instead
-        # for sells it diverges to 1/symmetric_bound_factor*final price
-        if symmetric_bound_factor > 1:
-            symmetric_bound_factor = 1/symmetric_bound_factor
-        delta_price = (1-symmetric_bound_factor)*final_price
-        buy_price = (delta_price * factor + (final_price-delta_price))
-        price = (buy_price/final_price)**sign * final_price
-        return price
-
+    # pricing strategy can be geometric
+    # geometric pricing changes the price according to the geometric series,
+    # e.g. with the factor 0.5
+    # 1, 1/2, 1/4, 1/8, 1/16 ... and so on.
     if pricing_strategy["name"] == "geometric":
-        sign = np.sign(energy)
-        # the geometric_factor is the factor with which the price is multiplied every time step
-        geometric_factor = pricing_strategy["param"][0]
-        if geometric_factor > 1:
-            geometric_factor = 1 / geometric_factor
-
-        geometric_price = final_price * geometric_factor ** (steps * sign)
-        try:
-            symmetric_bound_cap = pricing_strategy["param"][1]
-        except IndexError:
-            # no symmetric_bound_factor was provided
-            return geometric_price
-
-        if sign > 0:
-            return max(geometric_price, symmetric_bound_cap*final_price)
-        else:
-            return min(geometric_price, 1/symmetric_bound_cap*final_price)
+        return get_geometric_price(steps, final_price, energy, pricing_strategy["param"])
 
     raise ValueError("pricing_strategy is a dictionary but does not contain a valid strategy under "
                      "the key 'name'.")
+
+
+def get_linear_price(steps, final_price, energy, param):
+    """ Return the price based on a linear series
+
+    :param steps: number of steps until the future order has to be met
+    :type steps: int
+    :param final_price: price for the future order (often equal to market maker price)
+    :type final_price: float
+    :param energy: amount of energy of the future order. Positive amounts mean buying energy
+    :param param: gradient per time step
+    :type param: list()
+    :return:
+    """
+    try:
+        m = param[0]
+    except TypeError:
+        m = param
+    sign = np.sign(energy)
+    return final_price - sign * steps * m
+
+
+def get_harmonic_price(steps, final_price, energy, param):
+    """ Return the price based on a harmonic series
+
+    :param steps: number of steps until the future order has to be met
+    :type steps: int
+    :param final_price: price for the future order (often equal to market maker price)
+    :type final_price: float
+    :param energy: amount of energy of the future order. Positive amounts mean buying energy
+    :param param: half_life_steps and symmetric_bound_factor, with symmetric_bound_factor being
+        optional
+    :type param: list()
+    :return:
+    """
+    sign = np.sign(energy)
+    # the half_life_steps is the steps where the price is 50% of the final price for buys.
+    # if energy is supposed to be sold, its 200% instead
+    # Note: This is not to be confused with an half-life time of an exponential decay function,
+    # which is the behaviour of a geometric series. (see below)
+    try:
+        half_life_steps = param[0]
+    except TypeError:
+        half_life_steps = param
+    error = "Harmonic series needs a positive non zero float value as first parameter"
+    assert half_life_steps > 0, error
+    factor = ((steps / half_life_steps) + 1) ** -1
+    try:
+        symmetric_bound_factor = param[1]
+    except IndexError:
+        # no symmetric_bound_factor was provided
+        return factor ** sign * final_price
+
+    # symmetric bound is always smaller than 1 and represents the convergence value of the
+    # harmonic series. The default harmonic series convergences to 0 or diverges to infinity
+    # if a symmetric_bound as second parameter is given the series will converge to
+    # lim --> symmetric_bound_factor*final price instead
+    # for sells it diverges to 1/symmetric_bound_factor*final price
+    if symmetric_bound_factor > 1:
+        symmetric_bound_factor = 1 / symmetric_bound_factor
+    delta_price = (1 - symmetric_bound_factor) * final_price
+    buy_price = (delta_price * factor + (final_price - delta_price))
+    price = (buy_price / final_price) ** sign * final_price
+    return price
+
+
+def get_geometric_price(steps, final_price, energy, param):
+    """ Return the price based on a geometric series
+
+    :param steps: number of steps until the future order has to be met
+    :type steps: int
+    :param final_price: price for the future order (often equal to market maker price)
+    :type final_price: float
+    :param energy: amount of energy of the future order. Positive amounts mean buying energy
+    :param param: geometric_factor and symmetric_bound_cap, with symmetric bound capping being
+        optional
+    :type param: list()
+    :return:
+    """
+    sign = np.sign(energy)
+    # the geometric_factor is the factor with which the price is multiplied every time step
+    try:
+        geometric_factor = param[0]
+    except TypeError:
+        geometric_factor = param
+    if geometric_factor > 1:
+        geometric_factor = 1 / geometric_factor
+
+    geometric_price = final_price * geometric_factor ** (steps * sign)
+    try:
+        symmetric_bound_cap = param[1]
+    except IndexError:
+        # no symmetric_bound_factor was provided
+        return geometric_price
+
+    if sign > 0:
+        return max(geometric_price, symmetric_bound_cap * final_price)
+    else:
+        return min(geometric_price, 1 / symmetric_bound_cap * final_price)
+

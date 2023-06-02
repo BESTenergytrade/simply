@@ -502,11 +502,11 @@ class TestActor:
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
         order = actor.generate_order()
-        assert order.price == buy_price - check_index*GRADIENT*buy_price
+        assert order.price == buy_price - check_index*GRADIENT
 
         actor.market_schedule[check_index] = -1
         order = actor.generate_order()
-        assert order.price == sell_price + check_index*GRADIENT*sell_price
+        assert order.price == sell_price + check_index*GRADIENT
 
         # make sure final price is used when the next time step with energy needs is the current
         # time step
@@ -521,6 +521,7 @@ class TestActor:
         assert order.price == sell_price
 
         # negative prices are possible when buying
+        actor.pricing_strategy = dict(name="linear", param=[GRADIENT*100])
         actor.market_schedule[:] = 0
         actor.market_schedule[20] = 1
         order = actor.generate_order()
@@ -599,7 +600,7 @@ class TestActor:
         # price is symmetrical to above price by using the reciprocal value of the price factor
         specific_price = 1/((1-SYM_BOUND)/(check_index+1/HALF_LIFE_INDEX) + SYM_BOUND) * sell_price
         assert order.price == specific_price
-        # 1.6 / 1 =-> reciprocal value 0.625. Therefore 10 * 0.625 ==6.25
+        # 1.6 / 1 =-> reciprocal value 0.625. Therefore 10 * 0.625 == 6.25
 
         # check that prices are still properly generated for current time step energy
         actor.market_schedule[:] = 0
@@ -657,7 +658,7 @@ class TestActor:
         battery = Battery(capacity=10, max_c_rate=2, soc_initial=0.0)
         # with this soc and capacity it means max 10 energy can be stored
         actor = Actor(0, self.example_df, battery=battery, _steps_per_hour=4, cluster=0)
-        actor.pricing_strategy = dict(name="linear", param=[0.1])
+        actor.pricing_strategy = dict(name="linear", param=[0])
         actor.pred.schedule[:] = 0
         actor.pred.schedule[[5, 10, 15]] = 5
         actor.pred.schedule[[2, 12, 13]] = -5
@@ -666,7 +667,7 @@ class TestActor:
         order = actor.generate_order()
         m = BestMarket(0, self.pn)
         m.accept_order(order, callback=actor.receive_market_results)
-        # Generate  order as ask
+        # Generate order as ask
         m.accept_order(Order(1, 0, 'other_actor', 0, 4, 0.0001))
         m.clear()
 
