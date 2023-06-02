@@ -29,7 +29,7 @@ class Actor:
     and defining an energy management schedule, generating bids or asks and receiving trading
     results.
     The actor interacts with the market at every time step in a way defined by the actor strategy.
-    The actor fullfils his schedule needs by buying/selling power. Buying power can be guaranteed by
+    The actor fullfils his schedule needs by buying/selling energy. Buying energy can be guaranteed by
     placing orders with at least the market maker price, since the market maker is seen as unlimited
     supply. At the start of every time step the actor can place one order to buy or sell energy at
     the current time step. Basis for this order are a predicted schedule and a market maker price
@@ -91,6 +91,9 @@ class Actor:
         Scenario reference for the actor
     self.steps_per_hour: int
         Frequency of data per hour
+    self.pricing_strategy: object
+        Strategy used to calculate prices for orders, which are planned in the future.
+        Type can be function(steps,price,energy) or dict with keys ("name", "params")
     self.battery: .battery.Battery()
         Battery used by the actor
     self.bank: float
@@ -180,6 +183,7 @@ class Actor:
 
     # getter
     def get_steps_per_hour(self):
+        """ Return the amount of simulation steps per hour."""
         if self.scenario is None:
             return self._steps_per_hour
         else:
@@ -606,7 +610,7 @@ class Actor:
 
         # Make sure not to over charge the battery since market schedule calculated the amount
         # for a later time slot
-        energy = self.limit_energy(energy, index=index)
+        energy = self.get_limited_energy(energy, index=index)
         energy = self.adjust_energy(energy, index=index)
 
         # get the price by using the pricing strategy
@@ -623,9 +627,42 @@ class Actor:
         return new
 
     def get_price(self, index, final_price, energy):
+        """ Return the price for order generation for a planned future order generation.
+
+        Planned order generation can be moved forward if energy storage is possible. Since urgency
+        for energy procurement is lower prices can be adjusted in a favorable way for the actor.
+        This method returns the price based on the actor.attribute pricing strategy and takes
+        the input of index which is the number of time steps until an order will be placed,
+        the final_price which would be used for this order and the energy of this order.
+        Positive energy values stand for buying of energy, i.e. a reduced price will be generated.
+
+        :param index: number of time steps until a future order
+        :type index: int
+        :param final_price: price which would be used for a future order
+        :type final_price: float
+        :param energy: energy amount of future order. Positive energy stands for buying of energy
+        :type energy: float
+        :return: price for order generation at the current time step
+        :rtype: float
+        """
         return get_price(self.pricing_strategy, index, final_price, energy)
 
-    def limit_energy(self, energy, index):
+    def get_limited_energy(self, energy, index):
+        """ Return the amount of energy that can be ordered at the current time step
+
+        Planned order generation can be moved forward if energy storage is possible. Energy storage
+        can limit the amount of energy that can be bought/sold. This method returns the energy that
+        can be procured at the current time step up to index. The limitation is calculated up to a
+        future point in time. The index is the amount of simulation time steps up to this future
+        point.
+
+        :param energy: energy amount of future order. Positive energy stands for buying of energy
+        :type energy: float
+        :param index: number of time steps until a future order
+        :type index: int
+        :return: energy for order generation at the current time step
+        :rtype: float
+        """
         # no limit is needed if the energy is used in the current time step --> index 0
         if index == 0:
             return energy
@@ -637,11 +674,21 @@ class Actor:
         if energy > 0:
             delta_soc = 1-socs.max()
             return min(energy, delta_soc*self.battery.capacity)
+        # selling energy
         else:
             delta_soc = -socs.max()
             return max(energy, delta_soc*self.battery.capacity)
 
     def adjust_energy(self, energy, index=1):
+        """ Adjust energy amount by up to one energy unit to stay in soc boundaries
+
+        :param energy: energy amount of future order. Positive energy stands for buying of energy
+        :type energy: float
+        :param index: number of time steps until a future order
+        :type index: int
+        :return: energy amount for order generation the current time step
+        :rtype: float
+        """
         # buying energy
         if energy > 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
@@ -792,7 +839,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     max_price = 0.3
     df["price"] *= max_price
     # Adapt order price by a factor to compensate net pricing of ask orders
-    # (i.e. positive power) Bids however include network charges
+    # (i.e. positive energy) Bids however include network charges
     net_price_factor = 0.7
     df["price"] = df.apply(lambda slot: slot["price"] - (slot["schedule"] > 0)
                            * net_price_factor * slot["price"], axis=1)
@@ -873,7 +920,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     df["price"] = np.random.rand(nb_ts, 1)
     df["price"] *= max_price
     # Adapt order price by a factor to compensate net pricing of ask orders
-    # (i.e. positive power) Bids however include network charges
+    # (i.e. positive energy) Bids however include network charges
     net_price_factor = 0.7
     df["price"] = df.apply(
         lambda slot: slot["price"] - (slot["schedule"] > 0) * net_price_factor * slot["price"],
@@ -918,29 +965,29 @@ def clip_soc(soc_prediction, upper_clipping):
         soc_max = np.max(soc_prediction)
 
 
-def get_price(pricing_strategy, index, final_price, energy):
+def get_price(pricing_strategy, steps, final_price, energy):
     """ Returns the price at the current time step to generate an order early
 
-    :param pricing_strategy: strategy name and parameters or function with arguments index, price
+    :param pricing_strategy: strategy name and parameters or function with arguments steps, price
         and energy amount
     :type pricing_strategy: dict() or function
-    :param index: amount of time step until interaction with market maker is planned
+    :param steps: amount of time step until interaction with market maker is planned
     :param final_price: price of the market maker interaction
     :param energy: amount of energy that is planned for trading. Positive amounts are buying and
         negative amounts are selling energy
     :return: current price for order generation
     :rtype: float
     """
-    # the market schedule demands to buy or sell power in the current time slot. Therefore
+    # the market schedule demands to buy or sell energy in the current time slot. Therefore
     # pricing will be adjusted to market maker prices, i.e. the final price will be used.
-    if index == 0:
+    if steps == 0:
         return final_price
 
-    # a function can be given with the arguments index, final_price and energy. it should return
+    # a function can be given with the arguments steps, final_price and energy. it should return
     # a price. if even more advanced functions with access to the actor data shall be used the
     # get_price method can be over written
     if callable(pricing_strategy):
-        return pricing_strategy(index, final_price, energy)
+        return pricing_strategy(steps, final_price, energy)
 
     if not isinstance(pricing_strategy, type(dict())):
         raise TypeError("pricing_strategy is neither a callable function nor a dictionary.")
@@ -952,19 +999,19 @@ def get_price(pricing_strategy, index, final_price, energy):
         except TypeError:
             m = pricing_strategy["param"]
         sign = np.sign(energy)
-        return final_price - sign * index * m * final_price
+        return final_price - sign * steps * m * final_price
 
     # pricing strategy can be harmonic
     # harmonic pricing changes the price according to the harmonic series meaning
     # 1, 1/2, 1/3, 1/4, 1/5 ... and so on.
     if pricing_strategy["name"] == "harmonic":
         sign = np.sign(energy)
-        # the half_life_index is the index where the price is 50% of the final price for buys.
+        # the half_life_steps is the steps where the price is 50% of the final price for buys.
         # if energy is supposed to be sold, its 200% instead
-        half_life_index = pricing_strategy["param"][0]
+        half_life_steps = pricing_strategy["param"][0]
         error = "Harmonic series needs a positive non zero float value as first parameter"
-        assert half_life_index > 0, error
-        factor = ((index / half_life_index) + 1)**-1
+        assert half_life_steps > 0, error
+        factor = ((steps / half_life_steps) + 1) ** -1
         try:
             symmetric_bound_factor = pricing_strategy["param"][1]
         except IndexError:
@@ -985,13 +1032,12 @@ def get_price(pricing_strategy, index, final_price, energy):
 
     if pricing_strategy["name"] == "geometric":
         sign = np.sign(energy)
-        # the half_life_index is the index where the price is 50% of the final price for buys.
-        # if energy is supposed to be sold, its 200% instead
+        # the geometric_factor is the factor with which the price is multiplied every time step
         geometric_factor = pricing_strategy["param"][0]
         if geometric_factor > 1:
             geometric_factor = 1 / geometric_factor
 
-        geometric_price = final_price * geometric_factor ** (index * sign)
+        geometric_price = final_price * geometric_factor ** (steps * sign)
         try:
             symmetric_bound_cap = pricing_strategy["param"][1]
         except IndexError:
