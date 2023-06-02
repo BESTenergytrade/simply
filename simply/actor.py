@@ -29,7 +29,7 @@ class Actor:
     and defining an energy management schedule, generating bids or asks and receiving trading
     results.
     The actor interacts with the market at every time step in a way defined by the actor strategy.
-    The actor fullfils his schedule needs by buying/selling energy. Buying energy can be guaranteed by
+    The actor fulfills his schedule needs by trading energy. Buying energy can be guaranteed by
     placing orders with at least the market maker price, since the market maker is seen as unlimited
     supply. At the start of every time step the actor can place one order to buy or sell energy at
     the current time step. Basis for this order are a predicted schedule and a market maker price
@@ -595,26 +595,26 @@ class Actor:
         # a pricing strategy is provided which allows to generate orders for future demands, with
         # better than guaranteed prices
         if energy == 0:
-            index = None
+            next_order_index = None
             for i, energy in enumerate(self.market_schedule):
                 if energy != 0:
-                    index = i
+                    next_order_index = i
                     break
         else:
-            index = 0
+            next_order_index = 0
 
         if energy > 0:
-            final_price = self.pred.price[index]
+            final_price = self.pred.price[next_order_index]
         else:
-            final_price = self.pred.selling_price[index]
+            final_price = self.pred.selling_price[next_order_index]
 
         # Make sure not to over charge the battery since market schedule calculated the amount
         # for a later time slot
-        energy = self.get_limited_energy(energy, index=index)
-        energy = self.adjust_energy(energy, index=index)
+        energy = self.get_limited_energy(energy, index=next_order_index)
+        energy = self.adjust_energy(energy, index=next_order_index)
 
         # get the price by using the pricing strategy
-        price = self.get_price(index, final_price, energy)
+        price = self.get_price(next_order_index, final_price, energy)
 
         # TODO simulate strategy: manipulation, etc.
         # TODO take flexibility into account to generate the bid
@@ -679,7 +679,7 @@ class Actor:
             delta_soc = -socs.max()
             return max(energy, delta_soc*self.battery.capacity)
 
-    def adjust_energy(self, energy, index=1):
+    def adjust_energy(self, energy, index=0):
         """ Adjust energy amount by up to one energy unit to stay in soc boundaries
 
         :param energy: energy amount of future order. Positive energy stands for buying of energy
@@ -703,7 +703,7 @@ class Actor:
             # rounding to the next energy unit can lead to unfulfilled schedules or over 1 socs.
             # In these cases decrease the order by one energy unit, i.e. sell more energy
             if self.battery.energy() + self.pred.schedule[0:index+1].sum() + (
-                    ((energy+cfg.config.EPS) // cfg.config.energy_unit + 1) *
+                    ((energy+cfg.config.EPS) // cfg.config.energy_unit+1) *
                     cfg.config.energy_unit) > self.battery.capacity:
                 energy -= cfg.config.energy_unit
         return energy
@@ -1008,6 +1008,8 @@ def get_price(pricing_strategy, steps, final_price, energy):
         sign = np.sign(energy)
         # the half_life_steps is the steps where the price is 50% of the final price for buys.
         # if energy is supposed to be sold, its 200% instead
+        # Note: This is not to be confused with an half-life time of an exponential decay function,
+        # which is the behaviour of a geometric series. (see below)
         half_life_steps = pricing_strategy["param"][0]
         error = "Harmonic series needs a positive non zero float value as first parameter"
         assert half_life_steps > 0, error
