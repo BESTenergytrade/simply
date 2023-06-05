@@ -1021,7 +1021,7 @@ def get_linear_price(steps, final_price, energy, param):
     :param final_price: price for the future order (often equal to market maker price)
     :type final_price: float
     :param energy: amount of energy of the future order. Positive amounts mean buying energy
-    :param param: gradient per time step
+    :param param: gradient per time step, sign will be discarded
     :type param: list()
     :return:
     """
@@ -1029,6 +1029,7 @@ def get_linear_price(steps, final_price, energy, param):
         m = param[0]
     except TypeError:
         m = param
+    m = abs(m)
     sign = np.sign(energy)
     return final_price - sign * steps * m
 
@@ -1060,6 +1061,8 @@ def get_harmonic_price(steps, final_price, energy, param):
     factor = ((steps / half_life_steps) + 1) ** -1
     try:
         symmetric_bound_factor = param[1]
+        if symmetric_bound_factor is None:
+            raise IndexError
     except IndexError:
         # no symmetric_bound_factor was provided
         return factor ** sign * final_price
@@ -1102,9 +1105,13 @@ def get_geometric_price(steps, final_price, energy, param):
     geometric_price = final_price * geometric_factor ** (steps * sign)
     try:
         symmetric_bound_cap = param[1]
+        if symmetric_bound_cap is None:
+            raise IndexError
     except IndexError:
         # no symmetric_bound_factor was provided
         return geometric_price
+    if symmetric_bound_cap > 1:
+        symmetric_bound_cap = 1 / symmetric_bound_cap
 
     if sign > 0:
         return max(geometric_price, symmetric_bound_cap * final_price)
