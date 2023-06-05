@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
-
-from simply import market, market_2pac, market_fair
+from simply import scenario, market, market_2pac, market_fair
 from simply.actor import Order
 from simply.scenario import load, create_random
+import os
 from simply.config import Config
 from simply.util import summerize_actor_trading
 from numpy import linspace
@@ -23,13 +23,24 @@ Usage: python main.py [config file]
 
 if __name__ == "__main__":
     parser = ArgumentParser(description='Entry point for market simulation')
-    parser.add_argument('config', nargs='?', default="", help='configuration file')
+    # parser.add_argument('config', nargs='?', default="", help='configuration file')
+    # Replaced the above line to take in the scenario directory (which will contain the config file) instead of putting in the config file
+    # also made it mandatory
+    parser.add_argument('scenario_dir', nargs='?', default=None, help='scenario directory path')
     args = parser.parse_args()
-
-    cfg = Config(args.config)
-    # Load scenario, if path exists with the correct format
-    # otherwise remove all files in existing folder and create new scenario
-    # check if actor-files with correct format exist in cfg.path
+    # Raise error if scenario directory not specified
+    if args.scenario_dir is None:
+        raise (
+            FileNotFoundError("Scenario directory path must be specified. Please provide the path as a command-line argument."))
+    # This means that the config file must always be in the scenario directory
+    config_file = os.path.join(args.scenario_dir, "config.txt")
+    # Raise error if config.txt file not found in scenario directory
+    if not os.path.isfile(config_file):
+        raise (
+            FileNotFoundError(f"Config file not found in scenario directory: {args.scenario_dir}"))
+    cfg = Config(config_file)
+    print(cfg)
+    # Checks if actor files with the correct format exist in the cfg.path
     scenario_exists = len([False for i in cfg.path.glob(f"actor_*.{cfg.data_format}")]) != 0
 
     print(f'Scenario path: {cfg.path}')
