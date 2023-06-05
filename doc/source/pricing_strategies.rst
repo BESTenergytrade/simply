@@ -100,14 +100,18 @@ Geometric pricing uses a geometric series to scale the price and follows the fun
 
 .. math::
 
-     current_price = final_price * (geometric_factor^{sign(energy)} ^{steps}
+     current_price = final_price * (geometric_factor^{sign(energy)})^{steps}
 
 where the geometric factor is always smaller than 1. The *symmetric_bound_factor* is optional
 
 .. code:: python
 
-   geometric_factor = some_postive_float_value
+   geometric_factor = some_positive_float_value
    symmetric_bound_factor = some_other_value
    actor.pricing_strategy = dict(name="geometric", param=[half_life_index,symmetric_bound_factor])
 
 The symmetric_bound_factor clips value to this bound, i.e. if resulting prices exceed this final_price multiplier, they are clipped to this value. I.e. if the symmetric_bound_factor is 2, the final_price can not exceed twice the final_price or go below 1/2 of the final_price in case of selling energy.
+
+Comparison of Pricing Strategies
+================================
+To show the different behaviour of these pricing strategies the following figure, shows the resulting price, for some order which is planned in the market_schedule in 10 time_steps
