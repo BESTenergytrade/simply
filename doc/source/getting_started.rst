@@ -89,7 +89,7 @@ where the created scenario should be stored. The number of market actors must ma
 The number of nodes must match the information in `network.json`. 
 
 
-After the network and the community have been created, `build_simulation.py` can be executed. The appropriate scenario 
+After the network and the community have been created, `build_scenario.py` can be executed. The appropriate scenario
 is created and saved to the location specified in the configuration file. The scenario contains a time series for each actor
 with power generation, power consumption, and market demand or supply (including bid price). 
 

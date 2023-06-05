@@ -5,6 +5,8 @@ import shutil
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import argparse
+import sys
 from argparse import ArgumentParser
 
 from simply.actor import Actor
@@ -234,46 +236,63 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     return Scenario(pn, actors, actor_map)
 
 
-if __name__ == "__main__":
-    # ToDo: Specify the path to the scenario (dirname) e.g. by the terminal, and then have the
-    #  other paths relative to this
-    # Store default configuration files and directories paths
-    dirname = Path(__file__).parent
-    # ToDo: Hardcoded for example_scenario1, will change later
-    # ToDo: hardocde filename e.g. scenario_config and then specifiy directory path
-    config_json_path = dirname / Path('examples/example_scenario1/example_config.json')
-    network_path = dirname / Path('examples/example_scenario1/example_network.json')
-    # ToDo: Hardcoded for example_scenario1, will change later - if there is not specified, use default values (or throw error and specify)
-    config_path = dirname / Path('examples/example_scenario1/config.txt')
-    # ToDo: Hardcoded for example_scenario1, will change later
-    loads_dir_path = dirname / Path('examples/example_scenario1/scenario_inputs/loads_dir.csv')
-    # ToDo: Hardcoded for example_scenario1, will change later
-    data_dirpath = Path("examples/example_scenario1/scenario_inputs")
+def main(scenario_dir, data_dir):
+    # Set the scenario directory path
+    scenario_dir = Path(scenario_dir)
+    print(f"Scenario directory: {scenario_dir}")
 
-    # Parse configuration files and directories paths as arguments
-    parser = ArgumentParser(description='Entry point for market simulation')
-    parser.add_argument('scenario_config', nargs='?', default=config_json_path,
-                        help='scenario config json file')
-    parser.add_argument('--network', default=network_path, help='network json file')
-    parser.add_argument('--config', default=config_path, help='configuration file')
-    parser.add_argument('--loads_dir',  default=loads_dir_path,
-                        help='loads assignment csv file')
-    parser.add_argument('--data_dir', default=data_dirpath, help='data directory')
-    args = parser.parse_args()
+    # Set the paths based on the scenario directory
+    config_json_path = scenario_dir / "example_config.json"
+    network_path = scenario_dir / "example_network.json"
+    config_path = scenario_dir / "config.txt"
+    data_dirpath = Path(data_dir) if data_dir else scenario_dir / "scenario_inputs"
+    loads_dir_path = data_dirpath / "loads_dir.csv"
+
+    missing_paths = [path for path in (config_json_path, network_path, config_path, loads_dir_path, data_dirpath) if
+                     not path.exists()]
+    if missing_paths:
+        missing_paths_str = "\n".join(str(path) for path in missing_paths)
+        raise FileNotFoundError(
+            f"One or more required files do not exist in the scenario directory:\n{missing_paths_str}")
 
     # Build config object using configuration file
-    cfg = Config(args.config)
-    cfg.path = Path().parent / cfg.path
-    print(cfg)
-    print(cfg.path)
-    cfg_path = cfg.path
+    cfg = Config(config_path)
+    cfg.path = scenario_dir / "scenario"
+
     # Reset save location directory
     remove_existing_dir(cfg.path)
-    sc = create_scenario_from_config(args.scenario_config, args.network, data_dirpath=args.data_dir,
-                                     nb_ts=cfg.nb_ts, loads_dir_path=args.loads_dir, ps=1, ls=None)
+
+    sc = create_scenario_from_config(
+        config_json_path,
+        network_path,
+        data_dirpath=data_dirpath,
+        nb_ts=cfg.nb_ts,
+        loads_dir_path=loads_dir_path,
+        ps=1,
+        ls=None
+    )
+
     sc.save(cfg.path, cfg.data_format)
     insert_market_maker_id(cfg.path)
 
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_actor_data()
+
+
+if __name__ == "__main__":
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='Entry point for market simulation')
+    parser.add_argument('scenario_dir', help='scenario directory path')
+    parser.add_argument('--data_dir', default='', help='data directory')
+    args = parser.parse_args()
+
+    if args.scenario_dir is None:
+        raise FileNotFoundError("Scenario directory path must be specified. Please provide the path as a command-line argument.")
+    data_dir = args.data_dir if args.data_dir is not None else os.path.join(args.scenario_dir, "scenario_inputs")
+    if args.data_dir is None:
+        print(f"Using data directory: {data_dir}")
+
+
+    # Call the main function with the specified scenario directory and data directory
+    main(args.scenario_dir, args.data_dir)
