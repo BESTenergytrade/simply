@@ -1117,4 +1117,3 @@ def get_geometric_price(steps, final_price, energy, param):
         return max(geometric_price, symmetric_bound_cap * final_price)
     else:
         return min(geometric_price, 1 / symmetric_bound_cap * final_price)
-

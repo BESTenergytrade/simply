@@ -114,4 +114,29 @@ The symmetric_bound_factor clips value to this bound, i.e. if resulting prices e
 
 Comparison of Pricing Strategies
 ================================
-To show the different behaviour of these pricing strategies the following figure, shows the resulting price, for some order which is planned in the market_schedule in 10 time_steps
+To show the different behaviour of these pricing strategies the following figure, shows the resulting price, for some order which is planned in the market_schedule in 10 time_steps and has a final price of 1. The bound factor is set to 0.4 in the cases with bounds.
+
+
+.. figure:: _static/buy_prices_strategies.png
+   :width: 70%
+   :alt: Buy Prices per strategy
+
+   Figure 1: scaling of buy prices up to the order price of the market maker.
+
+.. figure:: _static/sell_prices_strategies.png
+   :width: 80%
+   :alt: Sell Prices per strategy
+
+   Figure 2: scaling of sell prices up to the order price of the market maker.
+
+.. figure:: _static/buy_prices_strategies_with_bounds.png
+   :width: 90%
+   :alt: Buy Prices per strategy with boundary
+
+   Figure 3: scaling of buy prices up to the order price of the market maker with a boundary argument.
+
+.. figure:: _static/sell_prices_strategies_with_bounds.png
+   :width: 100%
+   :alt: Sell Prices per strategy with boundary
+
+   Figure 4: scaling of sell prices up to the order price of the market maker with a boundary argument.
