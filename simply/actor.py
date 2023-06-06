@@ -93,7 +93,8 @@ class Actor:
         Frequency of data per hour
     self.pricing_strategy: object
         Strategy used to calculate prices for orders, which are planned in the future.
-        Type can be function(steps,price,energy) or dict with keys ("name", "params")
+        Type can be function(steps,price,energy) or dict with keys ("name", "params"). For further
+        information check Pricing Strategies in ReadTheDocs or the documentation for :py:func:`get_price`
     self.battery: .battery.Battery()
         Battery used by the actor
     self.bank: float
@@ -969,7 +970,16 @@ def get_price(pricing_strategy, steps, final_price, energy):
     """ Returns the price at the current time step to generate an order early
 
     :param pricing_strategy: strategy name and parameters or function with arguments steps, price
-        and energy amount
+        and energy amount. Keys and values for the dictionary are dict("name":name,"param": param)
+        with allowed names ["linear", "harmonic", "geometric"]. For documentation of the param
+        values can be found at their respective functions, e.g.:
+
+            - :py:func:`get_linear_price`
+            - :py:func:`get_harmonic_price`
+            - :py:func:`get_geometric_price`
+
+        or in ReadTheDocs.
+
     :type pricing_strategy: dict() or function
     :param steps: amount of time step until interaction with market maker is planned
     :param final_price: price of the market maker interaction
@@ -1021,6 +1031,7 @@ def get_linear_price(steps, final_price, energy, param):
     :param final_price: price for the future order (often equal to market maker price)
     :type final_price: float
     :param energy: amount of energy of the future order. Positive amounts mean buying energy
+    :type energy: float
     :param param: gradient per time step, sign will be discarded
     :type param: list()
     :return:
@@ -1042,6 +1053,7 @@ def get_harmonic_price(steps, final_price, energy, param):
     :param final_price: price for the future order (often equal to market maker price)
     :type final_price: float
     :param energy: amount of energy of the future order. Positive amounts mean buying energy
+    :type energy: float
     :param param: half_life_steps and symmetric_bound_factor, with symmetric_bound_factor being
         optional
     :type param: list()
@@ -1088,6 +1100,7 @@ def get_geometric_price(steps, final_price, energy, param):
     :param final_price: price for the future order (often equal to market maker price)
     :type final_price: float
     :param energy: amount of energy of the future order. Positive amounts mean buying energy
+    :type energy: float
     :param param: geometric_factor and symmetric_bound_cap, with symmetric bound capping being
         optional
     :type param: list()
