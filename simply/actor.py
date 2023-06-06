@@ -627,18 +627,19 @@ class Actor:
         self.orders.append(new)
         return new
 
-    def get_price(self, index, final_price, energy):
+    def get_price(self, steps, final_price, energy):
         """ Return the price for order generation for a planned future order generation.
 
-        Planned order generation can be moved forward if energy storage is possible. Since urgency
-        for energy procurement is lower prices can be adjusted in a favorable way for the actor.
-        This method returns the price based on the actor.attribute pricing strategy and takes
-        the input of index which is the number of time steps until an order will be placed,
-        the final_price which would be used for this order and the energy of this order.
+        Planned order generation can be moved to an earlier time if energy storage is possible.
+        Since urgency for energy procurement is lower, prices can be adjusted favorably for the
+        actor. This method returns the current price based on the actor's attribute
+        :py:attr:`~simply.actor.pricing_strategy` and a planned future order. Parameters are
+        number of time steps until the future order will be placed, the final_price which would be
+        used for this future order and the energy of this future order.
         Positive energy values stand for buying of energy, i.e. a reduced price will be generated.
 
-        :param index: number of time steps until a future order
-        :type index: int
+        :param steps: number of time steps until a future order
+        :type steps: int
         :param final_price: price which would be used for a future order
         :type final_price: float
         :param energy: energy amount of future order. Positive energy stands for buying of energy
@@ -646,7 +647,7 @@ class Actor:
         :return: price for order generation at the current time step
         :rtype: float
         """
-        return get_price(self.pricing_strategy, index, final_price, energy)
+        return get_price(self.pricing_strategy, steps, final_price, energy)
 
     def get_limited_energy(self, energy, index):
         """ Return the amount of energy that can be ordered at the current time step
