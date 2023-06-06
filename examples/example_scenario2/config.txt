@@ -1,12 +1,11 @@
-[default]
+[input_params]
 
 #--------------------------
 # scenario
 #--------------------------
-# path of scenario file to load and/or store
-path = examples/example_scenario1/scenario
+results_path = examples/example_scenario2/results
 # load existing scenario
-load_scenario = True
+load_scenario = False
 # possible data_formats: json, csv
 data_format = csv
 

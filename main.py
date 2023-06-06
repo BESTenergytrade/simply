@@ -46,6 +46,7 @@ if __name__ == "__main__":
     print(f'Scenario path: {cfg.path}')
     # load existing scenario or else create randomized new one
     if cfg.load_scenario:
+        print(cfg.load_scenario)
         if scenario_exists:
             sc = load(cfg.path, cfg.data_format)
         else:

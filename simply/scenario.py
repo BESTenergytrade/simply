@@ -62,20 +62,25 @@ class Scenario:
             )
         )
 
-        # save actors
+        print(data_format)
+        # Save actors' data
+        a_dict = {}
+        for actor_variable in self.actors:
+            a_dict[actor_variable.id] = actor_variable.to_dict(external_data=True)
+
         if data_format == "csv":
-            # Save data in separate csv file and all actors in one config file
-            a_dict = {}
+            # Save data in separate CSV files
             for actor_variable in self.actors:
-                a_dict[actor_variable.id] = actor_variable.to_dict(external_data=True)
                 actor_variable.save_csv(dirpath)
-            dirpath.joinpath('actors.json').write_text(json.dumps(a_dict, indent=2))
-        else:
-            # Save config and data per actor in a single file
-            for actor_variable in self.actors:
-                dirpath.joinpath(f'actor_{actor_variable.id}.{data_format}').write_text(
-                    json.dumps(actor_variable.to_dict(external_data=False), indent=2)
-                )
+
+        # Save config and data per actor in a single file
+        actors_file_path = dirpath.joinpath('actors.json')
+        actors_file_path.write_text(json.dumps(a_dict, indent=2))
+
+        # Save data for all actors in one file
+        actors_data_file_path = dirpath.joinpath('actors_data.json')
+        actors_data = [actor_variable.to_dict(external_data=False) for actor_variable in self.actors]
+        actors_data_file_path.write_text(json.dumps(actors_data, indent=2))
 
         # save map_actors
         dirpath.joinpath('map_actors.json').write_text(json.dumps(self.map_actors, indent=2))

@@ -1,5 +1,5 @@
 import warnings
-from configparser import ConfigParser, MissingSectionHeaderError
+from configparser import ConfigParser, MissingSectionHeaderError, NoOptionError, NoSectionError
 from numpy import linspace
 from pathlib import Path
 
@@ -48,6 +48,7 @@ class Config:
         config = self
         global parser
         parser = ConfigParser()
+        # ToDo: probably change this to an error, because default values will not be used
         if not cfg_file:
             warnings.warn("No Configuration file path was provided. Default values will be used.")
         elif not Path(cfg_file).is_file():
@@ -58,7 +59,7 @@ class Config:
         except MissingSectionHeaderError:
             # headless config: insert missing section header
             with open(cfg_file, 'r') as f:
-                config_string = "[default]\n" + f.read()
+                config_string = "[input_params]\n" + f.read()
             parser.read_string(config_string)
 
         # default section: basic simulation properties
@@ -66,22 +67,25 @@ class Config:
         # scenario
         # --------------------------
         # path of scenario file to load and/or store
-        self.path = parser.get("default", "path", fallback="./scenarios/default")
-        self.path = Path(self.path)
-        self.data_format = parser.get("default", "data_format", fallback="json")
+        try:
+            self.results_path = parser.get("input_params", "path")
+        except (NoOptionError, NoSectionError):
+            raise ValueError("Configuration file must specify the 'path' option in the 'input_params' section.")
+        self.results_path = Path(self.results_path)
+        self.data_format = parser.get("input_params", "data_format", fallback="json")
         # load existing scenario
-        self.load_scenario = parser.getboolean("default", "load_scenario", fallback=False)
+        self.load_scenario = parser.getboolean("input_params", "load_scenario", fallback=False)
 
         # For generating random scenario
         # number actors in simulation
-        self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
+        self.nb_actors = parser.getint('input_params', 'nb_actors', fallback=5)
         # number of nodes in simulation
-        self.nb_nodes = parser.getint('default', 'nb_nodes', fallback=4)
+        self.nb_nodes = parser.getint('input_params', 'nb_nodes', fallback=4)
         # weight factor: network charges to power network weight
-        self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
+        self.weight_factor = parser.getfloat("input_params", "weight_factor", fallback=0.1)
 
         # Tolerance value for assertions, comparison and so on
-        self.EPS = parser.getfloat("default", "EPS", fallback=1e-6)
+        self.EPS = parser.getfloat("input_params", "EPS", fallback=1e-6)
 
         # --------------------------
         # market

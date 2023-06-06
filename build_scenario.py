@@ -257,6 +257,7 @@ def main(scenario_dir, data_dir):
 
     # Build config object using configuration file
     cfg = Config(config_path)
+    # ToDo: can change this if we want to specify the path for where the scenario gets stored
     cfg.path = scenario_dir / "scenario"
 
     # Reset save location directory
@@ -292,7 +293,6 @@ if __name__ == "__main__":
     data_dir = args.data_dir if args.data_dir is not None else os.path.join(args.scenario_dir, "scenario_inputs")
     if args.data_dir is None:
         print(f"Using data directory: {data_dir}")
-
 
     # Call the main function with the specified scenario directory and data directory
     main(args.scenario_dir, args.data_dir)
