@@ -32,8 +32,8 @@ class Actor:
     The actor fulfills his schedule needs by trading energy. A successful energy trade can
     be guaranteed by placing orders with at least the market maker price, since the market maker
     is seen as unlimited supply. At the start of every time step the actor can place one order to
-    buy or sell energy at the current time step. Basis for this order are a predicted schedule and a market maker price
-    time series as input.
+    buy or sell energy at the current time step. Basis for this order are a predicted schedule and
+    a market maker price time series as input.
     After matching took place, the (monetary) bank and resulting soc is calculated taking into
     consideration the schedule and the acquired energy of this time step, i.e. bank and soc at the
     end of the time step. Afterwards the time step is increased and a new prediction for the
@@ -94,7 +94,8 @@ class Actor:
     self.pricing_strategy: object
         Strategy used to calculate prices for orders, which are planned in the future.
         Type can be function(steps,price,energy) or dict with keys ("name", "params"). For further
-        information check Pricing Strategies in ReadTheDocs or the documentation for :py:func:`get_price`
+        information check Pricing Strategies in ReadTheDocs or the documentation for
+        :py:func:`get_price`
     self.battery: .battery.Battery()
         Battery used by the actor
     self.bank: float
