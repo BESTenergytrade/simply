@@ -374,8 +374,8 @@ class TestActor:
         # Actor would want to buy the scheduled amount. Since the fraction of an energy unit can
         # not be matched buying of energy is increased by one energy unit to not under charge
         assert actor.adjust_energy(-LOAD) == -LOAD + cfg.config.energy_unit
-        battery.charge(10)
 
+        battery.charge(CAPACITY)
         # Battery soc is at 100%. Schedule is less than an energy unit above capacity. Adjustment
         # should reduce the energy amount of the order by one energy unit
         LOAD = -cfg.config.energy_unit / 10 - CAPACITY
@@ -393,7 +393,7 @@ class TestActor:
         # matched or not does not matter
         assert actor.adjust_energy(-CHARGE) == -CHARGE
 
-        battery.charge(10)
+        battery.charge(CAPACITY)
         CHARGE = +cfg.config.energy_unit/10
         actor.pred.schedule[:] = CHARGE
         # Actor would want to sell the scheduled amount. Since the fraction of an energy unit can

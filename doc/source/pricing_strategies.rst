@@ -6,7 +6,7 @@ Pricing Strategies
 
 Simply implements several options to simulate specific interactions of actors in the market. Basic strategies can be used
 to give each actor a base line strategy which follows from the knowledge of future market maker prices and
-the agents own schedule. This does not take the possibility of local interaction between actors into account. This is
+the agents own schedule, i.e. expected residual load. This does not take the possibility of local interaction between actors into account. This is
 where static pricing strategies can be used. Static pricing strategies are based on the market_schedule, which defines
 amounts of energies which have to be traded at current or future times. They arise from the schedule, the chosen strategy
 and the constraint that the energy schedule has to be met through trades or energy inside of the actors battery. When a

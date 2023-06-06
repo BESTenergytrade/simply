@@ -636,7 +636,7 @@ class Actor:
         :py:attr:`~simply.actor.pricing_strategy` and a planned future order. Parameters are
         number of time steps until the future order will be placed, the final_price which would be
         used for this future order and the energy of this future order.
-        Positive energy values stand for buying of energy, i.e. a reduced price will be generated.
+        Positive energy values stand for buying of energy, i.e. a lower price will be generated.
 
         :param steps: number of time steps until a future order
         :type steps: int
@@ -684,7 +684,7 @@ class Actor:
     def adjust_energy(self, energy, index=0):
         """ Adjust energy amount by up to one energy unit to stay in soc boundaries
 
-        :param energy: energy amount of future order. Positive energy stands for buying of energy
+        :param energy: energy amount for next order. Positive energy stands for buying of energy
         :type energy: float
         :param index: number of time steps until a future order
         :type index: int
@@ -1008,15 +1008,10 @@ def get_price(pricing_strategy, steps, final_price, energy):
         return get_linear_price(steps, final_price, energy, pricing_strategy["param"])
 
     # pricing strategy can be harmonic
-    # harmonic pricing changes the price according to the harmonic series meaning
-    # 1, 1/2, 1/3, 1/4, 1/5 ... and so on.
     if pricing_strategy["name"] == "harmonic":
         return get_harmonic_price(steps, final_price, energy, pricing_strategy["param"])
 
     # pricing strategy can be geometric
-    # geometric pricing changes the price according to the geometric series,
-    # e.g. with the factor 0.5
-    # 1, 1/2, 1/4, 1/8, 1/16 ... and so on.
     if pricing_strategy["name"] == "geometric":
         return get_geometric_price(steps, final_price, energy, pricing_strategy["param"])
 
@@ -1048,6 +1043,9 @@ def get_linear_price(steps, final_price, energy, param):
 
 def get_harmonic_price(steps, final_price, energy, param):
     """ Return the price based on a harmonic series
+
+    Harmonic pricing changes the price according to the harmonic series meaning
+    1, 1/2, 1/3, 1/4, 1/5 ... and so on.
 
     :param steps: number of steps until the future order has to be met
     :type steps: int
@@ -1095,6 +1093,10 @@ def get_harmonic_price(steps, final_price, energy, param):
 
 def get_geometric_price(steps, final_price, energy, param):
     """ Return the price based on a geometric series
+
+    Geometric pricing changes the price according to the geometric series,
+    e.g. with the factor 0.5
+    1, 1/2, 1/4, 1/8, 1/16 ... and so on.
 
     :param steps: number of steps until the future order has to be met
     :type steps: int
