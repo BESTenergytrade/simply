@@ -21,16 +21,16 @@ An example scenario could be.
     - Due to the actor strategy the actor plans to buy 10 energy from the market maker in 3 time steps
         - The market_schedule will have 10 as a value at index 3
     - The actor generates an order at the current time step for a lower price than 0.5 currency units, e.g. 0.25
-    - The market maker will not match this order, but local prosumers might sell for this price, which is lower than the market maker price
+    - Local prosumers might sell for this price, which is lower than the market maker price
         - If the order gets matched the market_schedule will deduct the matched energy at index 3
         - If the order does not get matched the price for order generation will be increased in the next time step, e.g. 0.35
     - If no matching takes place up until index 3, the order generation will use the final price of 0.5 currency units to guarantee matching with the market_maker
 
 Pricing can be custom function with the arguments steps (int), final_price (float) and energy(float)
 
-- steps the amount of time steps until interaction with the market_maker is planned
-- final price is the guaranteed market maker price
-- energy is the energy amount of the planned interaction, mostly used to determine the direction of the order. Positive energy amounts mean buying power and vice versa.
+- :code:`steps` is the amount of time steps until interaction with the market_maker is planned
+- :code:`final_price` is the guaranteed market maker price
+- :code:`energy` is the energy amount of the planned interaction, mostly used to determine the direction of the order. Positive energy amounts mean buying power and vice versa.
 
 Besides the custom function, 3 different pricing strategies are implemented in form of a dictionary. The dictionary has two keys "name" and "params". The name describes the functions and params defines the function parameters. The pricing strategies are described shortly below.
 
@@ -44,6 +44,7 @@ The linear pricing strategy uses a linear function to calculate the price of the
 
     current\textunderscore price = final\textunderscore price - sign(energy) * steps * m
 
+where *m* is the absolut price delta per time step.
 Since positive energy values mean the actor wants to buy energy, the current price will be lowered to smaller values. To make use of this pricing strategy a dictionary has to be passed to the actor like in the code below:
 
 .. code:: python
@@ -71,7 +72,7 @@ The mandatory parameter is the half life index, which defines at which index hal
    symmetric_bound_factor = some_other_value
    actor.pricing_strategy = dict(name="harmonic", param=[half_life_index,symmetric_bound_factor])
 
-With the *symmetric_bound_factor* (being optional) and half_life_steps always being positive values, the formulas used are:
+With the *symmetric_bound_factor* (being optional) and both param values always being positive, the formulas used are:
 
 .. math::
 

@@ -634,16 +634,14 @@ class Actor:
         Planned order generation can be moved to an earlier time if energy storage is possible.
         Since urgency for energy procurement is lower, prices can be adjusted favorably for the
         actor. This method returns the current price based on the actor's attribute
-        :py:attr:`~simply.actor.pricing_strategy` and a planned future order. Parameters are
-        number of time steps until the future order will be placed, the final_price which would be
-        used for this future order and the energy of this future order.
-        Positive energy values stand for buying of energy, i.e. a lower price will be generated.
+        :py:attr:`~simply.actor.pricing_strategy` and a planned future order.
 
-        :param steps: number of time steps until a future order
+        :param steps: number of time steps until a future order will be placed
         :type steps: int
         :param final_price: price which would be used for a future order
         :type final_price: float
         :param energy: energy amount of future order. Positive energy stands for buying of energy
+            , i.e. a lower price will be generated.
         :type energy: float
         :return: price for order generation at the current time step
         :rtype: float
