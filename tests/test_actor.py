@@ -17,36 +17,17 @@ SELL_MULT = 0.9
 BAT_CAPACITY = 3
 
 
-# def market_step(actor, market, step_time):
-#     order, = actor.generate_orders()
-#     # Get the order into the market
-#     market.accept_order(order, callback=actor.receive_market_results)
-#     # Generate market maker order as ask
-#     market.accept_order(
-#         Order(1, step_time, 'market_maker', None, MARKET_MAKER_THRESHOLD, actor.pred.price[0]))
-#     # Generate market maker order as bid
-#     market.accept_order(
-#         Order(-1, step_time, 'market_maker', None, MARKET_MAKER_THRESHOLD,
-#               actor.pred.selling_price[0]))
-#     market.clear()
-
-
 class StubClass:
     def __init__(self):
         pass
 
 
 class TestActor:
-    stub_scenario = StubClass()
-    stub_scenario.time_step = 0
-    stub_scenario.actors = []
-
     df = pd.DataFrame(np.random.rand(24, 4), columns=["load", "pv", "price", "schedule"])
     cfg.Config("")
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
-
     test_prices = [0.082, 0.083, 0.087, 0.102, 0.112, 0.122, 0.107, 0.103, 0.1, 0.1, 0.09, 0.082,
                    0.083, 0.083, 0.094, 0.1, 0.11, 0.109, 0.106, 0.105, 0.1, 0.093, 0.084, 0.081,
                    0.078, 0.074, 0.074, 0.079, 0.081, 0.083, 0.079, 0.074, 0.07, 0.067, 0.065,
@@ -75,7 +56,7 @@ class TestActor:
     example_df = pd.concat([example_df] * 10).reset_index(drop=True)
 
     def test_init(self):
-        # actor_id, dataframe, load_scale, power_scale, pm (?)
+        # actor_id, dataframe, environment
         a = Actor(0, self.df, self.env)
         assert a is not None
 
@@ -171,13 +152,12 @@ class TestActor:
         self.scenario.reset()
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        # self.scenario.reset()
         actor = Actor(0, self.example_df, battery=battery, environment=self.env)
 
+        # Market maker buys for less than he sells for
         self.env.market_maker.all_buy_prices *= SELL_MULT
         self.env.market_maker.create_prediction()
 
-        # self.scenario.market = m
         nr_of_matches = 0
         # tolerance due to energy_unit differences
         tol = 2 * cfg.config.energy_unit
@@ -217,7 +197,6 @@ class TestActor:
         # test that strategy 1 works without errors. Assert that price of energy is lower than
         # buying only in the current time slots
 
-        # reset scenario
         self.scenario.reset()
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
@@ -280,13 +259,10 @@ class TestActor:
         # exactly when the battery would reach an soc of 1 or higher.
         # Assert that price of energy is lower than
         # buying only in the current time slots
-        # reset scenario
-
         self.scenario.reset()
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, battery=battery, environment=self.env)
-
         self.env.market_maker.all_buy_prices *= SELL_MULT
         self.env.market_maker.create_prediction()
 
@@ -311,10 +287,9 @@ class TestActor:
         # strategy 3 extends strategy 2. It buys energy at low prices and sells it at high prices
         # if profit can be made and the soc of of the previous strategies allows for it.
         # Assert this strategy runs without errors.
-        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         self.scenario.reset()
+        battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, environment=self.env, battery=battery)
-
         self.env.market_maker.all_buy_prices *= SELL_MULT
         self.env.market_maker.create_prediction()
 
@@ -375,6 +350,44 @@ class TestActor:
                * BAT_CAPACITY)
         assert val == approx(actor.bank)
 
+    def test_adjust_energy(self):
+        CAPACITY = 10
+        actor = self.get_actor_w_pricing_setup(capacity=CAPACITY, soc_initial=0)
+        # with this soc and capacity it means 10 energy can be stored
+        battery = actor.battery
+        # Buying Energy   ########
+        # Battery soc is at 0%. Schedule has smaller than energy_unit demand
+        LOAD = -cfg.config.energy_unit/10
+        actor.pred.schedule[:] = LOAD
+        # Actor would want to buy the scheduled amount. Since the fraction of an energy unit can
+        # not be matched buying of energy is increased by one energy unit to not under charge
+        assert actor.adjust_energy(-LOAD) == -LOAD + cfg.config.energy_unit
+
+        battery.charge(CAPACITY)
+        # Battery soc is at 100%. Schedule is less than an energy unit above capacity. Adjustment
+        # should reduce the energy amount of the order by one energy unit
+        LOAD = -cfg.config.energy_unit / 10 - CAPACITY
+        actor.pred.schedule[:] = LOAD
+        # Actor would want to order the scheduled amount. If the fraction of the energy unit is
+        # matched or not does not matter
+        assert actor.adjust_energy(-LOAD) == -LOAD
+
+        # Selling Energy   ########
+        battery.charge(-battery.energy())
+        # More than the capacity would be charged
+        CHARGE = CAPACITY+cfg.config.energy_unit/10
+        actor.pred.schedule[:] = CHARGE
+        # Actor would want to sell the scheduled amount. If the fraction of the energy unit is
+        # matched or not does not matter
+        assert actor.adjust_energy(-CHARGE) == -CHARGE
+
+        battery.charge(CAPACITY)
+        CHARGE = +cfg.config.energy_unit/10
+        actor.pred.schedule[:] = CHARGE
+        # Actor would want to sell the scheduled amount. Since the fraction of an energy unit can
+        # not be matched selling of energy is increased by one energy unit to not over charge
+        assert actor.adjust_energy(-CHARGE) == -CHARGE - cfg.config.energy_unit
+
     def test_limiting_energy(self):
         # test limit of energy amount
         battery = Battery(capacity=10, max_c_rate=2, soc_initial=0.99)
@@ -398,26 +411,36 @@ class TestActor:
         orders = actor.generate_orders()
         assert orders[0].energy == pytest.approx(9.9)
 
-    def test_pricing(self):
+    def get_actor_w_pricing_setup(self, capacity=1, soc_initial=0.0,
+                                  pricing_strategy=None,
+                                  mm_buy_price=1, mm_sell_price=10):
+        battery = Battery(capacity=capacity, max_c_rate=2, soc_initial=soc_initial)
+        actor = Actor(0, self.example_df, self.env, battery=battery,
+                      pricing_strategy=pricing_strategy)
+        # Note: Price the actor can buy energy for is the mm sell price and vice versa
+        self.env.market_maker.all_buy_prices[:] = mm_buy_price
+        self.env.market_maker.all_sell_prices[:] = mm_sell_price
+        self.env.market_maker.create_prediction()
+        return actor
+
+    # Test different pricing algorithms as well as self defined pricing functionality.
+    # Test both cases of buying and selling energy, since pricing schemes lower the price
+    # in comparison to the guaranteed buying price and raise the price in comparison to the
+    # guaranteed selling price
+
+    def test_no_pricing(self):
         # Test different pricing algorithms as well as self defined pricing functionality.
         # Test both cases of buying and selling energy, since pricing schemes lower the price
         # in comparison to the guaranteed buying price and raise the price in comparison to the
         # guaranteed selling price
-        self.scenario.reset()
-        bat = Battery(capacity=10, max_c_rate=2, soc_initial=0.5)
-        actor = Actor(0, self.example_df, environment=self.env, battery=bat, pricing_strategy=None)
         buy_price = 10
         sell_price = 1
-        self.env.market_maker.all_sell_prices[:] = buy_price
-        self.env.market_maker.all_buy_prices[:] = sell_price
-        self.env.market_maker.create_prediction()
-
+        energy_amount = 1
+        check_index = 5
+        actor = self.get_actor_w_pricing_setup(capacity=10, soc_initial=0.5, pricing_strategy=None,
+                                               mm_buy_price=buy_price, mm_sell_price=sell_price)
         actor.pred.schedule[:] = 0
         actor.get_market_schedule(strategy=0)
-
-        check_index = 5
-        energy_amount = 1
-
         # If no pricing strategy is given, no order is generated, since the current time step
         # does not plan interaction. The planned order at index 5 is ignored.
         actor.pricing_strategy = None
@@ -426,38 +449,60 @@ class TestActor:
         orders = actor.generate_orders()
         assert len(orders) == 0
 
+    def test_custom_pricing(self):
         # custom pricing strategy
-        # A pricing_strategy can ba a function with the inputs index, meaning time steps until some
-        # market interaction is planned in the market_schedule, the price this interaction would use
-        # (e.g. selling or buying price) and the energy amount, which is positive when energy is
-        # bought
-        # Note that the energy used is the adjusted and limited energy which is the energy
+        # A pricing_strategy can be a custom function(steps, final_price, energy) with the inputs:
+        # - steps: time steps until some market interaction is planned in the market_schedule
+        # - final_price: price this interaction would use (e.g. selling or buying price) and the
+        # energy amount, which is positive when energy is bought
+        # - energy: Note that the energy used is the adjusted and limited energy which is the energy
         # in the order. this amount is limited by battery capacity
-        actor.pricing_strategy = lambda index, final_price, energy: final_price/index + energy
-        orders = actor.generate_orders()
-        assert orders[0].price == buy_price/check_index + energy_amount
+        buy_price = 10
+        sell_price = 1
+        energy_amount = 1
+        check_index = 5
+
+        actor = self.get_actor_w_pricing_setup(capacity=10, soc_initial=0.5,
+                                               mm_buy_price=sell_price, mm_sell_price=buy_price)
+        actor.pred.schedule[:] = 0
+
+        actor.pricing_strategy = lambda index, final_price, energy: final_price / index + energy
         actor.market_schedule[:] = 0
+        actor.market_schedule[check_index] = energy_amount
+        orders = actor.generate_orders()
+        assert actor.environment.market_maker.current_buy_price == sell_price
+        assert actor.environment.market_maker.current_sell_price == buy_price
+        assert orders[0].price == buy_price/check_index + energy_amount
+
         energy_amount = - energy_amount
         actor.market_schedule[check_index] = energy_amount
         orders = actor.generate_orders()
         assert orders[0].price == sell_price/check_index + energy_amount
 
+    def test_linear_pricing(self):
         # linear pricing function increases or decreases the order price by the given factor.
-        # If the market schedule dictates buying power in 4 time steps for 1$, the current price
-        # for order generation is set to 0.6$ since we used 0.1 as gradient.
-        # If energy is sold the price would be increased instead.
-        actor.pricing_strategy = dict(name="linear", param=[0.1])
+        # If the market schedule plans buying power in 4 time steps for 1 currency unit, the
+        # current price for order generation is set to 0.6 currency units since we used 0.1 as
+        # gradient. If energy is sold the price would be increased instead.
+        buy_price = 10
+        sell_price = 1
         check_index = 4
+        actor = self.get_actor_w_pricing_setup(capacity=10, soc_initial=0.5,
+                                               mm_buy_price=sell_price, mm_sell_price=buy_price)
+        actor.pred.schedule[:] = 0
+        GRADIENT = 0.1
+        actor.pricing_strategy = dict(name="linear", param=[GRADIENT])
+
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
         orders = actor.generate_orders()
-        assert orders[0].price == buy_price - check_index*0.1*buy_price
+        assert orders[0].price == buy_price - check_index*0.1
 
         actor.market_schedule[check_index] = -1
         orders = actor.generate_orders()
-        assert orders[0].price == sell_price + check_index*0.1*sell_price
+        assert orders[0].price == sell_price + check_index*0.1
 
-        # make sure final price is given when the next time step with energy needs is the current
+        # make sure final price is used when the next time step with energy needs is the current
         # time step
         check_index = 0
         actor.market_schedule[:] = 0
@@ -470,20 +515,28 @@ class TestActor:
         assert orders[0].price == sell_price
 
         # negative prices are possible when buying
+        actor.pricing_strategy = dict(name="linear", param=[GRADIENT*100])
         actor.market_schedule[:] = 0
         actor.market_schedule[20] = 1
         orders = actor.generate_orders()
         assert orders[0].price < 0
 
-        # test harmonic pricing
+    def test_harmonic_pricing(self):
         # harmonic pricing changes the price according to the harmonic series meaning
         # 1, 1/2, 1/3, 1/4, 1/5 ... and so on. The mandatory parameter is the half life index
         # which dictates at which index 1/2 is reached the function follows the formula
         # final_price * ((index / half_life_index) + 1) ** (- sign(energy))
         #
-        actor.pricing_strategy = dict(name="harmonic", param=[3])
-        # check that the final price is given for index 0
+        buy_price = 10
+        sell_price = 1
         check_index = 0
+        actor = self.get_actor_w_pricing_setup(capacity=10, soc_initial=0.5,
+                                               mm_buy_price=sell_price, mm_sell_price=buy_price)
+        actor.pred.schedule[:] = 0
+        HALF_PRICE_INDEX = 3
+        actor.pricing_strategy = dict(name="harmonic", param=[HALF_PRICE_INDEX])
+
+        # check that the final price is used for index 0
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
         orders = actor.generate_orders()
@@ -493,7 +546,7 @@ class TestActor:
         assert orders[0].price == sell_price
 
         # check that for index = half_life_index, the final price is halved
-        check_index = 3
+        check_index = HALF_PRICE_INDEX
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
         orders = actor.generate_orders()
@@ -505,7 +558,7 @@ class TestActor:
         assert orders[0].price == sell_price * 2
 
         # double the half_life_index means a third of the final_price
-        check_index = 6
+        check_index = HALF_PRICE_INDEX*2
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
         orders = actor.generate_orders()
@@ -516,21 +569,32 @@ class TestActor:
         orders = actor.generate_orders()
         assert orders[0].price == sell_price * 3
 
+    def test_harmonic_pricing_with_bound_factor(self):
         # harmonic pricing allows for a second parameter called symmetric_bound_factor. It leads to
         # the pricing converging towards factor*final_price, in this case 60% of the final price.
         # the upper bound symmetric so that it is bound to 1/0.6 --> 166% of the final price
-        actor.pricing_strategy = dict(name="harmonic", param=[1, 0.6])
+        buy_price = 10
+        sell_price = 1
+        actor = self.get_actor_w_pricing_setup(capacity=10, soc_initial=0.5,
+                                               mm_buy_price=sell_price, mm_sell_price=buy_price)
+        actor.pred.schedule[:] = 0
+        HALF_LIFE_INDEX = 1
+        SYM_BOUND = 0.6
+        actor.pricing_strategy = dict(name="harmonic", param=[HALF_LIFE_INDEX, SYM_BOUND])
         check_index = 15
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
         orders = actor.generate_orders()
-        assert orders[0].price == 6.25
+        specific_price = ((1-SYM_BOUND)/(check_index+1/HALF_LIFE_INDEX) + SYM_BOUND) * buy_price
+        assert orders[0].price == specific_price
 
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = -1
         orders = actor.generate_orders()
-        assert orders[0].price == 1.6
-        # 1.6 / 1 =-> reciprocal value 0.625. Therefore 10 * 0.625 ==6.25
+        # price is symmetrical to above price by using the reciprocal value of the price factor
+        specific_price = 1/((1-SYM_BOUND)/(check_index+1/HALF_LIFE_INDEX) + SYM_BOUND) * sell_price
+        assert orders[0].price == specific_price
+        # 1.6 / 1 =-> reciprocal value 0.625. Therefore 10 * 0.625 == 6.25
 
         # check that prices are still properly generated for current time step energy
         actor.market_schedule[:] = 0
@@ -543,47 +607,56 @@ class TestActor:
         orders = actor.generate_orders()
         assert orders[0].price == sell_price
 
+    def test_geometric_pricing(self):
         # test geometric series
         # this series has a constant factor in between the elements of the series, so that the
         # n-th element, with the geometric factor x and the start value n0 is defined as
         # n-th element = n0 * x^(n)
-        actor.pricing_strategy = dict(name="geometric", param=[0.9])
+        buy_price = 10
+        sell_price = 1
+        actor = self.get_actor_w_pricing_setup(capacity=10, soc_initial=0.5,
+                                               mm_buy_price=sell_price, mm_sell_price=buy_price)
+        actor.pred.schedule[:] = 0
+        GEOMETRIC_FACTOR = 0.9
+        actor.pricing_strategy = dict(name="geometric", param=[GEOMETRIC_FACTOR])
         check_index = 3
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
         orders = actor.generate_orders()
-        assert orders[0].price == pytest.approx(buy_price*0.9**3)
+        assert orders[0].price == pytest.approx(buy_price*GEOMETRIC_FACTOR**check_index)
 
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = -1
         orders = actor.generate_orders()
-        assert orders[0].price == pytest.approx(sell_price * (1/0.9) ** 3)
+        assert orders[0].price == pytest.approx(sell_price * (1/GEOMETRIC_FACTOR) ** check_index)
 
         # a second parameter can be used to cap the price to a factor of the final price
         # the pricing is capped/clipped at a price of factor*final_price, in this case 70% of the
         # final price- the upper bound is symmetric so that it is bound to 1/0.7 --> 143% of the
         # final price
-        actor.pricing_strategy = dict(name="geometric", param=[0.9, 0.7])
+        SYMMETRIC_BOUND = 0.7
+        actor.pricing_strategy = dict(name="geometric", param=[GEOMETRIC_FACTOR, SYMMETRIC_BOUND])
         check_index = 6
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = 1
         orders = actor.generate_orders()
-        assert orders[0].price == 0.7*buy_price
+        assert orders[0].price == SYMMETRIC_BOUND*buy_price
 
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = -1
         orders = actor.generate_orders()
-        assert orders[0].price == pytest.approx(1/0.7 * sell_price)
+        assert orders[0].price == pytest.approx(1/SYMMETRIC_BOUND * sell_price)
 
     def test_market_schedule_adjustment(self):
         # test if the market schedule is properly adjusted when orders are matched with the pricing
         # strategy.
         self.scenario.reset()
         market = self.scenario.market
-        battery = Battery(capacity=10, max_c_rate=2, soc_initial=0.0)
-        # with this soc and capacity it means max 0.1 energy can be stored
-        actor = Actor(0, self.example_df, environment=self.env, battery=battery, cluster=0)
-        actor.pricing_strategy = dict(name="linear", param=[0.1])
+        # with this soc and capacity it means max 10 energy can be stored
+        actor = self.get_actor_w_pricing_setup(capacity=10, soc_initial=0)
+        # actor will use the same price as the final price for every order with gradient = 0
+        GRADIENT = 0
+        actor.pricing_strategy = dict(name="linear", param=[GRADIENT])
         actor.pred.schedule[:] = 0
         actor.pred.schedule[[5, 10, 15]] = 5
         actor.pred.schedule[[2, 12, 13]] = -5
@@ -593,7 +666,7 @@ class TestActor:
         for order in orders:
             market.accept_order(order, callback=actor.receive_market_results)
 
-        # Generate  order as ask
+        # Generate order as ask. Other actor sells up to 4 energy
         market.accept_order(Order(1, 0, 'other_actor', 0, 4, 0.0001))
         market.clear()
 
@@ -607,7 +680,7 @@ class TestActor:
         for order in orders:
             market.accept_order(order, callback=actor.receive_market_results)
 
-        # Generate order as ask
+        # Generate order as bid. other Actor would buy up to 4 energy
         market.accept_order(Order(-1, 0, 'other_actor', 0, 4, 9999))
         market.clear()
         assert actor.market_schedule[1] == pytest.approx(-1)

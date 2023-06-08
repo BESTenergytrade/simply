@@ -12,6 +12,7 @@ Welcome to simply's documentation!
 
    getting_started
    matching_strategies
+   pricing_strategies
    modules
    glossary
 

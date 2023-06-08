@@ -25,7 +25,7 @@ class Environment:
         self.time_step = cfg.config.start
         self.steps_per_hour = steps_per_hour
         self.add_actor_to_scenario = add_actor_to_scenario
-        # Get grid fee method of market to make grid fees accessible for actors. will be overwritten
+        # Get grid fee method of market to make grid fees accessible for actors. Will be overwritten
         # when market is added to scenario
         self.get_grid_fee = Market().get_grid_fee
         if buy_prices.size == 0:
@@ -79,10 +79,10 @@ class Scenario:
                 actor_.get_market_schedule()
 
     def market_step(self):
-        for actor_ in self.market_participants:
-            orders = actor_.generate_orders()
+        for participant in self.market_participants:
+            orders = participant.generate_orders()
             for order in orders:
-                self.market.accept_order(order, callback=actor_.receive_market_results)
+                self.market.accept_order(order, callback=participant.receive_market_results)
         self.market.clear(reset=cfg.config.reset_market)
 
     def next_time_step(self):
