@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from typing import Iterable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Sized
 import simply.config as cfg
 from simply.actor import Order
 from simply.market import MARKET_MAKER_THRESHOLD, ASK, BID
@@ -21,7 +21,7 @@ class MarketMaker:
 
     def __init__(self,
                  environment: 'Environment',
-                 buy_prices: Iterable[float],
+                 buy_prices: Sized,
                  sell_prices: np.array = None,
                  buy_to_sell_function=None,
                  **kwargs):
@@ -53,6 +53,19 @@ class MarketMaker:
         self.sold_energy = [0]
         self.bought_energy = [0]
         self.environment.add_actor_to_scenario(self)
+
+    def save_csv(self, dirpath):
+        """
+        Saves data and pred dataframes to given directory with actor specific csv file.
+
+        :param str dirpath: (optional) Path of the directory in which the actor csv file should be
+            stored.
+        """
+        save_data=["all_buy_prices","all_sell_prices"]
+        save_df = pd.DataFrame()
+        for data in save_data:
+            save_df[data]=self.__dict__[data]
+        save_df.to_csv(dirpath.joinpath(self.id + ".csv"))
 
     def to_dict(self, external_data=None):
         """

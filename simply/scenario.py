@@ -281,8 +281,7 @@ def create_random(num_nodes, num_actors, weight_factor):
     scenario = Scenario(pn, [], None, buy_prices=mm_buy_prices)
     environment = scenario.environment
     actors = [actor.create_random("H" + str(i), environment=environment) for i in range(num_actors)]
-    map_actors = pn.add_actors_random(actors)
-    scenario.map_actors = map_actors
+    scenario.map_actors = pn.add_actors_random(actors)
     return scenario
 
 
