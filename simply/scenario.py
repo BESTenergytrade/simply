@@ -1,5 +1,6 @@
 import json
 import warnings
+from typing import Sized
 
 from networkx.readwrite import json_graph
 import pandas as pd
@@ -46,13 +47,15 @@ class Environment:
         # Get grid fee method of market to make grid fees accessible for actors. Will be overwritten
         # when market is added to scenario
         self.get_grid_fee = Market().get_grid_fee
-        if buy_prices.size == 0:
-            self.market_maker = None
+        self.market_maker = None
+        self.add_market_maker(buy_prices, **kwargs)
+
+    def add_market_maker(self, buy_prices: Sized, **kwargs):
+        if len(buy_prices) == 0:
             warnings.warn("Environment was created without a market maker since no buy_prices, "
                           "were provided.")
         else:
             self.market_maker = MarketMaker(environment=self, buy_prices=buy_prices, **kwargs)
-
 
 class Scenario:
     """
@@ -287,6 +290,9 @@ def create_random2(num_nodes, num_actors):
     assert num_actors < num_nodes
     # num_actors has to be much smaller than num_nodes
     pn = power_network.create_random(num_nodes)
+    # Add actor nodes at random position (leaf node) in the network
+    # One network node can contain several actors (using random.choices method)
+
     actors = [actor.create_random("H" + str(i)) for i in range(num_actors)]
 
     # Give actors a random position in the network
@@ -311,8 +317,9 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
     :param ts_hour: number of time slot of equal length within one hour
     :param nb_ts: number of time slots to be generated
     """
-    # Create random nodes for power network
     pn = power_network.create_random(num_nodes)
+    # Add actor nodes at random position (leaf node) in the network
+    # One network node can contain several actors (using random.choices method)
 
     # Read all filenames from given directory
     filenames = dirpath.glob("*.csv")

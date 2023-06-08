@@ -787,7 +787,7 @@ class Actor:
         #  also errors need to be saved
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
-        save_df = self.data[["load", "pv", "schedule", "price"]]
+        save_df = self.data[["load", "pv", "schedule"]]
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
@@ -833,12 +833,13 @@ def create_random(actor_id, environment, start_date="2021-01-01", nb_ts=24, ts_h
     return Actor(actor_id, df, environment, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
 
 
-def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
+def create_from_csv(actor_id, env, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
                     override_scaling=False):
     """
     Create actor instance with random asset time series and random scaling factors. Replace
 
     :param str actor_id: unique actor identifier
+    :param simply.scenario.environment env: environment the actor is created in
     :param Dict asset_dict: nested dictionary specifying 'csv' filename and column ('col_index')
         per asset or the time series index ('index') of the Actor
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
@@ -860,7 +861,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     peak["pv"] = random.choices([0, peak["pv"]], [1 - pv_prob, pv_prob], k=1)
 
     # Initialize DataFrame
-    cols = ["load", "pv", "schedule", "price"]
+    cols = ["load", "pv", "schedule"]
     df = pd.DataFrame([], columns=cols)
 
     # Read csv files for each asset
@@ -898,20 +899,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
         for day in daily(df, 24 * ts_hour):
             day["pv"] *= gaussian_pv(ts_hour, 3)
 
-    # Dummy-Strategy:
-    # Predefined energy management, energy volume and price for trades due to no flexibility
-    df["schedule"] = peak["pv"] * df["pv"] - peak["load"] * df["load"]
-    max_price = 0.3
-    df["price"] = np.random.rand(nb_ts, 1)
-    df["price"] *= max_price
-    # Adapt order price by a factor to compensate net pricing of ask orders
-    # (i.e. positive energy) Bids however include network charges
-    net_price_factor = 0.7
-    df["price"] = df.apply(
-        lambda slot: slot["price"] - (slot["schedule"] > 0) * net_price_factor * slot["price"],
-        axis=1)
-
-    return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
+    return Actor(actor_id, df,env, ls=peak["load"], ps=peak["pv"])
 
 
 def clip_soc(soc_prediction, upper_clipping):

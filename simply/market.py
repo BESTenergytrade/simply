@@ -80,7 +80,7 @@ class Market:
         """
         Handle new order.
 
-        Order must have same timestep as market, type must be -1 or +1.
+        Order must have same time step as market, type must be -1 or +1.
         Energy is quantized according to the market's energy unit (round down).
         Signature of callback function: matching time, sign for energy direction
         (opposite of order type), matched energy, matching price.
@@ -262,6 +262,9 @@ class Market:
             # if match is given, data from the match is used. In other cases bid
             bid_cluster = match['bid_cluster']
             ask_cluster = match['ask_cluster']
+            assert (bid_cluster or ask_cluster) == False, \
+                'Either pass "match" or ("bid_cluster" and "ask_cluster"), otherwise only match ' \
+                'information is considered'
 
         if not self.grid_fee_matrix:
             return cfg.config.default_grid_fee
