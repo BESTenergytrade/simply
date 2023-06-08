@@ -3,9 +3,9 @@ from networkx.readwrite import json_graph
 import pandas as pd
 import random
 import matplotlib.pyplot as plt
-
 from simply import actor
 from simply import power_network
+from simply.battery import Battery
 from simply.util import get_all_data
 
 
@@ -154,8 +154,14 @@ def load(dirpath, data_format):
         for aj in actors_j.values():
             ai = [aj["id"], pd.read_csv(dirpath / aj["csv"]), None, aj["csv"], aj["ls"], aj["ps"],
                   aj["pm"]]
-            actors.append(actor.Actor(*ai))
+            if aj["id"] != "market_maker":
+                actors.append(actor.Actor(*ai))
+            else:
+                battery = Battery(100, check_boundaries=False)
+                actors.append(actor.Actor(*[aj["id"], pd.read_csv(dirpath / aj["csv"]), battery, aj["csv"], aj["ls"], aj["ps"],
+                  aj["pm"]]))
     else:
+        # ToDo: this will be modified once json actors
         actor_files = dirpath.glob(f"actor_*.{data_format}")
         for f in sorted(actor_files):
             at = f.read_text()
