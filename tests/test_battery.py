@@ -10,7 +10,7 @@ from simply.scenario import Scenario
 
 class TestBattery:
     Config("")
-    scenario = Scenario(None, [], None, np.ones(20))
+    scenario = Scenario(None, None, np.ones(20))
     environment = scenario.environment
 
     def test_battery_creation(self):

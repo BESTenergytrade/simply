@@ -34,10 +34,9 @@ class TestActor:
                    0.067, 0.073, 0.075, 0.085, 0.095, 0.107, 0.107, 0.107, 0.107, 0.1, 0.094, 0.087,
                    0.08]
 
-    scenario = Scenario(pn, [], None, buy_prices=np.tile(test_prices, 10), steps_per_hour=4)
+    scenario = Scenario(pn, None, buy_prices=np.tile(test_prices, 10), steps_per_hour=4)
     env = scenario.environment
-
-    market = BestMarket(scenario, pn)
+    scenario.add_market(BestMarket(pn))
 
     test_schedule = [0.164, 0.077, 0.019, -0.038, -0.281, -0.054, -0.814, -1.292, -1.301, -1.303,
                      -1.27, -1.228, -1.301, -0.392, -0.564, -0.411, 1.046, 1.385, 1.448, 1.553,
@@ -110,7 +109,7 @@ class TestActor:
 
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=battery, environment=self.env)
+        actor = Actor(0, self.example_df, environment=self.env, battery=battery)
         assert actor.battery is not None
         assert isinstance(actor.battery, Battery)
         assert actor.battery.capacity == BAT_CAPACITY
@@ -119,7 +118,7 @@ class TestActor:
         # overwrite strategy 0 with zero buys/sells. Assert that the simulation throws an error
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=battery, environment=self.env)
+        actor = Actor(0, self.example_df, environment=self.env, battery=battery)
 
         # Check if UserWarning correctly prints out the strategy name if the strategy is not found
         foo = "foo"
@@ -152,7 +151,7 @@ class TestActor:
         self.scenario.reset()
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=battery, environment=self.env)
+        actor = Actor(0, self.example_df, environment=self.env, battery=battery)
 
         # Market maker buys for less than he sells for
         self.env.market_maker.all_buy_prices *= SELL_MULT
@@ -200,7 +199,7 @@ class TestActor:
         self.scenario.reset()
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=battery, environment=self.env)
+        actor = Actor(0, self.example_df, environment=self.env, battery=battery)
 
         self.env.market_maker.all_buy_prices *= SELL_MULT
         self.env.market_maker.create_prediction()
@@ -262,7 +261,7 @@ class TestActor:
         self.scenario.reset()
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, battery=battery, environment=self.env)
+        actor = Actor(0, self.example_df, environment=self.env, battery=battery)
         self.env.market_maker.all_buy_prices *= SELL_MULT
         self.env.market_maker.create_prediction()
 

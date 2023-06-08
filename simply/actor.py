@@ -49,7 +49,7 @@ class Actor:
         on the data time series
     :param int cluster: cluster in which actor is located
     :param int strategy: Number for strategy [0-3]
-    :param .scenario.Environment() Environment: Environment reference for the actor
+    :param .scenario.Environment() environment: Environment reference for the actor
 
     Members:
 
@@ -107,7 +107,7 @@ class Actor:
 
     """
 
-    def __init__(self, actor_id, df, environment, battery=None, csv=None, ls=1, ps=1, pm={},
+    def __init__(self, actor_id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
                  cluster=None, strategy: int = 0, pricing_strategy=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
@@ -119,10 +119,6 @@ class Actor:
         self.cluster = cluster
 
         self.horizon = cfg.config.horizon
-
-        # Let the actor have a reference to the environment and add it to the other scenario actors
-        self.environment = environment
-        environment.add_actor_to_scenario(self)
 
         self.bank = 0
         self.matched_energy_current_step = 0
@@ -152,15 +148,30 @@ class Actor:
                 prediction_multiplier = self.error_scale * np.random.rand(self.horizon)
                 self.pm[column] = prediction_multiplier.tolist()
 
-        self.create_prediction()
-
-        self.market_schedule = np.zeros(self.horizon)
-        self.market_schedule[0] = self.get_default_market_schedule()[0]
+        self._environment = None
+        if environment is not None:
+            # Let the actor have a reference to the environment and add it to the other
+            # scenario actors. This is done through the environment property which also creates a
+            # market schedule and prediction for the environment time step
+            self.environment = environment
+            environment.add_actor_to_scenario(self)
 
         self.orders = []
         self.traded = {}
         self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
+
+    def get_environment(self):
+        return self._environment
+
+    def set_environment(self, environment):
+        self._environment = environment
+        self.create_prediction()
+        self.market_schedule = np.zeros(self.horizon)
+        self.market_schedule[0] = self.get_default_market_schedule()[0]
+
+    # creating a property object. This way changing environment also leads to updates
+    environment = property(get_environment, set_environment)
 
     def get_mm_buy_prices(self):
         env = self.environment
@@ -899,7 +910,7 @@ def create_from_csv(actor_id, env, asset_dict={}, start_date="2021-01-01", nb_ts
         for day in daily(df, 24 * ts_hour):
             day["pv"] *= gaussian_pv(ts_hour, 3)
 
-    return Actor(actor_id, df,env, ls=peak["load"], ps=peak["pv"])
+    return Actor(actor_id, df, env, ls=peak["load"], ps=peak["pv"])
 
 
 def clip_soc(soc_prediction, upper_clipping):

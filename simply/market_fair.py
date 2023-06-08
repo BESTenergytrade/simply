@@ -20,8 +20,8 @@ class BestMarket(Market):
     This converges to an optimal solution.
     """
 
-    def __init__(self, scenario=None, network=None, grid_fee_matrix=None):
-        super().__init__(scenario, network, grid_fee_matrix)
+    def __init__(self, network=None, grid_fee_matrix=None, time_step=None):
+        super().__init__(network, grid_fee_matrix, time_step)
 
     def match(self, show=False):
         asks = self.get_asks()

@@ -1,4 +1,3 @@
-import subprocess
 from argparse import ArgumentParser
 from simply.config import Config
 from main import main

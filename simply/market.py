@@ -23,18 +23,12 @@ class Market:
 
     This class provides a basic matching strategy which may be overridden.
     """
-    def __init__(self, scenario=None, network=None, grid_fee_matrix=None):
+    def __init__(self, network=None, grid_fee_matrix=None, time_step=None):
         self.orders = pd.DataFrame(columns=Order._fields)
-        self.scenario = scenario
-
-        if self.scenario is not None:
-            if self.scenario.market is not None:
-                warnings.warn("Existing market in Scenario is overwritten with new market")
-            self.scenario.market = self
-            self.scenario.environment.get_grid_fee = self.get_grid_fee
 
         self.trades = None
         self.matches = []
+        self.t_step = time_step
         self.actor_callback = {}
         self.network = network
         self.save_csv = cfg.config.save_csv
@@ -258,13 +252,13 @@ class Market:
         :param bid_cluster: cluster id of ask
         :return: the grid fee associated with the given bid and ask clusters
         """
-        if match is not None:
+        if match or match is not None:
+            if bid_cluster or ask_cluster:
+                warnings.warn('Either pass "("bid_cluster" and "ask_cluster"),'
+                              'otherwise only match information is considered')
             # if match is given, data from the match is used. In other cases bid
             bid_cluster = match['bid_cluster']
             ask_cluster = match['ask_cluster']
-            assert (bid_cluster or ask_cluster) == False, \
-                'Either pass "match" or ("bid_cluster" and "ask_cluster"), otherwise only match ' \
-                'information is considered'
 
         if not self.grid_fee_matrix:
             return cfg.config.default_grid_fee
@@ -305,8 +299,3 @@ class Market:
             # if an actor has none as cluster, e.g. the market maker, a TypeError will be thrown.
             # use default grid fee in this case.
             ask.price += cfg.config.default_grid_fee
-
-    def get_t_step(self):
-        return self.scenario.environment.time_step
-    # creating a property object
-    t_step = property(get_t_step)

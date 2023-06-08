@@ -61,10 +61,10 @@ class MarketMaker:
         :param str dirpath: (optional) Path of the directory in which the actor csv file should be
             stored.
         """
-        save_data=["all_buy_prices","all_sell_prices"]
+        save_data = ["all_buy_prices", "all_sell_prices"]
         save_df = pd.DataFrame()
         for data in save_data:
-            save_df[data]=self.__dict__[data]
+            save_df[data] = self.__dict__[data]
         save_df.to_csv(dirpath.joinpath(self.id + ".csv"))
 
     def to_dict(self, external_data=None):

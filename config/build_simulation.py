@@ -199,7 +199,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     buy_prices = get_mm_prices(price_path / price_filename, start_date, start_date)
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
-    scenario = Scenario(None, [], None, buy_prices=buy_prices)
+    scenario = Scenario(None, None, buy_prices=buy_prices)
     for i, actor_row in config_df.iterrows():
         file_dict = {}
         asset_dict = {}

@@ -8,8 +8,6 @@ from abc import ABC, abstractmethod
 from simply.config import Config
 
 # default config
-from simply.scenario import Scenario
-
 Config('')
 
 ENERGY_UNIT_CONVERSION_FACTOR = 1  # simply: kW
@@ -65,14 +63,11 @@ class MatchingAlgorithm(ABC):
         # ToDo in doc above Market object? Is it not a Market constructor?
 
         recommendations = []
-        scenario = Scenario(None, [], None, [])
-        environment = scenario.environment
         # Market is coupled with scenario and environment data. Market looks up time in environment.
 
         for market_id, market_name in mycoDict.items():
             for time, orders in market_name.items():
-                environment.time_step = time
-                m = market(scenario=scenario, grid_fee_matrix=grid_fee_matrix)
+                m = market(grid_fee_matrix=grid_fee_matrix, time_step=time)
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 

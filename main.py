@@ -51,13 +51,14 @@ def main():
 
     # generate requested market
     if "pac" in cfg.market_type:
-        m = market_2pac.TwoSidedPayAsClear(scenario=sc, network=sc.power_network)
+        m = market_2pac.TwoSidedPayAsClear(network=sc.power_network)
     elif cfg.market_type in ["fair", "merit"]:
-        m = market_fair.BestMarket(scenario=sc, network=sc.power_network)
+        m = market_fair.BestMarket(network=sc.power_network)
     else:
         # default
-        m = market.Market(scenario=sc, network=sc.power_network)
+        m = market.Market(network=sc.power_network)
 
+    sc.add_market(m)
     for _ in range(cfg.nb_ts):
         # actors calculate strategy based market interaction with the market maker
         sc.create_strategies()

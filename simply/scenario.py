@@ -17,8 +17,8 @@ from simply.market import Market
 
 
 class Environment:
-    """Representation of the environment which is visible to all actors. Decouples scenario information
-    from actors.
+    """Representation of the environment which is visible to all actors. Decouples scenario
+    information from actors.
 
     :param iterable buy_prices: iterable of prices the market maker would buy energy for
     :param int steps_per_hour: amount of simulation steps per hour
@@ -57,26 +57,21 @@ class Environment:
         else:
             self.market_maker = MarketMaker(environment=self, buy_prices=buy_prices, **kwargs)
 
+
 class Scenario:
     """
     Representation of the world state: who is present (actors) and how everything is
      connected (power_network). RNG seed is preserved so results can be reproduced.
     """
 
-    def __init__(self,
-                 network,
-                 actors,
-                 map_actors,
-                 buy_prices: np.array = None,
-                 rng_seed=None,
-                 steps_per_hour=4,
-                 **kwargs):
+    def __init__(self, network, map_actors=None, buy_prices: np.array = None, rng_seed=None,
+                 steps_per_hour=4, **kwargs):
 
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
-        self.market = None
+        self._market = None
         self.power_network = network
-        self.market_participants = list(actors)
+        self.market_participants = list()
         # maps node ids to actors
         self.map_actors = map_actors
         if buy_prices is None:
@@ -85,8 +80,18 @@ class Scenario:
             buy_prices = np.array(buy_prices)
         self._buy_prices = buy_prices.copy()
         self.kwargs = kwargs
-
         self.environment = Environment(buy_prices, steps_per_hour, self.add_participant, **kwargs)
+
+    def get_market(self):
+        return self._market
+
+    def set_market(self, market):
+        assert isinstance(market, Market), "Scenario.market can only be changed to type 'Market'"
+        self._market = market
+        self.environment.get_grid_fee = self._market.get_grid_fee
+
+    # creating a property object. This way changing markets also leads to changes in grid fee
+    market = property(get_market, set_market)
 
     def add_participant(self, participant):
         is_participant = isinstance(participant, Actor) or isinstance(participant, MarketMaker)
@@ -99,6 +104,10 @@ class Scenario:
             if isinstance(participant, Actor):
                 participant.get_market_schedule()
 
+    def add_market(self, market):
+        self.market = market
+        market.t_step = self.environment.time_step
+
     def market_step(self):
         for participant in self.market_participants:
             orders = participant.generate_orders()
@@ -106,14 +115,18 @@ class Scenario:
                 self.market.accept_order(order, callback=participant.receive_market_results)
         self.market.clear(reset=cfg.config.reset_market)
 
+    def add_actor(self, actor):
+        if actor not in self.market_participants:
+            self.market_participants.append(actor)
+            actor.environment = self.environment
+
     def next_time_step(self):
         for participant in self.market_participants:
             participant.next_time_step()
-
         self.environment.time_step += 1
-
         for participant in self.market_participants:
             participant.create_prediction()
+        self.market.t_step = self.environment.time_step
 
     def from_config(self):
         pass
@@ -208,6 +221,7 @@ class Scenario:
         self.environment.market_maker = MarketMaker(
             environment=self.environment, buy_prices=self._buy_prices.copy())
         self.environment.time_step = cfg.config.start
+        self.market.t_step = self.environment.time_step
 
 
 def from_dict(scenario_dict):
@@ -218,11 +232,10 @@ def from_dict(scenario_dict):
                                          multigraph=pn_dict.get("multigraph", False))
     pn = power_network.PowerNetwork(pn_name, network)
 
-    actors = [
-        actor.Actor(actor_id, pd.read_json(ai["df"]), ai["ls"], ai["ps"], ai["pm"])
-        for actor_id, ai in scenario_dict["actors"].items()]
-
-    return Scenario(pn, actors, scenario_dict["map_actors"], scenario_dict["rng_seed"])
+    scen = Scenario(pn, scenario_dict["map_actors"], scenario_dict["rng_seed"])
+    for actor_id, ai in scenario_dict["actors"].items():
+        scen.add_actor(actor.Actor(actor_id, pd.read_json(ai["df"]), ai["ls"], ai["ps"], ai["pm"]))
+    return scen
 
 
 def load(dirpath, data_format):
@@ -246,15 +259,24 @@ def load(dirpath, data_format):
         at = actors_file.read_text()
         actors_j = json.loads(at)
         for aj in actors_j.values():
-            ai = [aj["id"], pd.read_csv(dirpath / aj["csv"]), aj["csv"], aj["ls"], aj["ps"],
-                  aj["pm"]]
+            ai = {"id": aj["id"],
+                  "df": pd.read_csv(dirpath / aj["csv"]),
+                  "csv": aj["csv"],
+                  "ls": aj["ls"],
+                  "ps": aj["ps"],
+                  "pm": aj["pm"]}
             actors.append(actor.Actor(*ai))
     else:
         actor_files = dirpath.glob(f"actor_*.{data_format}")
         for f in sorted(actor_files):
             at = f.read_text()
             aj = json.loads(at)
-            ai = [aj["id"], pd.read_json(aj["df"]), aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
+            ai = {"id": aj["id"],
+                  "df": pd.read_csv(dirpath / aj["csv"]),
+                  "csv": aj["csv"],
+                  "ls": aj["ls"],
+                  "ps": aj["ps"],
+                  "pm": aj["pm"]}
             actors.append(actor.Actor(*ai))
 
     # Give actors knowledge of the cluster they belong to
@@ -266,7 +288,7 @@ def load(dirpath, data_format):
     map_actor_text = next(dirpath.glob('map_actors.*')).read_text()
     map_actors = json.loads(map_actor_text)
 
-    return Scenario(pn, actors, map_actors, rng_seed)
+    return Scenario(pn, map_actors, rng_seed)
 
 
 def create_random(num_nodes, num_actors, weight_factor):
@@ -278,7 +300,7 @@ def create_random(num_nodes, num_actors, weight_factor):
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
     mm_buy_prices = np.random.random(100)
-    scenario = Scenario(pn, [], None, buy_prices=mm_buy_prices)
+    scenario = Scenario(pn, None, buy_prices=mm_buy_prices)
     environment = scenario.environment
     actors = [actor.create_random("H" + str(i), environment=environment) for i in range(num_actors)]
     scenario.map_actors = pn.add_actors_random(actors)
@@ -302,7 +324,7 @@ def create_random2(num_nodes, num_actors):
     # pn.add_actors_map(map_actors)
     mm_buy_prices = np.random.random(100)
 
-    return Scenario(pn, actors, map_actors, mm_buy_prices)
+    return Scenario(pn, map_actors, mm_buy_prices)
 
 
 def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_hour=4, nb_ts=None):
@@ -355,4 +377,4 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
 
-    return Scenario(pn, actors, map_actors, steps_per_hour=ts_hour)
+    return Scenario(pn, map_actors, steps_per_hour=ts_hour)
