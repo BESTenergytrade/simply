@@ -57,12 +57,12 @@ class MatchingAlgorithm(ABC):
         :param mycoDict: hierarchical dictionary with market name and time slot each containing a
             dict with bids and offers in lists {'bids': [], 'offers': []}
         :type mycoDict: dict
-        # ToDo Market object? Is it not a Market constructor?
         :param market: Market object that implements the matching algorithm
         :param grid_fee_matrix: two-dimensional nXn list used to calculate grid-fees e.g.,
             [[0,1],[1,0]]
         :return: list of dictionaries with matches in all given markets and time slots
         """
+        # ToDo in doc above Market object? Is it not a Market constructor?
 
         recommendations = []
         scenario = Scenario(None, [], None, [])
