@@ -16,9 +16,27 @@ from simply.market import Market
 
 
 class Environment:
-    """
-    Representation of the environment which is visible to all actors. Decouples scenario information
+    """Representation of the environment which is visible to all actors. Decouples scenario information
     from actors.
+
+    :param iterable buy_prices: iterable of prices the market maker would buy energy for
+    :param int steps_per_hour: amount of simulation steps per hour
+    :param function add_actor_to_scenario: Function which adds the actor to
+        py:attr:`~simply.scenario.actors`
+    :param dict kwargs: kwargs for MarketMaker generation
+
+    Members:
+
+    time_step : int
+        current time_step of the environment
+    steps_per_hour : int
+        mount of simulation steps per hour
+    add_actor_to_scenario : function
+        Function which adds the actor to py:attr:`~simply.scenario.actors`
+    get_grid_fee : method
+        getter function of grid_fee of the Market
+    market_maker : py:class:`~simply.battery.Battery`
+        market_maker in this environment
     """
 
     def __init__(self, buy_prices, steps_per_hour, add_actor_to_scenario, **kwargs):
@@ -74,9 +92,9 @@ class Scenario:
             self.market_participants.append(participant)
 
     def create_strategies(self):
-        for actor_ in self.market_participants:
-            if isinstance(actor_, Actor):
-                actor_.get_market_schedule()
+        for participant in self.market_participants:
+            if isinstance(participant, Actor):
+                participant.get_market_schedule()
 
     def market_step(self):
         for participant in self.market_participants:
