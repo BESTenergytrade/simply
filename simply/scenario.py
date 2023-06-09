@@ -88,6 +88,7 @@ class Scenario:
     def set_market(self, market):
         assert isinstance(market, Market), "Scenario.market can only be changed to type 'Market'"
         self._market = market
+        self._market.t_step = self.environment.time_step
         self.environment.get_grid_fee = self._market.get_grid_fee
 
     # creating a property object. This way changing markets also leads to changes in grid fee
