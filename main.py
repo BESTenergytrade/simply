@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
+from pathlib import Path
 
 from simply import market, market_2pac, market_fair
 from simply.scenario import load, create_random
@@ -31,6 +32,8 @@ def main():
     scenario_exists = len([False for i in cfg.path.glob(f"actor_*.{cfg.data_format}")]) != 0
 
     print(f'Scenario path: {cfg.path}')
+
+
     # load existing scenario or else create randomized new one
     if cfg.load_scenario:
         if scenario_exists:
@@ -42,6 +45,9 @@ def main():
             raise Exception(f'The path: {cfg.path} already exists with another file structure. '
                             'Please remove or rename folder to avoid confusion and restart '
                             'simulation.')
+        else:
+            # create path if it does not exist yet
+            Path(cfg.path).mkdir(parents=True, exist_ok=True)
         sc = create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.path, cfg.data_format)
 

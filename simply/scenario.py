@@ -1,6 +1,6 @@
 import json
 import warnings
-from typing import Sized
+from typing import Sized, Iterable
 
 from networkx.readwrite import json_graph
 import pandas as pd
@@ -115,10 +115,20 @@ class Scenario:
                 self.market.accept_order(order, callback=participant.receive_market_results)
         self.market.clear(reset=cfg.config.reset_market)
 
-    def add_actor(self, actor):
+    def add_actor(self, actor, map_node=None):
         if actor not in self.market_participants:
             self.market_participants.append(actor)
             actor.environment = self.environment
+            if map_node:
+                self.map_actors[actor.id] = map_node
+
+    def add_actors(self, actors: Iterable, map_actors=None):
+        for actor_ in actors:
+            try:
+                map_node = map_actors[actor_.id]
+            except Exception:
+                map_node = None
+            self.add_actor(actor_, map_node)
 
     def next_time_step(self):
         for participant in self.market_participants:
