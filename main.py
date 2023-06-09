@@ -33,7 +33,6 @@ def main():
 
     print(f'Scenario path: {cfg.path}')
 
-
     # load existing scenario or else create randomized new one
     if cfg.load_scenario:
         if scenario_exists:
@@ -85,6 +84,7 @@ def main():
     if cfg.show_prints:
         print("\nTraded energy volume and price at actor level")
         print(summerize_actor_trading(sc))
+
 
 if __name__ == "__main__":
     main()
