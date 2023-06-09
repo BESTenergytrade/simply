@@ -254,7 +254,7 @@ class Market:
         """
         if match or match is not None:
             if bid_cluster or ask_cluster:
-                warnings.warn('Either pass "("bid_cluster" and "ask_cluster"),'
+                warnings.warn('Either pass match OR ("bid_cluster" and "ask_cluster"),'
                               'otherwise only match information is considered')
             # if match is given, data from the match is used. In other cases bid
             bid_cluster = match['bid_cluster']
@@ -264,6 +264,9 @@ class Market:
             return cfg.config.default_grid_fee
         else:
             if bid_cluster is None or ask_cluster is None:
+                warnings.warn("Grid fee is calculated for a case where at least one cluster is"
+                              "'None'. In these cases the default grid fee will be returned")
+
                 # default grid fee
                 return self.grid_fee_matrix[0][-1]
             else:
