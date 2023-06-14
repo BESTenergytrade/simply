@@ -134,6 +134,7 @@ def create_actor_from_config(actor_id, asset_dict={}, start_date="2016-01-01", n
             continue
         csv_df = pd.read_csv(csv_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=True,
                              index_col=['Time'])
+        csv_df.index = pd.to_datetime(csv_df.index)
         df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, 0]
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
@@ -256,7 +257,7 @@ if __name__ == "__main__":
 
     # Build config object using configuration file
     cfg = Config(args.config)
-    cfg.path = Path('../') / cfg.path
+    cfg.path = Path().parent / cfg.path
     # Reset save location directory
     remove_existing_dir(cfg.path)
     sc = create_scenario_from_config(args.scenario_config, args.network, data_dirpath=args.data_dir,
