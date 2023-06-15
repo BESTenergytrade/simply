@@ -19,7 +19,7 @@ Struct to hold order
 :param actor_id: ID of ordering actor
 :param energy: amount of energy the actor wants to trade. Will be rounded down(asks)/up(bids)
     according to the market's energy unit
-:param price: bidding/asking price for 1 kWh
+:param price: bidding/asking price for one unit of energy
 """
 
 
