@@ -72,13 +72,24 @@ by simply.
 
 **Configuration file**
 
-In both cases, a configuration file (`config.txt`) is required to specify the correct parameters
-of the scenario and simulation. The file is split into the sections `scenario`, `market` and `outputs`, and
+In all cases for using simply, a configuration file (`config.txt`) is required to specify the correct parameters
+of the scenario and simulation. If a parameter is not specified in `config.txt` and there is a default option,
+this will be chosen. The file is split into the sections `scenario`, `market` and `outputs`, and
 the parameters for each section are outlined as follows:
 
-.. csv-table:: Example for defining a scalar parameter as a time series
+.. csv-table:: Scenario
    :file: ../files_to_be_displayed/scenario_params.csv
-   :widths: 30, 50, 30, 30
+   :widths: 30, 70, 30, 30
+   :header-rows: 1
+
+.. csv-table:: Market
+   :file: ../files_to_be_displayed/market_params.csv
+   :widths: 30, 70, 30, 30
+   :header-rows: 1
+
+.. csv-table:: Output
+   :file: ../files_to_be_displayed/output_params.csv
+   :widths: 30, 70, 30, 30
    :header-rows: 1
 
 Building your own scenario
@@ -138,8 +149,8 @@ and other market participants. For each market actor, the following must be spec
 #. The location of the actor in the community network, i.e. the network node at which the prosumer is located.
 #. The information about power consumption and power devices (if any):
 
-    * The device type, i.e. "load", "solar" or "battery".
-    * The device ID: here is the name of a file (.json or .csv), which is to be stored under /sample and contains the load curve for the respective power consumption or the respective power device.
+- The device type, i.e. "load", "solar" or "battery".
+- The device ID: here is the name of a file (.json or .csv), which is to be stored under /sample and contains the load curve for the respective power consumption or the respective power device.
 
 Each actor is represented with the following structure:
 
@@ -162,16 +173,86 @@ Each actor is represented with the following structure:
         ]
     }
 
-**Configuration file**
 
-In the configuration file `config.txt` the correct settings regarding the scenario must be specified.
+**Network configuration**
 
-After setting up the inputs, you can run build_simulation
+The file `network_config.json` represents a template for the construction of a market community network. Under "nodes"
+the names of the individual nodes are listed (e.g. N01, N02). The market maker represents a separate node.
+Under "links" the network charge is defined for each combination of two nodes. Nodes between which there is a network
+charge of 0 represent a common cluster (see BEST Matching Algorithm). The general structure is shown below:
 
+::
 
+    {
+      "example_network": {
+        "directed": false,
+        "multigraph": false,
+        "graph": {},
+        "nodes": [
+          {
+            "id":  "N01"
+          },
+          {
+            ... :  ...
+          }
+        ],
+        "links": [
+          {
+            "weight": 0,
+            "source": "N01",
+            "target": "N02"
+          },
+          {
+            ... : ...,
+            ... : ...,
+            ... : ...
+          }
+        ]
+      }
+    }
+
+**Running build_scenario**
+
+After the network and the community have been created, `build_scenario.py` can be executed. This is done by:
+
+ .. code:: bash
+
+    python build_scenario.py path/to/your/project/dir
+
+with the option of specifying a path for your scenario inputs if you want to store them outside of your project directory:
+
+ .. code:: bash
+
+    python build_scenario.py path/to/your/project/dir -- data_dir path/to/your/scenario/inputs
+
+The scenario is then created and automatically saved to `path/to/your/project/dir/scenario`. The scenario contains a
+time series for each actor with power generation, power consumption, and market demand or supply (including bid price).
+
+An example of how to build a scenario can be found here. #PROVIDE LINK LATER
 
 Generating a random scenario
 ----------------------------
+There is also the option of generating a random scenario to be used in `main.py`. In this case, the parameters
+`market_type`, `reset_market`, 'energy_unit' and 'default_grid_fee' should be specified in `config.txt`, otherwise
+the default parameters are used. The only input required before running the main simply function is the `config.txt`
+file:
+
+::
+
+    |-- projects
+        |-- your_project_name
+            |-- config.txt
+
+An example of how to generate a random scenario can be found here. #PROVIDE LINK LATER
+
+Running the main simply function
+--------------------------------
+The main simply function is executed by:
+
+ .. code:: bash
+
+    python main.py path/to/your/project/dir
+
 
 
 Old text (to be deleted)
