@@ -31,28 +31,57 @@ class MarketMaker:
         # All prices the market maker is paying to buy energy. Mostly the prediction of these
         # values is used and provided via property
         self.all_buy_prices = np.array(buy_prices)
-        if sell_prices is not None:
-            # if sell_prices are provided they are used
-            self.all_sell_prices = sell_prices
-        else:
-            if buy_to_sell_function is None:
-                # if no specific function to calculate sell_prices is provided
-                # the grid fee will be added to all the buy_price
-                warnings.warn("Market Maker selling prices are set equal to buying prices")
-                self.all_sell_prices = self.all_buy_prices.copy()
-            else:
-                # if a specific function is provided, it is used to calculate sell_prices from
-                # the buy_prices
-                self.all_sell_prices = buy_to_sell_function(self.all_buy_prices)
-        assert all(self.all_buy_prices <= self.all_sell_prices)
+        self.all_sell_prices = self.generate_sell_prices(buy_to_sell_function, sell_prices)
+
+        # Since resetting of objects should be possible the initial values are stored. In case
+        # of a reset they are triggered and overwrite the above possibly mutated prices
+        self._buy_prices = buy_prices
+        self._sell_prices = sell_prices
+        self._buy_to_sell_function = buy_to_sell_function
+
+        # Check if all buy prices are lower than the sell prices.
+        self.check_prices()
 
         self.horizon = cfg.config.horizon
         self.pred = pd.DataFrame()
         self.create_prediction()
         self.traded = {}
-        self.sold_energy = [0]
-        self.bought_energy = [0]
+        self.energy_sold = [0]
+        self.energy_bought = [0]
+        # Overwriting the environment market_maker with this market_maker
         self.environment.add_actor_to_scenario(self)
+
+    def reset(self):
+        # Reset prices to original prices
+        self.all_buy_prices = np.array(self._buy_prices)
+        self.all_sell_prices = self.generate_sell_prices(
+            self._buy_to_sell_function, self._sell_prices)
+        self.check_prices()
+        self.create_prediction()
+        self.traded = {}
+        self.energy_sold = [0]
+        self.energy_bought = [0]
+
+    def check_prices(self):
+        if not all(self.all_buy_prices <= self.all_sell_prices):
+            warnings.warn(
+                f"Not all buy prices are lower than the sell prices for the MarketMaker {self}")
+            raise AssertionError
+
+    def generate_sell_prices(self, buy_to_sell_function, sell_prices):
+        if sell_prices is not None:
+            # if sell_prices are provided they are used
+            return sell_prices
+        else:
+            if buy_to_sell_function is None:
+                # if no specific function to calculate sell_prices is provided
+                # the grid fee will be added to all the buy_price
+                warnings.warn("Market Maker selling prices are set equal to buying prices")
+                return self.all_buy_prices.copy()
+            else:
+                # if a specific function is provided, it is used to calculate sell_prices from
+                # the buy_prices
+                return buy_to_sell_function(self.all_buy_prices)
 
     def save_csv(self, dirpath):
         """
@@ -142,12 +171,12 @@ class MarketMaker:
         pre = self.traded.get(time, ([], []))
         self.traded[time] = tuple(e + [post[i]] for i, e in enumerate(pre))
         if sign == -1:
-            self.sold_energy[-1] += energy
+            self.energy_sold[-1] += energy
         elif sign == +1:
-            self.bought_energy[-1] += energy
+            self.energy_bought[-1] += energy
         else:
             raise ValueError
 
     def next_time_step(self):
-        self.sold_energy.append(0)
-        self.bought_energy.append(0)
+        self.energy_sold.append(0)
+        self.energy_bought.append(0)

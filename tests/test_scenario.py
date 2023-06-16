@@ -7,7 +7,10 @@ from simply.power_network import PowerNetwork
 class TestScenario:
 
     def test_init(self):
-        # network, actors, map_actors, market, buy_prices [rng_seed]
+        # Scenario Constructor
+        # (network, map_actors=None, buy_prices: np.array = None, rng_seed=None,
+        # steps_per_hour=4, **kwargs)
+
         pn = PowerNetwork("", nx.random_tree(1))
         # random seed, but None
         s = Scenario(pn, None, [])

@@ -13,7 +13,7 @@ from simply.scenario import Scenario
 
 ratings = dict()
 NR_STEPS = 100
-SELL_MULT = 0.9
+SELL_MULT = 1/0.9
 BAT_CAPACITY = 3
 
 
@@ -34,7 +34,9 @@ class TestActor:
                    0.067, 0.073, 0.075, 0.085, 0.095, 0.107, 0.107, 0.107, 0.107, 0.1, 0.094, 0.087,
                    0.08]
 
-    scenario = Scenario(pn, None, buy_prices=np.tile(test_prices, 10), steps_per_hour=4)
+    # Sell prices of are higher than buy_prices. This way the MarketMaker makes a profit
+    scenario = Scenario(pn, None, buy_prices=np.tile(test_prices, 10), steps_per_hour=4,
+                        sell_prices=np.tile(test_prices, 10)*SELL_MULT)
     env = scenario.environment
     scenario.add_market(BestMarket(pn))
 
@@ -87,12 +89,12 @@ class TestActor:
         assert len(a.traded[0][1]) == 2
 
     def test_create_random(self):
-        a = create_random(0, self.env)
+        a = create_random(0)
         assert a.id == 0
 
     def test_create_random_multidays_halfhour(self):
         data_cfg = {"nb_ts": 96, "ts_hour": 2}
-        a = create_random(0, self.env, **data_cfg)
+        a = create_random(0, **data_cfg)
         # time series is longer than one day
         assert a.data.index[0].date() != a.data.index[-1].date()
 
@@ -153,10 +155,6 @@ class TestActor:
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, environment=self.env, battery=battery)
 
-        # Market maker buys for less than he sells for
-        self.env.market_maker.all_buy_prices *= SELL_MULT
-        self.env.market_maker.create_prediction()
-
         nr_of_matches = 0
         # tolerance due to energy_unit differences
         tol = 2 * cfg.config.energy_unit
@@ -200,8 +198,6 @@ class TestActor:
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, environment=self.env, battery=battery)
-
-        self.env.market_maker.all_buy_prices *= SELL_MULT
         self.env.market_maker.create_prediction()
 
         nr_of_matches = 0
@@ -262,7 +258,6 @@ class TestActor:
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, environment=self.env, battery=battery)
-        self.env.market_maker.all_buy_prices *= SELL_MULT
         self.env.market_maker.create_prediction()
 
         nr_of_matches = 0
@@ -289,7 +284,6 @@ class TestActor:
         self.scenario.reset()
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, environment=self.env, battery=battery)
-        self.env.market_maker.all_buy_prices *= SELL_MULT
         self.env.market_maker.create_prediction()
 
         market = self.scenario.market

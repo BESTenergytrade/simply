@@ -802,12 +802,10 @@ class Actor:
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
-def create_random(actor_id, environment, start_date="2021-01-01", nb_ts=24, ts_hour=1):
+def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     """
     Create actor instance with random asset time series and random scaling factors
 
-    :param environment: scenario.Environment environment: Object that contains visible information
-        for objects within the simulation.
     :param str actor_id: unique actor identifier
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
@@ -841,7 +839,7 @@ def create_random(actor_id, environment, start_date="2021-01-01", nb_ts=24, ts_h
                            * net_price_factor * slot["price"], axis=1)
     # makes sure that the battery capacity is big enough, even if no useful trading takes place
     bat_capacity = max(random.random()*10, 2 * cfg.config.energy_unit)
-    return Actor(actor_id, df, environment, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
+    return Actor(actor_id, df, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
 
 
 def create_from_csv(actor_id, env, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,

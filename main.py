@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
-from pathlib import Path
 
 from simply import market, market_2pac, market_fair
 from simply.scenario import load, create_random
@@ -46,7 +45,7 @@ def main():
                             'simulation.')
         else:
             # create path if it does not exist yet
-            Path(cfg.path).mkdir(parents=True, exist_ok=True)
+            cfg.path.mkdir(parents=True, exist_ok=True)
         sc = create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.path, cfg.data_format)
 

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from simply.market import ASK, BID, MARKET_MAKER_THRESHOLD
+from simply.market import ASK, BID, MARKET_MAKER_THRESHOLD, Market
 from simply.market_maker import MarketMaker
 import simply.config as cfg
 from simply.scenario import Scenario
@@ -11,7 +11,7 @@ from simply.actor import create_random
 class TestMarketMaker:
     cfg.Config("")
     buy_prices = np.arange(1, 100, 1)
-    scenario = Scenario(None, None, buy_prices)
+    scenario = Scenario(None, None, None)
     env = scenario.environment
 
     def test_init(self):
@@ -25,7 +25,61 @@ class TestMarketMaker:
             MarketMaker(environment=self.env, buy_prices=self.buy_prices,
                         sell_prices=self.buy_prices - 1)
 
+    def test_energy_sold(self):
+        # Test to check if the market maker properly cumulates all the energy it sells
+        # and buys
+        # Reset the market_maker to be sure there is no data present
+        self.scenario.reset()
+        market_maker = self.env.market_maker
+        self.scenario.add_market(Market())
+        assert len(market_maker.traded) == 0
+        assert sum(market_maker.energy_sold) == 0
+        assert sum(market_maker.energy_bought) == 0
+        NR_TIME_STEPS = 10
+        self.add_actor_w_constant_schedule("sell_actor", 1)
+        self.run_simply(NR_TIME_STEPS)
+
+        assert sum(market_maker.energy_bought) == 10
+
+    def test_energy_bought(self):
+        # Test to check if the market maker properly cumulates all the energy it sells
+        # and buys
+        # Reset the market_maker to be sure there is no data present
+        self.scenario.reset()
+        market_maker = self.env.market_maker
+        self.scenario.add_market(Market())
+        assert len(market_maker.traded) == 0
+        assert sum(market_maker.energy_sold) == 0
+        assert sum(market_maker.energy_bought) == 0
+        NR_TIME_STEPS = 10
+        self.add_actor_w_constant_schedule("buy_actor", -1)
+        self.run_simply(NR_TIME_STEPS)
+        assert sum(market_maker.energy_sold) == 10
+
+    def run_simply(self, NR_TIME_STEPS):
+        for _ in range(NR_TIME_STEPS):
+            # actors calculate strategy based market interaction with the market maker
+            self.scenario.create_strategies()
+
+            # orders are generated based on the flexibility towards the planned market interaction
+            # and a pricing scheme. Orders are matched at the end
+            self.scenario.market_step()
+
+            # actors are prepared for the next time step by changing socs, banks and predictions
+            self.scenario.next_time_step()
+
+    def add_actor_w_constant_schedule(self, name, schedule_value):
+        actor = create_random(name)
+        actor.data.load[:] = 0 + (schedule_value < 0) * abs(schedule_value)
+        actor.data.schedule[:] = schedule_value
+        actor.data.pv[:] = 0 + (schedule_value > 0) * schedule_value
+        actor.battery.soc = 0
+        # Adds actor to scenario, sets the environment and creates a prediction based on the
+        # environment timestamp
+        self.scenario.add_participant(actor)
+
     def test_order_generation(self):
+        self.scenario.reset()
         time_step = self.env.time_step
         grid_fee = 0.5
         cfg.config.default_grid_fee = grid_fee
@@ -36,9 +90,11 @@ class TestMarketMaker:
         assert bid_order.price == self.buy_prices[time_step]
         assert ask_order.price == self.buy_prices[time_step]
 
-        actor = create_random("test_actor", environment=self.env)
-        assert actor.get_mm_buy_prices()[time_step] == bid_order.price - grid_fee
-        assert actor.get_mm_sell_prices()[time_step] == bid_order.price + grid_fee
+        actor = create_random("test_actor")
+        self.scenario.add_participant(actor)
+        # Actor accessed the market maker prices which differ due to the grid_fee
+        assert actor.get_mm_buy_prices()[0] == bid_order.price - grid_fee
+        assert actor.get_mm_sell_prices()[0] == bid_order.price + grid_fee
 
         # test if the energy amount is correct
         assert bid_order.energy == MARKET_MAKER_THRESHOLD
@@ -54,8 +110,8 @@ class TestMarketMaker:
         assert bid_order.price == self.buy_prices[time_step]
         assert ask_order.price == self.buy_prices[time_step]
 
-        assert actor.get_mm_buy_prices()[time_step] == bid_order.price - grid_fee
-        assert actor.get_mm_sell_prices()[time_step] == bid_order.price + grid_fee
+        assert actor.get_mm_buy_prices()[0] == bid_order.price - grid_fee
+        assert actor.get_mm_sell_prices()[0] == bid_order.price + grid_fee
 
         # if no new prediction is created this should fail
         time_step = 7
