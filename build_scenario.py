@@ -241,8 +241,8 @@ def main(project_dir, data_dir):
     project_dir = Path(project_dir)
 
     # Set the paths based on the scenario directory
-    config_json_path = project_dir / "example_config.json"
-    network_path = project_dir / "example_network.json"
+    config_json_path = project_dir / "actors_config.json"
+    network_path = project_dir / "network_config.json"
     config_path = project_dir / "config.txt"
     data_dirpath = Path(data_dir) if data_dir else project_dir / "scenario_inputs"
     loads_dir_path = data_dirpath / "loads_dir.csv"
