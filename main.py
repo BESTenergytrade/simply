@@ -40,24 +40,26 @@ if __name__ == "__main__":
             FileNotFoundError(f"Config file not found in scenario directory: {args.scenario_dir}"))
     cfg = Config(config_file)
     print(cfg)
-    # Checks if actor files with the correct format exist in the cfg.path
-    scenario_exists = len([False for i in cfg.path.glob(f"actor_*.{cfg.data_format}")]) != 0
+    # Checks if actor files with the correct format exist in the cfg.scenario_path
+    scenario_exists = len([False for i in cfg.scenario_path.glob(f"actor_*.{cfg.data_format}")]) != 0
 
-    print(f'Scenario path: {cfg.path}')
+    print(f'Scenario path: {cfg.scenario_path}')
     # load existing scenario or else create randomized new one
     if cfg.load_scenario:
         print(cfg.load_scenario)
         if scenario_exists:
-            sc = load(cfg.path, cfg.data_format)
+            sc = load(cfg.scenario_path, cfg.data_format)
         else:
-            raise Exception(f'Could not find actor data in path: {cfg.path} .')
+            raise Exception(f'Could not find scenario path: {cfg.scenario_path}. Make sure to include the '
+                            f'scenario directory in your project or if you want to generate a random scenario, '
+                            f'set load_scenario = False in config.txt.')
     else:
-        if cfg.path.exists():
-            raise Exception(f'The path: {cfg.path} already exists with another file structure. '
+        if cfg.scenario_path.exists():
+            raise Exception(f'The path: {cfg.scenario_path} already exists with another file structure. '
                             'Please remove or rename folder to avoid confusion and restart '
                             'simulation.')
         sc = create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
-        sc.save(cfg.path, cfg.data_format)
+        sc.save(cfg.scenario_path, cfg.data_format)
 
     if cfg.show_plots:
         sc.power_network.plot()

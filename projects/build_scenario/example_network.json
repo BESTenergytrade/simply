@@ -1,0 +1,46 @@
+{
+  "example_network": {
+    "directed": false,
+    "multigraph": false,
+    "graph": {},
+    "nodes": [
+      {
+        "id":  "N01"
+      },
+      {
+        "id":  "N02"
+      },
+      {
+        "id":  "N03"
+      },
+      {
+        "id":  "N04"
+      },
+      {
+        "id":  "N05"
+      }
+    ],
+    "links": [
+      {
+        "weight": 0,
+        "source": "N01",
+        "target": "N02"
+      },
+      {
+        "weight": 0,
+        "source": "N02",
+        "target": "N03"
+      },
+      {
+        "weight": 0,
+        "source": "N03",
+        "target": "N04"
+      },
+      {
+        "weight": 1,
+        "source": "N04",
+        "target": "N05"
+      }
+    ]
+  }
+}

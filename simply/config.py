@@ -66,19 +66,23 @@ class Config:
         # --------------------------
         # scenario
         # --------------------------
-        # path of scenario file to load and/or store
         try:
-            self.path = parser.get("default", "path")
+            self.project_path = parser.get("default", "project_path")
         except (NoOptionError, NoSectionError):
-            raise ValueError("Configuration file must specify the 'path' option in the 'input_params' section.")
-        self.path = Path(self.path)
+            raise ValueError("Configuration file must specify the 'project_path' parameter (path of project directory).")
+        self.project_path = Path(self.project_path)
+        self.results_path = parser.get("default", "results_path", fallback=str(self.project_path / "market_results"))
+        self.results_path = Path(self.results_path)
+        self.scenario_path = parser.get("default", "scenario_path", fallback=str(self.project_path / "scenario"))
+        self.scenario_path = Path(self.scenario_path)
         self.data_format = parser.get("default", "data_format", fallback="json")
         # load existing scenario
-        self.load_scenario = parser.getboolean("default", "load_scenario", fallback=False)
+        self.load_scenario = parser.getboolean("default", "load_scenario", fallback=True)
 
         # For generating random scenario
         # number actors in simulation
-        self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
+        #self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
+        self.nb_actors = parser.getint('default', 'nb_actors', fallback=None)
         # number of nodes in simulation
         self.nb_nodes = parser.getint('default', 'nb_nodes', fallback=4)
         # weight factor: network charges to power network weight

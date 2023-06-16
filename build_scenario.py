@@ -236,16 +236,15 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     return Scenario(pn, actors, actor_map)
 
 
-def main(scenario_dir, data_dir):
-    # Set the scenario directory path
-    scenario_dir = Path(scenario_dir)
-    print(f"Scenario directory: {scenario_dir}")
+def main(project_dir, data_dir):
+    # Set the project directory path
+    project_dir = Path(project_dir)
 
     # Set the paths based on the scenario directory
-    config_json_path = scenario_dir / "example_config.json"
-    network_path = scenario_dir / "example_network.json"
-    config_path = scenario_dir / "config.txt"
-    data_dirpath = Path(data_dir) if data_dir else scenario_dir / "scenario_inputs"
+    config_json_path = project_dir / "example_config.json"
+    network_path = project_dir / "example_network.json"
+    config_path = project_dir / "config.txt"
+    data_dirpath = Path(data_dir) if data_dir else project_dir / "scenario_inputs"
     loads_dir_path = data_dirpath / "loads_dir.csv"
 
     missing_paths = [path for path in (config_json_path, network_path, config_path, loads_dir_path, data_dirpath) if
@@ -257,8 +256,10 @@ def main(scenario_dir, data_dir):
 
     # Build config object using configuration file
     cfg = Config(config_path)
-    # ToDo: can change this if we want to specify the path for where the scenario gets stored
-    cfg.path = scenario_dir / "scenario"
+
+    # Set cfg.path based on scenario_path from config file or default to project_dir/"scenario"
+    scenario_path = cfg.scenario_path if hasattr(cfg, 'scenario_path') else None
+    cfg.path = Path(scenario_path) if scenario_path else project_dir / "scenario"
 
     # Reset save location directory
     remove_existing_dir(cfg.path)
@@ -284,15 +285,15 @@ def main(scenario_dir, data_dir):
 if __name__ == "__main__":
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Entry point for market simulation')
-    parser.add_argument('scenario_dir', help='scenario directory path')
+    parser.add_argument('project_dir', help='scenario directory path')
     parser.add_argument('--data_dir', default='', help='data directory')
     args = parser.parse_args()
 
-    if args.scenario_dir is None:
-        raise FileNotFoundError("Scenario directory path must be specified. Please provide the path as a command-line argument.")
-    data_dir = args.data_dir if args.data_dir is not None else os.path.join(args.scenario_dir, "scenario_inputs")
+    if args.project_dir is None:
+        raise FileNotFoundError("Project directory path must be specified. Please provide the path as a command-line argument.")
+    data_dir = args.data_dir if args.data_dir is not None else os.path.join(args.project_dir, "scenario_inputs")
     if args.data_dir is None:
         print(f"Using data directory: {data_dir}")
 
     # Call the main function with the specified scenario directory and data directory
-    main(args.scenario_dir, args.data_dir)
+    main(args.project_dir, args.data_dir)
