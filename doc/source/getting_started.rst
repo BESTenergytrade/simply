@@ -76,9 +76,9 @@ In both cases, a configuration file (`config.txt`) is required to specify the co
 of the scenario and simulation. The file is split into the sections `scenario`, `market` and `outputs`, and
 the parameters for each section are outlined as follows:
 
-.. csv-table:: Scenario
-   :file: "scenario_params.csv"
-   :widths: 30, 70
+.. csv-table:: Example for defining a scalar parameter as a time series
+   :file: ../files_to_be_displayed/scenario_params.csv
+   :widths: 30, 50, 30, 30
    :header-rows: 1
 
 Building your own scenario
