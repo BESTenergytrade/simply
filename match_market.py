@@ -17,7 +17,7 @@ Reads in configuration file (or uses defaults when none is supplied),
 creates or loads scenario and matches orders in each timestep.
 May show network plots or print market statistics, depending on config.
 
-Usage: python main.py [config file]
+Usage: python match_market.py [config file]
 """
 
 

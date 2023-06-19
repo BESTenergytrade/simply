@@ -232,7 +232,7 @@ An example of how to build a scenario can be found here. #PROVIDE LINK LATER
 
 Generating a random scenario
 ----------------------------
-There is also the option of generating a random scenario to be used in `main.py`. In this case, the parameters `nb_actors`,
+There is also the option of generating a random scenario to be used in `match_market.py`. In this case, the parameters `nb_actors`,
 `nb_nodes` and `weight_factor` should be specified in `config.txt`, otherwise the default parameters are used. The only
 input required before running the main simply function is the `config.txt` file:
 
@@ -244,63 +244,20 @@ input required before running the main simply function is the `config.txt` file:
 
 An example of how to generate a random scenario can be found here. #PROVIDE LINK LATER
 
-Running the main simply function
+Running the match market function
 --------------------------------
-The main simply function is executed by:
+The match market function is executed by:
 
  .. code:: bash
 
-    python main.py path/to/your/project/dir
+    python match_market.py path/to/your/project/dir
 
+If you choose to generate a random scenario, the scenario folder will be created in path/to/your/project/dir
+scenario - here is where time series for each actor with power generation, power consumption, and market demand or supply
+(including bid price) can be found.
 
-
-Old text (to be deleted)
-========================
-Run a market simulation using a config file (For possible configuations see `simply/config.py` or example config file `examples/*.txt`.):
-
-.. code:: bash
-
-    ./main.py config.cfg
-
-
-Or use the market wrapper to communicate order information directly to the market matching functions in a json format:
-
-.. code:: bash
-
-    ./market_wrapper.py orders.json
-
-
-Create your own scenario 
-========================
-
-Under `config/` you will find two files (.json), which represent an example of how you can design your own scenario.  
-The `example_config.json` file represents a template for setting up a market community consisting of the market maker 
-and other market participants. For each market actor, the following must be specified, analogous to the example file: 
-
-#. The name of the market actor, e.g. "residential_1".
-#. The market actor type, i.e. "market_maker", "residential", "industrial" or "business". 
-#. The location of the actor in the community network, i.e. the network node at which the prosumer is located. 
-#. The information about power consumption and power devices (if any): 
-    
-* The device type, i.e. "load", "solar" or "battery". 
-* The device ID: here is the name of a file (.json or .csv), which is to be stored under /sample and contains the load curve for the respective power consumption or the respective power device. 
- 
-The file `example_network.json` represents a template for the construction of a market community network. Under "nodes" 
-the names of the individual nodes are listed (e.g. N01, N02). The market maker represents a separate node.  
-Under "links" the network charge is defined for each combination of two nodes. Nodes between which there is a network 
-charge of 0 represent a common cluster (see BEST Matching Algorithm). 
-
-In the configuration file `config/config.txt` the correct settings regarding the scenario must be made. It can be set 
-where the created scenario should be stored. The number of market actors must match the specifications in the `config.json` file. 
-The number of nodes must match the information in `network.json`. 
-
-
-After the network and the community have been created, `build_scenario.py` can be executed. The appropriate scenario
-is created and saved to the location specified in the configuration file. The scenario contains a time series for each actor
-with power generation, power consumption, and market demand or supply (including bid price). 
-
-
-
+For both instances, once you run `match_market.py` the results will be stored in path/to/your/project/dir/market_results.
+Here you can see the results for the matches and orders in the network.
 
 License
 =======
