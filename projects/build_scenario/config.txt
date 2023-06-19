@@ -4,7 +4,7 @@
 # load existing scenario
 load_scenario = True
 # project directory path
-project_path = projects/build_scenario
+# project_path = projects/build_scenario
 # possible data_formats: json, csv
 data_format = csv
 

@@ -237,9 +237,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 
 
 def main(project_dir, data_dir):
-    # Set the project directory path
     project_dir = Path(project_dir)
-
     # Set the paths based on the scenario directory
     config_json_path = project_dir / "actors_config.json"
     network_path = project_dir / "network_config.json"
@@ -255,7 +253,7 @@ def main(project_dir, data_dir):
             f"One or more required files do not exist in the scenario directory:\n{missing_paths_str}")
 
     # Build config object using configuration file
-    cfg = Config(config_path)
+    cfg = Config(config_path, project_dir)
 
     # Set cfg.path based on scenario_path from config file or default to project_dir/"scenario"
     scenario_path = cfg.scenario_path if hasattr(cfg, 'scenario_path') else None
@@ -285,7 +283,7 @@ def main(project_dir, data_dir):
 if __name__ == "__main__":
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Entry point for market simulation')
-    parser.add_argument('project_dir', help='scenario directory path')
+    parser.add_argument('project_dir', help='project directory path')
     parser.add_argument('--data_dir', default='', help='data directory')
     args = parser.parse_args()
 

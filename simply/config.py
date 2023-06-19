@@ -43,7 +43,7 @@ class Config:
     :keyword cfg_file: start
     """
 
-    def __init__(self, cfg_file):
+    def __init__(self, cfg_file, project_dir):
         global config
         config = self
         global parser
@@ -66,11 +66,7 @@ class Config:
         # --------------------------
         # scenario
         # --------------------------
-        try:
-            self.project_path = parser.get("default", "project_path")
-        except (NoOptionError, NoSectionError):
-            raise ValueError("Configuration file must specify the 'project_path' parameter (path of project directory).")
-        self.project_path = Path(self.project_path)
+        self.project_path = Path(project_dir)
         self.results_path = parser.get("default", "results_path", fallback=str(self.project_path / "market_results"))
         self.results_path = Path(self.results_path)
         self.scenario_path = parser.get("default", "scenario_path", fallback=str(self.project_path / "scenario"))
@@ -81,8 +77,7 @@ class Config:
 
         # For generating random scenario
         # number actors in simulation
-        #self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
-        self.nb_actors = parser.getint('default', 'nb_actors', fallback=None)
+        self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
         # number of nodes in simulation
         self.nb_nodes = parser.getint('default', 'nb_nodes', fallback=4)
         # weight factor: network charges to power network weight

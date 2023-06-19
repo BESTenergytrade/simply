@@ -24,21 +24,21 @@ Usage: python main.py [config file]
 if __name__ == "__main__":
     parser = ArgumentParser(description='Entry point for market simulation')
     # parser.add_argument('config', nargs='?', default="", help='configuration file')
-    # Replaced the above line to take in the scenario directory (which will contain the config file) instead of putting in the config file
+    # Replaced the above line to take in the project directory (which will contain the config file) instead of putting in the config file
     # also made it mandatory
-    parser.add_argument('scenario_dir', nargs='?', default=None, help='scenario directory path')
+    parser.add_argument('project_dir', nargs='?', default=None, help='project directory path')
     args = parser.parse_args()
-    # Raise error if scenario directory not specified
-    if args.scenario_dir is None:
+    # Raise error if project directory not specified
+    if args.project_dir is None:
         raise (
-            FileNotFoundError("Scenario directory path must be specified. Please provide the path as a command-line argument."))
-    # This means that the config file must always be in the scenario directory
-    config_file = os.path.join(args.scenario_dir, "config.txt")
-    # Raise error if config.txt file not found in scenario directory
+            FileNotFoundError("Project directory path must be specified. Please provide the path as a command-line argument."))
+    # This means that the config file must always be in the project directory
+    config_file = os.path.join(args.project_dir, "config.txt")
+    # Raise error if config.txt file not found in project directory
     if not os.path.isfile(config_file):
         raise (
-            FileNotFoundError(f"Config file not found in scenario directory: {args.scenario_dir}"))
-    cfg = Config(config_file)
+            FileNotFoundError(f"Config file not found in project directory: {args.project_dir}"))
+    cfg = Config(config_file, args.project_dir)
     print(cfg)
     # Checks if actor files with the correct format exist in the cfg.scenario_path
     scenario_exists = len([False for i in cfg.scenario_path.glob(f"actor_*.{cfg.data_format}")]) != 0
@@ -46,7 +46,6 @@ if __name__ == "__main__":
     print(f'Scenario path: {cfg.scenario_path}')
     # load existing scenario or else create randomized new one
     if cfg.load_scenario:
-        print(cfg.load_scenario)
         if scenario_exists:
             sc = load(cfg.scenario_path, cfg.data_format)
         else:
@@ -54,10 +53,6 @@ if __name__ == "__main__":
                             f'scenario directory in your project or if you want to generate a random scenario, '
                             f'set load_scenario = False in config.txt.')
     else:
-        if cfg.scenario_path.exists():
-            raise Exception(f'The path: {cfg.scenario_path} already exists with another file structure. '
-                            'Please remove or rename folder to avoid confusion and restart '
-                            'simulation.')
         sc = create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.scenario_path, cfg.data_format)
 
