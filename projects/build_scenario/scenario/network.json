@@ -11,25 +11,10 @@
         "id": "N02"
       },
       {
-        "id": "N03"
-      },
-      {
-        "id": "N04"
-      },
-      {
-        "id": "N05"
-      },
-      {
         "id": "residential_1"
       },
       {
         "id": "residential_2"
-      },
-      {
-        "id": "residential_3"
-      },
-      {
-        "id": "industrial_1"
       },
       {
         "id": "market_maker"
@@ -49,38 +34,13 @@
       },
       {
         "weight": 0,
-        "source": "N02",
-        "target": "N03"
-      },
-      {
-        "weight": 0,
-        "source": "N02",
-        "target": "industrial_1"
-      },
-      {
-        "weight": 0,
-        "source": "N03",
-        "target": "N04"
-      },
-      {
-        "weight": 0,
-        "source": "N04",
-        "target": "N05"
-      },
-      {
-        "weight": 0,
-        "source": "N04",
+        "source": "N01",
         "target": "residential_1"
       },
       {
         "weight": 0,
-        "source": "N04",
+        "source": "N02",
         "target": "residential_2"
-      },
-      {
-        "weight": 0,
-        "source": "N04",
-        "target": "residential_3"
       },
       {
         "weight": 0,

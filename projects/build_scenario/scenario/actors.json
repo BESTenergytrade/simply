@@ -15,22 +15,6 @@
     "ps": 1,
     "pm": {}
   },
-  "residential_3": {
-    "id": "residential_3",
-    "df": {},
-    "csv": "actor_residential_3.csv",
-    "ls": 1,
-    "ps": 1,
-    "pm": {}
-  },
-  "industrial_1": {
-    "id": "industrial_1",
-    "df": {},
-    "csv": "actor_industrial_1.csv",
-    "ls": 1,
-    "ps": 1,
-    "pm": {}
-  },
   "market_maker_buy": {
     "id": "market_maker",
     "df": {},

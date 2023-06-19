@@ -7,7 +7,7 @@
         "comment": "An example of a residential prosumer with load and pv data specifed by their 'deviceID'",
         "prosumerName": "residential_1",
         "prosumerType": "residential",
-        "gridLocation": "N04",
+        "gridLocation": "N01",
         "devices": [
             {
                 "deviceType": "load",
@@ -23,7 +23,7 @@
         "comment": "An example of a residential prosumer without pv specifed by their 'deviceID'",
         "prosumerName": "residential_2",
         "prosumerType": "residential",
-        "gridLocation": "N04",
+        "gridLocation": "N02",
         "devices": [
             {
                 "deviceType": "load",
@@ -31,16 +31,22 @@
             }
         ]
     },
-  {
-        "comment": "A prosumer is processed archetypal actor based on their 'prosumerType' and lack of specified devices.",
-        "prosumerName": "residential_3",
+    {
+        "comment": "An example of a residential prosumer without pv specifed by their 'deviceID'",
+        "prosumerName": "residential_2",
         "prosumerType": "residential",
-        "gridLocation": "N04"
-    },
-  {
-        "comment": "an example of an archetypal industrial prosumer.",
-        "prosumerName": "industrial_1",
-        "prosumerType": "industrial",
-        "gridLocation": "N02"
-  }
+        "gridLocation": "N02",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "CHH16_sample.csv"
+            },
+	    {
+                "deviceType": "solar",
+                "deviceID": "generated_pv.csv"
+            }
+
+        ]
+    }
+
 ]
