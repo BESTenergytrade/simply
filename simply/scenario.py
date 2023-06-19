@@ -31,7 +31,7 @@ class Environment:
     time_step : int
         current time_step of the environment
     steps_per_hour : int
-        mount of simulation steps per hour
+        amount of simulation steps per hour
     add_actor_to_scenario : function
         Function which adds the actor to py:attr:`~simply.scenario.actors`
     get_grid_fee : method
