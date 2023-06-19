@@ -94,12 +94,12 @@ the parameters for each section are outlined as follows:
 
 Building your own scenario
 --------------------------
-..
-   ToDo: check names of structure tree at the end and adapt if needed
 
 A scenario is built from a number of required inputs: data (load, pricing, production, load directory), information on each
-actor, information on the network and a configuration file. The structure to build a scenario should be set up
-as follows:
+actor, information on the network and a configuration file. The structure to build a scenario can be set up
+as shown below. Note that the directory containing your data timeseries (scenario inputs) can be located elsewhere if you
+specify in the command line. However, actors_config, config and network_config must all be stored in your project
+directory:
 
 ::
 
@@ -232,10 +232,9 @@ An example of how to build a scenario can be found here. #PROVIDE LINK LATER
 
 Generating a random scenario
 ----------------------------
-There is also the option of generating a random scenario to be used in `main.py`. In this case, the parameters
-`market_type`, `reset_market`, 'energy_unit' and 'default_grid_fee' should be specified in `config.txt`, otherwise
-the default parameters are used. The only input required before running the main simply function is the `config.txt`
-file:
+There is also the option of generating a random scenario to be used in `main.py`. In this case, the parameters `nb_actors`,
+`nb_nodes` and `weight_factor` should be specified in `config.txt`, otherwise the default parameters are used. The only
+input required before running the main simply function is the `config.txt` file:
 
 ::
 
