@@ -3,8 +3,7 @@ Getting started
 ~~~~~~~~~~~~~~~
 
 Simply is an open-source tool to simulate electricity markets using different matching algorithms.
-..
-   ToDo: expand on the description of simply
+# ToDo: expand on the description of simply
 
 Documentation
 =============
@@ -61,8 +60,8 @@ The algorithms take grid fees into account, which can be based on clusters defin
 location in the network.
 The matching algorithms can also be used individually via a wrapper using a json format for order
 definition.
-..
-   ToDo: maybe adapt description a bit
+
+# ToDo: maybe adapt description a bit
 
 Using Simply
 ============
@@ -245,7 +244,7 @@ input required before running the main simply function is the `config.txt` file:
 An example of how to generate a random scenario can be found here. #PROVIDE LINK LATER
 
 Running the match market function
---------------------------------
+---------------------------------
 The match market function is executed by:
 
  .. code:: bash
