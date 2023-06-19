@@ -1,0 +1,4 @@
+name,description,type,default
+show_prints,print debug info to the console,bool,False
+show_plots,show various plots,bool,False
+save_csv,save orders and matching results to csv files,bool,False

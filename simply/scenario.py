@@ -3,9 +3,9 @@ from networkx.readwrite import json_graph
 import pandas as pd
 import random
 import matplotlib.pyplot as plt
-
 from simply import actor
 from simply import power_network
+from simply.battery import Battery
 from simply.util import get_all_data
 
 
@@ -61,20 +61,25 @@ class Scenario:
             )
         )
 
-        # save actors
+        print(data_format)
+        # Save actors' data
+        a_dict = {}
+        for actor_variable in self.actors:
+            a_dict[actor_variable.id] = actor_variable.to_dict(external_data=True)
+
         if data_format == "csv":
-            # Save data in separate csv file and all actors in one config file
-            a_dict = {}
+            # Save data in separate CSV files
             for actor_variable in self.actors:
-                a_dict[actor_variable.id] = actor_variable.to_dict(external_data=True)
                 actor_variable.save_csv(dirpath)
-            dirpath.joinpath('actors.json').write_text(json.dumps(a_dict, indent=2))
-        else:
-            # Save config and data per actor in a single file
-            for actor_variable in self.actors:
-                dirpath.joinpath(f'actor_{actor_variable.id}.{data_format}').write_text(
-                    json.dumps(actor_variable.to_dict(external_data=False), indent=2)
-                )
+
+        # Save config and data per actor in a single file
+        actors_file_path = dirpath.joinpath('actors.json')
+        actors_file_path.write_text(json.dumps(a_dict, indent=2))
+
+        # Save data for all actors in one file
+        actors_data_file_path = dirpath.joinpath('actors_data.json')
+        actors_data = [actor_variable.to_dict(external_data=False) for actor_variable in self.actors]
+        actors_data_file_path.write_text(json.dumps(actors_data, indent=2))
 
         # save map_actors
         dirpath.joinpath('map_actors.json').write_text(json.dumps(self.map_actors, indent=2))
@@ -146,15 +151,21 @@ def load(dirpath, data_format):
         at = actors_file.read_text()
         actors_j = json.loads(at)
         for aj in actors_j.values():
-            ai = [aj["id"], pd.read_csv(dirpath / aj["csv"]), aj["csv"], aj["ls"], aj["ps"],
+            ai = [aj["id"], pd.read_csv(dirpath / aj["csv"]), None, aj["csv"], aj["ls"], aj["ps"],
                   aj["pm"]]
-            actors.append(actor.Actor(*ai))
+            if aj["id"] != "market_maker":
+                actors.append(actor.Actor(*ai))
+            else:
+                battery = Battery(100, check_boundaries=False)
+                actors.append(actor.Actor(*[aj["id"], pd.read_csv(dirpath / aj["csv"]), battery, aj["csv"], aj["ls"], aj["ps"],
+                  aj["pm"]]))
     else:
+        # ToDo: this will be modified once json actors
         actor_files = dirpath.glob(f"actor_*.{data_format}")
         for f in sorted(actor_files):
             at = f.read_text()
             aj = json.loads(at)
-            ai = [aj["id"], pd.read_json(aj["df"]), aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
+            ai = [aj["id"], pd.read_json(aj["df"]), None, aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
             actors.append(actor.Actor(*ai))
 
     # Give actors knowledge of the cluster they belong to
