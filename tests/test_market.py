@@ -38,7 +38,7 @@ class TestMarket:
         assert len(m.orders) == 2
         # order IDs are numbered consecutively by default, so order ID 0 should already exist
         with pytest.raises(ValueError):
-            m.accept_order(Order(1, 0, 0, None, 1, 1), 0)
+            m.accept_order(Order(1, 0, 0, None, 1, 1), order_id=0)
         # reject orders from the future
         with pytest.raises(ValueError):
             m.accept_order(Order(1, 1, 0, None, 1, 1))

@@ -3,7 +3,7 @@
 from argparse import ArgumentParser
 
 from simply import market, market_2pac, market_fair
-from simply.scenario import load, create_random
+from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading
 
@@ -19,12 +19,8 @@ Usage: python main.py [config file]
 """
 
 
-def main():
-    parser = ArgumentParser(description='Entry point for market simulation')
-    parser.add_argument('config', nargs='?', default="", help='configuration file')
-    args = parser.parse_args()
+def main(cfg: Config):
 
-    cfg = Config(args.config)
     # Load scenario, if path exists with the correct format
     # otherwise remove all files in existing folder and create new scenario
     # check if actor-files with correct format exist in cfg.path
@@ -33,6 +29,7 @@ def main():
     print(f'Scenario path: {cfg.path}')
 
     # load existing scenario or else create randomized new one
+    sc: Scenario
     if cfg.load_scenario:
         if scenario_exists:
             sc = load(cfg.path, cfg.data_format)
@@ -86,4 +83,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = ArgumentParser(description='Entry point for market simulation')
+    parser.add_argument('config', nargs='?', default="", help='configuration file')
+    args = parser.parse_args()
+
+    cfg = Config(args.config)
+    main(cfg)

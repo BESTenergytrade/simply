@@ -248,8 +248,8 @@ class Market:
         Returns the grid fee associated with the bid and ask clusters of a given match.
 
         :param match: a dictionary representing a match, with keys 'bid_cluster' and 'ask_cluster'
-        :param ask_cluster: cluster id of bid
         :param bid_cluster: cluster id of ask
+        :param ask_cluster: cluster id of bid
         :return: the grid fee associated with the given bid and ask clusters
         """
         if match or match is not None:
@@ -264,7 +264,7 @@ class Market:
             return cfg.config.default_grid_fee
         else:
             if bid_cluster is None or ask_cluster is None:
-                warnings.warn("Grid fee is calculated for a case where at least one cluster is"
+                warnings.warn("Grid fee is calculated for a case where at least one cluster is "
                               "'None'. In these cases the default grid fee will be returned")
 
                 # default grid fee

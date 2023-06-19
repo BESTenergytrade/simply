@@ -104,11 +104,6 @@ class TestActor:
         assert isinstance(actor.battery, Battery)
         assert actor.battery.capacity == cfg.config.energy_unit*2
 
-        actor = Actor(0, self.example_df, environment=self.env)
-        assert actor.battery is not None
-        assert isinstance(actor.battery, Battery)
-        assert actor.battery.capacity == cfg.config.energy_unit*2
-
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, environment=self.env, battery=battery)
@@ -149,7 +144,6 @@ class TestActor:
         # the simplest strategy which buys or sells exactly the amount of the schedule at the time
         # the energy is needed. A battery is still needed since schedule values do not necessarily
         # line up with the traded_energy amount, e.g. schedule does not have 0.01 steps.
-
         self.scenario.reset()
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
@@ -339,9 +333,11 @@ class TestActor:
             self.scenario.market_step()
             self.scenario.next_time_step()
         sell_prices = self.env.market_maker.all_sell_prices
-        val = (np.diff(sell_prices)[:NR_STEPS][np.diff(sell_prices)[:NR_STEPS] > 0].sum()
-               * BAT_CAPACITY)
-        assert val == approx(actor.bank)
+        # cumulated sum of positive price gradients and the battery capacity yields achievable
+        # profit
+        max_profit = (np.diff(sell_prices)[:NR_STEPS][np.diff(sell_prices)[:NR_STEPS] > 0].sum()
+                      * BAT_CAPACITY)
+        assert max_profit == approx(actor.bank)
 
     def test_adjust_energy(self):
         CAPACITY = 10

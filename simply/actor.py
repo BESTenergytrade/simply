@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from collections import namedtuple
 import matplotlib.pyplot as plt
+from pytest import approx
 
 from simply.battery import Battery
 from simply.util import daily, gaussian_pv
@@ -39,7 +40,7 @@ class Actor:
     end of the time step. Afterwards the time step is increased and a new prediction for the
     schedule and price is generated.
 
-    :param int actor_id: unique identifier of the actor
+    :param int id: unique identifier of the actor
     :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "price" are processed
     :param .battery.Battery() battery: Battery used by the actor
     :param str csv: Filename in which this actor's data should be stored
@@ -107,14 +108,14 @@ class Actor:
 
     """
 
-    def __init__(self, actor_id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
+    def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
                  cluster=None, strategy: int = 0, pricing_strategy=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
          are generated.
         """
-        self.id = actor_id
+        self.id = id
         self.grid_id = None
         self.cluster = cluster
 
@@ -138,7 +139,7 @@ class Actor:
         if csv is not None:
             self.csv_file = csv
         else:
-            self.csv_file = f'actor_{actor_id}.csv'
+            self.csv_file = f'actor_{id}.csv'
         # ToDo remove schedule from input or only allow either (load and pv) OR (schedule)
         for column, scale in [("load", ls), ("pv", ps), ("schedule", 1)]:
             self.data[column] = scale * df[column]
@@ -158,7 +159,7 @@ class Actor:
 
         self.orders = []
         self.traded = {}
-        self.args = {"id": actor_id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
+        self.args = {"id": id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
 
     def get_environment(self):
@@ -568,8 +569,7 @@ class Actor:
 
         # assumes schedule is positive when pv is produced, Assertion error useful during
         # development to be certain
-        # ToDo: Remove for release
-        assert self.pred.schedule[0] == self.pred.pv[0] - self.pred.load[0]
+        assert self.pred.schedule[0] == approx(self.pred.pv[0] - self.pred.load[0])
         # ToDo Make sure that the balance of schedule and bought energy does not charge
         # or discharge more power than the max c rate
         self.battery.charge(self.pred.schedule[0] + self.matched_energy_current_step)
@@ -704,7 +704,7 @@ class Actor:
                 energy -= cfg.config.energy_unit
         return energy
 
-    def next_time_step(self):
+    def prepare_next_time_step(self):
         """Update actor and schedule and for next time step.
 
         Should be executed after clearing.
@@ -795,7 +795,7 @@ class Actor:
             stored.
         """
         # TODO if "predicted" values do not equal actual time series values,
-        #  also errors need to be saved
+        #  also errors need to be saved.
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
         save_df = self.data[["load", "pv", "schedule"]]
@@ -842,14 +842,13 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     return Actor(actor_id, df, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
 
 
-def create_from_csv(actor_id, env, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
+def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
                     override_scaling=False):
     """
     Create actor instance with random asset time series and random scaling factors. Replace
 
     :param str actor_id: unique actor identifier
-    :param simply.scenario.environment env: environment the actor is created in
-    :param Dict asset_dict: nested dictionary specifying 'csv' filename and column ('col_index')
+mn ('col_index')
         per asset or the time series index ('index') of the Actor
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
@@ -908,7 +907,7 @@ def create_from_csv(actor_id, env, asset_dict={}, start_date="2021-01-01", nb_ts
         for day in daily(df, 24 * ts_hour):
             day["pv"] *= gaussian_pv(ts_hour, 3)
 
-    return Actor(actor_id, df, env, ls=peak["load"], ps=peak["pv"])
+    return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
 
 
 def clip_soc(soc_prediction, upper_clipping):

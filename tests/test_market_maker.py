@@ -15,14 +15,14 @@ class TestMarketMaker:
     env = scenario.environment
 
     def test_init(self):
-        MarketMaker(environment=self.env, buy_prices=self.buy_prices)
+        MarketMaker(buy_prices=self.buy_prices, environment=self.env)
 
     def test_price_comparison(self):
-        MarketMaker(environment=self.env, buy_prices=self.buy_prices)
+        MarketMaker(buy_prices=self.buy_prices, environment=self.env)
         # Assertion error should be thrown since mm would buy for higher prices than he would sell
         # for
         with pytest.raises(AssertionError):
-            MarketMaker(environment=self.env, buy_prices=self.buy_prices,
+            MarketMaker(buy_prices=self.buy_prices, environment=self.env,
                         sell_prices=self.buy_prices - 1)
 
     def test_energy_sold(self):
@@ -83,13 +83,19 @@ class TestMarketMaker:
         time_step = self.env.time_step
         grid_fee = 0.5
         cfg.config.default_grid_fee = grid_fee
-        market_maker = MarketMaker(environment=self.env, buy_prices=self.buy_prices)
+        market_maker = MarketMaker(buy_prices=self.buy_prices, environment=self.env)
         orders = market_maker.generate_orders()
         bid_order, = [order for order in orders if order.type == BID]
         ask_order, = [order for order in orders if order.type == ASK]
-        assert bid_order.price == self.buy_prices[time_step]
-        assert ask_order.price == self.buy_prices[time_step]
+        # Is the market_maker using the correct data
+        assert self.buy_prices[time_step] == market_maker.all_sell_prices[time_step]
+        assert self.buy_prices[time_step] == market_maker.all_sell_prices[time_step]
 
+        # Do the orders use the correct market_maker data ?
+        assert bid_order.price == market_maker.all_buy_prices[time_step]
+        assert ask_order.price == market_maker.all_sell_prices[time_step]
+
+        # test grid fee adjustment
         actor = create_random("test_actor")
         self.scenario.add_participant(actor)
         # Actor accessed the market maker prices which differ due to the grid_fee
@@ -111,9 +117,10 @@ class TestMarketMaker:
         assert ask_order.price == self.buy_prices[time_step]
 
         assert actor.get_mm_buy_prices()[0] == bid_order.price - grid_fee
-        assert actor.get_mm_sell_prices()[0] == bid_order.price + grid_fee
+        assert actor.get_mm_sell_prices()[0] == ask_order.price + grid_fee
 
-        # if no new prediction is created this should fail
+        # if no new prediction is created this should fail, in other words
+        # forgetting to update with: market_maker.create_prediction()
         time_step = 7
         self.env.time_step = time_step
         orders = market_maker.generate_orders()
@@ -122,11 +129,11 @@ class TestMarketMaker:
         with pytest.raises(AssertionError):
             assert bid_order.price == self.buy_prices[time_step]
         with pytest.raises(AssertionError):
-            assert ask_order.price == self.buy_prices[time_step] + grid_fee
+            assert ask_order.price == self.buy_prices[time_step]
 
         # test use of sell prices
         kwarg = dict(sell_prices=self.buy_prices * 2)
-        market_maker = MarketMaker(environment=self.env, buy_prices=self.buy_prices, **kwarg)
+        market_maker = MarketMaker(buy_prices=self.buy_prices, environment=self.env, **kwarg)
         time_step = 0
         self.env.time_step = time_step
         market_maker.create_prediction()
@@ -137,7 +144,7 @@ class TestMarketMaker:
 
         # if both options of data and function are given, data is used
         kwarg = dict(sell_prices=self.buy_prices * 2, buy_to_sell_function=lambda x: x + 1)
-        market_maker = MarketMaker(environment=self.env, buy_prices=self.buy_prices, **kwarg)
+        market_maker = MarketMaker(buy_prices=self.buy_prices, environment=self.env, **kwarg)
         time_step = 0
         self.env.time_step = time_step
         market_maker.create_prediction()
@@ -148,7 +155,7 @@ class TestMarketMaker:
 
         # if only function is given, function is used
         kwarg = dict(buy_to_sell_function=lambda x: x + 1.5)
-        market_maker = MarketMaker(environment=self.env, buy_prices=self.buy_prices, **kwarg)
+        market_maker = MarketMaker(buy_prices=self.buy_prices, environment=self.env, **kwarg)
         time_step = 0
         self.env.time_step = time_step
         market_maker.create_prediction()

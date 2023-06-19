@@ -10,6 +10,9 @@ if TYPE_CHECKING:
     from simply.scenario import Environment
 
 
+MARKETMAKERID = "MarketMaker"
+
+
 class MarketMaker:
     """ The MarketMaker represents the market maker and implements methods accordingly. This
     includes generating buy and sell orders according to a provided price time series with
@@ -19,14 +22,10 @@ class MarketMaker:
     as almost infinite source and sink of energy
     """
 
-    def __init__(self,
-                 environment: 'Environment',
-                 buy_prices: Sized,
-                 sell_prices: np.array = None,
-                 buy_to_sell_function=None,
-                 **kwargs):
+    def __init__(self, buy_prices: Sized, environment: 'Environment' = None,
+                 sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
         self.environment = environment
-        self.id = "MARKET_MAKER"
+        self.id = MARKETMAKERID
         self.cluster = kwargs.get("cluster", None)
         # All prices the market maker is paying to buy energy. Mostly the prediction of these
         # values is used and provided via property
@@ -44,12 +43,16 @@ class MarketMaker:
 
         self.horizon = cfg.config.horizon
         self.pred = pd.DataFrame()
-        self.create_prediction()
         self.traded = {}
         self.energy_sold = [0]
         self.energy_bought = [0]
-        # Overwriting the environment market_maker with this market_maker
-        self.environment.add_actor_to_scenario(self)
+        if environment is not None:
+            # Overwriting the environment market_maker with this market_maker
+            self.environment.add_actor_to_scenario(self)
+            self.create_prediction()
+        else:
+            warnings.warn("MarketMaker was not added to environment. To use the MarketMaker in a "
+                          "scenario add it through scenario.add_participant()")
 
     def reset(self):
         # Reset prices to original prices
@@ -70,6 +73,10 @@ class MarketMaker:
 
     def generate_sell_prices(self, buy_to_sell_function, sell_prices):
         if sell_prices is not None:
+            if buy_to_sell_function is not None:
+                warnings.warn("The market maker uses the provided selling prices. A function to "
+                              "create selling prices from buying prices was provided as well, but "
+                              "will not be used.")
             # if sell_prices are provided they are used
             return sell_prices
         else:
@@ -102,7 +109,7 @@ class MarketMaker:
 
         """
         return {
-            "id": "MarketMaker",
+            "id": MARKETMAKERID,
             "sell_prices": list(self.all_sell_prices),
             "buy_prices": list(self.all_buy_prices)
             }
@@ -177,6 +184,6 @@ class MarketMaker:
         else:
             raise ValueError
 
-    def next_time_step(self):
+    def prepare_next_time_step(self):
         self.energy_sold.append(0)
         self.energy_bought.append(0)

@@ -43,7 +43,7 @@ class TestBattery:
 
         df = pd.DataFrame(data=zip(load, pv, schedule, price),
                           columns=["load", "pv", "schedule", "price"])
-        a = Actor(actor_id="1", df=df, environment=self.environment, battery=Battery(capacity=10))
+        a = Actor(id="1", df=df, environment=self.environment, battery=Battery(capacity=10))
 
         # Get energy for the first time step. The actor charges the battery with the amount in the
         # schedule. If the schedule is negative battery gets discharged.
