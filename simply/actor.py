@@ -141,7 +141,7 @@ class Actor:
         else:
             self.csv_file = f'actor_{id}.csv'
         # ToDo remove schedule from input or only allow either (load and pv) OR (schedule)
-        for column, scale in [("load", ls), ("pv", ps), ("schedule", 1)]:
+        for column, scale in [("load", ls), ("pv", ps)]:
             self.data[column] = scale * df[column]
             try:
                 self.pm[column] = np.array(pm[column])
@@ -584,7 +584,7 @@ class Actor:
         """
 
         energy = self.market_schedule[0]
-
+        assert not np.isnan(energy), "Market schedule"
         if energy == 0 and self.pricing_strategy is None or all(self.market_schedule == 0):
             return []
 
