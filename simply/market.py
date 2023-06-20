@@ -264,8 +264,7 @@ class Market:
             return cfg.config.default_grid_fee
         else:
             if bid_cluster is None or ask_cluster is None:
-                warnings.warn("Grid fee is calculated for a case where at least one cluster is "
-                              "'None'. In these cases the default grid fee will be returned")
+                warnings.warn("At least one cluster is 'None', returning default grid fee.")
 
                 # default grid fee
                 return self.grid_fee_matrix[0][-1]
