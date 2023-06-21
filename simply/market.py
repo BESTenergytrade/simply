@@ -268,7 +268,7 @@ class Market:
                               "'None'. In these cases the default grid fee will be returned")
 
                 # default grid fee
-                return self.grid_fee_matrix[0][-1]
+                return cfg.config.default_grid_fee
             else:
                 return self.grid_fee_matrix[bid_cluster][ask_cluster]
 

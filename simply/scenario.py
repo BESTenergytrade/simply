@@ -289,15 +289,19 @@ class Scenario:
             self.market.t_step = self.environment.time_step
             self.market.reset()
 
+        old_market_maker = None
+        if self.environment.market_maker is not None:
+            old_market_maker = self.environment.market_maker
+
+        for participant in self.market_participants:
+            participant.reset()
+
         # Remove previous participants
         self.market_participants = []
 
-        # Store the old market maker
-        if self.environment.market_maker is not None:
-            market_maker = self.environment.market_maker
-            market_maker.reset()
+        if old_market_maker is not None:
             # But add the market maker again
-            self.add_participant(market_maker)
+            self.add_participant(old_market_maker)
 
 
 def from_dict(scenario_dict):

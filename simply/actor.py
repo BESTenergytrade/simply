@@ -37,7 +37,7 @@ class Actor:
     a market maker price time series as input.
     After matching took place, the (monetary) bank and resulting soc is calculated taking into
     consideration the schedule and the acquired energy of this time step, i.e. bank and soc at the
-    end of the time step. Afterwards the time step is increased and a new prediction for the
+    end of the time step. Afterward the time step is increased and a new prediction for the
     schedule and price is generated.
 
     :param int id: unique identifier of the actor
@@ -107,6 +107,22 @@ class Actor:
         planed energy amounts for interaction with the market_maker and basis of order generation
 
     """
+    _cache = {}
+
+    def reset(self):
+        try:
+            del self._cache[self]
+        except KeyError:
+            pass
+        self.socs = []
+        self.matched_energy_current_step = 0
+        self.predicted_soc = None
+        self.orders = []
+        self.traded = {}
+        self.bank = 0
+        self.battery.reset()
+
+
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
                  cluster=None, strategy: int = 0, pricing_strategy=None):
@@ -549,23 +565,23 @@ class Actor:
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
-    def update_battery(self, _cache=dict()):
+
+
+    def update_battery(self):
         """Update the battery state with the current schedule and the matched energy in this step.
 
         This function needs to be called once per time step to track the energy inside of the
         battery. It takes the planned, i.e. predicted, schedule and changes the battery's SOC
         accordingly.
-
-        :param _cache: cache of function calls, which SHOULD NOT be provided by user
         """
         # _cache keeps track of method calls by storing the last time of the method call at the
         # key of self/object reference. This makes sure that energy is only taken once per time step
-        if self not in _cache:
-            _cache[self] = self.t_step
+        if self not in self._cache:
+            self._cache[self] = self.t_step
         else:
             error = "Actor used the battery twice in a single time step"
-            assert _cache[self] < self.t_step, error
-            _cache[self] = self.t_step
+            assert self._cache[self] < self.t_step, error
+            self._cache[self] = self.t_step
 
         # assumes schedule is positive when pv is produced, Assertion error useful during
         # development to be certain

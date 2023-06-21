@@ -12,7 +12,8 @@ import numpy as np
 
 class TestMultipleActors:
     np.random.seed(42)
-    df = pd.DataFrame(np.random.rand(24, 2), columns=["load", "pv"])
+    NUM_STEPS = 96
+    df = pd.DataFrame(np.random.rand(NUM_STEPS, 2), columns=["load", "pv"])
     cfg.Config("")
     SELL_MULT = 1/0.8
     # Sell prices of are higher than buy_prices. This way the MarketMaker makes a profit
@@ -33,7 +34,7 @@ class TestMultipleActors:
                             sell_prices=np.tile(test_prices, 10)*self.SELL_MULT)
         scenario.add_market(BestMarket(pn))
         return scenario
-    NUM_STEPS = 96
+
     num_actors=0
 
     def create_actor(self):
@@ -48,20 +49,39 @@ class TestMultipleActors:
         """
         banks={}
         for actor in actors:
-            scenario.reset()
             scenario.add_participant(actor)
-            for _ in range(self.NUM_STEPS):
-                # actors calculate strategy based market interaction with the market maker
-                scenario.create_strategies()
-                # orders are generated based on the flexibility towards the planned market interaction
-                # and a pricing scheme. Orders are matched at the end
-                scenario.market_step()
-                # actors are prepared for the next time step by changing socs, banks and predictions
-                scenario.next_time_step()
+            self.run_simply(scenario)
             banks[actor.id]=actor.bank
+            scenario.reset()
         return banks
 
+    def run_simply(self, scenario):
+        for _ in range(self.NUM_STEPS):
+            # actors calculate strategy based market interaction with the market maker
+            scenario.create_strategies()
+            # orders are generated based on the flexibility towards the planned market interaction
+            # and a pricing scheme. Orders are matched at the end
+            scenario.market_step()
+            # actors are prepared for the next time step by changing socs, banks and predictions
+            scenario.next_time_step()
+
     def test_no_interaction(self, scenario):
-        actors = [self.create_actor() for _ in range(5)]
+        actors = [self.create_actor() for _ in range(2)]
         banks=self.get_banks_no_interaction(scenario, actors)
-        a=2
+        scenario.add_participants(actors)
+        self.run_simply(scenario)
+        for actor in actors:
+            assert actor.bank == banks[actor.id]
+
+    def test_interaction(self, scenario):
+        cfg.config.default_grid_fee=0.1
+        actors = [self.create_actor() for _ in range(2)]
+        act = actors [0]
+        act.data.loc[:,"load"] = np.roll(np.array(act.data.loc[:,"load"]), 6)
+        banks = self.get_banks_no_interaction(scenario, actors)
+        scenario.add_participants(actors)
+        act.create_prediction()
+        self.run_simply(scenario)
+        for actor in actors:
+            assert actor.bank == banks[actor.id]
+
