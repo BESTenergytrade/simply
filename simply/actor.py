@@ -852,7 +852,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     Create actor instance with random asset time series and random scaling factors. Replace
 
     :param str actor_id: unique actor identifier
-mn ('col_index')
+    :param Dict asset_dict: nested dictionary specifying 'csv' filename and column ('col_index')
         per asset or the time series index ('index') of the Actor
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series

@@ -107,6 +107,18 @@ class Scenario:
     market = property(get_market, set_market)
 
     def add_participants(self, participants: Iterable, map_actors=None, add_to_network=False):
+        """Add participants to the scenario.
+
+        If added to the network nodes, this is either done using the provided mapping dictionary or
+        randomly.
+
+        :param participants: participants to be added
+        :type participants: simply.actor.Actor or simply.scenario.MarketMaker
+        :param map_actors: dictionary with actor_ids as key and node_id as value
+        :param add_to_network: should the actors be added to the power network
+        :type add_to_network: bool
+        :return:
+        """
         actors = list(filter(lambda x: isinstance(x, Actor), participants))
 
         if map_actors is None:
@@ -128,6 +140,7 @@ class Scenario:
             if add_to_network:
                 self.power_network.add_actors_map(map_actors)
 
+        # Only update the node mapping of the provided actors
         self.map_actors.update(map_actors)
 
         for participant in participants:
