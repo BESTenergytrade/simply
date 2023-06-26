@@ -14,7 +14,7 @@ class TestMain():
 
     def test_load_scenario_csv(self, tmp_path):
         cfg = Config("")
-        # cfg.save_csv = True is the default value. Therefore we don't set it
+        # cfg.save_csv = True is the default value. Therefore, we don't set it
         cfg.data_format = "csv"
         cfg.path = Path((tmp_path/"output"))
         main(cfg)

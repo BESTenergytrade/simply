@@ -332,7 +332,6 @@ class TestActor:
         market_maker.all_sell_prices = market_maker.all_buy_prices.copy()
         market_maker.create_prediction()
 
-        actor.data.schedule *= 0
         actor.data.pv *= 0
         actor.data.load *= 0
         actor.create_prediction()

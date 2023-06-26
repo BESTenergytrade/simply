@@ -29,9 +29,10 @@ class TwoSidedPayAsClear(Market):
         matches = []
         for ask_id, ask in asks.iterrows():
             while bid is not None:
-                if self.grid_fee_matrix:
-                    self.apply_grid_fee(ask, bid)
-                if ask.price > bid.price:
+                # if self.grid_fee_matrix:
+                #     self.apply_grid_fee(ask, bid)
+                grid_fee = self.get_grid_fee(bid_cluster=bid.cluster, ask_cluster=ask.cluster)
+                if ask.price + grid_fee > bid.price:
                     break
                 # get common energy value
                 energy = min(ask.energy, bid.energy)
@@ -48,15 +49,15 @@ class TwoSidedPayAsClear(Market):
                     "bid_cluster": bid.cluster,
                     "ask_cluster": ask.cluster,
                     "energy": energy,
-                    "price": ask.price
+                    "price": ask.price + grid_fee
                 })
-                if bid.energy < cfg.config.energy_unit:
+                if bid.energy + cfg.config.EPS < cfg.config.energy_unit:
                     # bid finished: next bid
                     try:
                         bid_id, bid = next(bid_iter)
                     except StopIteration:
                         bid = None
-                if ask.energy < cfg.config.energy_unit:
+                if ask.energy + cfg.config.EPS < cfg.config.energy_unit:
                     # ask finished: next ask
                     break
 

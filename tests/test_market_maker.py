@@ -71,7 +71,6 @@ class TestMarketMaker:
     def add_actor_w_constant_schedule(self, name, schedule_value):
         actor = create_random(name)
         actor.data.load[:] = 0 + (schedule_value < 0) * abs(schedule_value)
-        actor.data.schedule[:] = schedule_value
         actor.data.pv[:] = 0 + (schedule_value > 0) * schedule_value
         actor.battery.soc = 0
         # Adds actor to scenario, sets the environment and creates a prediction based on the

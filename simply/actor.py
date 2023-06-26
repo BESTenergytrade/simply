@@ -701,11 +701,12 @@ class Actor:
         :return: energy amount for order generation the current time step
         :rtype: float
         """
+        index = max(1,index)
         # buying energy
         if energy > 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
-            if (self.battery.energy() + self.pred.schedule[0:index+1].sum() +
+            if (self.battery.energy() + self.pred.schedule[0:index].sum() +
                     ((energy+cfg.config.EPS) // cfg.config.energy_unit *
                      cfg.config.energy_unit) < 0):
                 energy += cfg.config.energy_unit
@@ -714,7 +715,7 @@ class Actor:
         elif energy < 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or over 1 socs.
             # In these cases decrease the order by one energy unit, i.e. sell more energy
-            if self.battery.energy() + self.pred.schedule[0:index+1].sum() + (
+            if self.battery.energy() + self.pred.schedule[0:index].sum() + (
                     ((energy+cfg.config.EPS) // cfg.config.energy_unit+1) *
                     cfg.config.energy_unit) > self.battery.capacity:
                 energy -= cfg.config.energy_unit
@@ -814,7 +815,7 @@ class Actor:
         #  also errors need to be saved.
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
-        save_df = self.data[["load", "pv", "schedule"]]
+        save_df = self.data[["load", "pv"]]
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 

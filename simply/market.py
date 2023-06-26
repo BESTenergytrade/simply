@@ -153,7 +153,7 @@ class Market:
             if bid_actor_callback is not None:
                 bid_actor_callback(self.t_step, 1, energy, price)
             if ask_actor_callback is not None:
-                ask_actor_callback(self.t_step, -1, energy, price)
+                ask_actor_callback(self.t_step, -1, energy, price-match["included_grid_fee"])
         if reset:
             # don't retain orders for next cycle
             self.orders = pd.DataFrame(columns=Order._fields)
