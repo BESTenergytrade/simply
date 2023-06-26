@@ -4,9 +4,7 @@ from simply.config import Config
 from main import main
 
 
-class TestMain():
-    # ToDo Set up test to check proper functionality of save and loading of scenario, e.g. test that
-    #  the results stay consistent
+class TestMain:
     def test_main(self, tmp_path):
         cfg = Config("")
         cfg.path = Path((tmp_path / "output"))
@@ -14,20 +12,20 @@ class TestMain():
 
     def test_load_scenario_csv(self, tmp_path):
         cfg = Config("")
-        # cfg.save_csv = True is the default value. Therefore we don't set it
+        # cfg.save_csv = True is the default value. Therefore, we don't set it
         cfg.data_format = "csv"
         cfg.path = Path((tmp_path/"output"))
-        main(cfg)
+        sc = main(cfg)
 
         cfg.load_scenario = True
-        main(cfg)
+        sc = main(cfg)
 
     def test_load_scenario_json(self, tmp_path):
         cfg = Config("")
         cfg.save_csv = True
         cfg.data_format = "json"
         cfg.path = Path((tmp_path/"output"))
-        main(cfg)
+        sc = main(cfg)
 
         cfg.load_scenario = True
-        main(cfg)
+        sc = main(cfg)

@@ -778,14 +778,18 @@ class Actor:
         :param dict external_data: (optional) Dictionary with additional data e.g. on prediction
             error time series
         """
+        args = self.args.copy()
+        args["csv"]=self.csv_file
         if external_data:
-            args_no_df = {
-                "id": self.id, "df": {}, "csv": self.csv_file, "ls": self.load_scale,
-                "ps": self.pv_scale, "pm": {}
-            }
+            args_no_df = args
+            args_no_df.update({"df": {},"pm": {}, "ls":1, "ps": 1})
             return args_no_df
         else:
-            return self.args
+            # since data is already scaled by ls and ps, both of these values are set to 1, so
+            # they don't get applied twice
+            args_df = args
+            args_df.update({"df": self.data.to_json(),"pm": {}, "ls":1, "ps": 1})
+            return args_df
 
     def save_csv(self, dirpath):
         """

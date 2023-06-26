@@ -339,14 +339,6 @@ def load(dirpath, data_format):
             if aj["id"] == market_maker.MARKETMAKERID:
                 participant = market_maker.MarketMaker(**aj)
             else:
-                # ToDo: Timo, do you agree with this method?
-                # save_csv stores the mutated csv. In these cases the data should not be mutated
-                # again through scaling factors. For now lets check if the csv seems actor specific
-                # and ignore scaling in these cases
-                if aj["id"] in aj["csv"]:
-                    # csv file seems actor specific --> set scaling to 1
-                    aj["ls"] = 1
-                    aj["ps"] = 1
                 aj["df"] = pd.read_csv(dirpath / aj["csv"])
                 participant = actor.Actor(**aj)
             participants.append(participant)
@@ -358,13 +350,9 @@ def load(dirpath, data_format):
             if aj["id"] == market_maker.MARKETMAKERID:
                 participant = market_maker.MarketMaker(**aj)
             else:
-                # ToDO @Timo this is kinda confusing. Values should be stored in a mutated way or
-                # not but this should not be mixed depending on datatype
-                # saving as json actually stores the original data which has not been mutated.
-                # Therefore in this case load and pv scaling need to be applied and not set to 1.
                 aj["df"] = pd.read_json(aj["df"])
                 participant = actor.Actor(**aj)
-        participants.append(participant)
+            participants.append(participant)
 
     # Give actors knowledge of the cluster they belong to
     for aj in participants:
@@ -380,9 +368,9 @@ def load(dirpath, data_format):
 
 
 def create_random(num_nodes, num_actors, weight_factor):
+    # Create random nodes
     pn = power_network.create_random(num_nodes)
-    # Add actor nodes at random position (leaf node) in the network
-    # One network node can contain several actors (using random.choices method)
+
 
     # Update shortest paths and the grid fee matrix
     pn.update_shortest_paths()
@@ -390,6 +378,9 @@ def create_random(num_nodes, num_actors, weight_factor):
     mm_buy_prices = np.random.random(100)
     scenario = Scenario(pn, None, buy_prices=mm_buy_prices)
     actors = [actor.create_random("H" + str(i)) for i in range(num_actors)]
+
+    # Add actor nodes at random position (leaf node) in the network
+    # One network node can contain several actors (using random.choices method)
     scenario.map_actors = pn.add_actors_random(actors)
     scenario.add_participants(actors)
     return scenario
@@ -398,6 +389,7 @@ def create_random(num_nodes, num_actors, weight_factor):
 def create_random2(num_nodes, num_actors):
     assert num_actors < num_nodes
     # num_actors has to be much smaller than num_nodes
+    # Create random nodes
     pn = power_network.create_random(num_nodes)
 
     # Create random actors
@@ -428,9 +420,9 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
     :param ts_hour: number of time slot of equal length within one hour
     :param nb_ts: number of time slots to be generated
     """
+    # Create random nodes in the power network
     pn = power_network.create_random(num_nodes)
-    # Add actor nodes at random position (leaf node) in the network
-    # One network node can contain several actors (using random.choices method)
+
 
     # Read all filenames from given directory
     filenames = dirpath.glob("*.csv")
@@ -455,9 +447,11 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
 
         actors.append(a)
 
+    # Add actor nodes at random position (leaf node) in the network
+    # One network node can contain several actors (using random.choices method)
     map_actors = pn.add_actors_random(actors)
 
-    # Update shortest paths and the grid fee matrix
+    # Update the shortest paths and the grid fee matrix
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
     scenario = Scenario(pn, map_actors, steps_per_hour=ts_hour)

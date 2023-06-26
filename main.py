@@ -81,6 +81,8 @@ def main(cfg: Config):
         print("\nTraded energy volume and price at actor level")
         print(summerize_actor_trading(sc))
 
+    return sc
+
 
 if __name__ == "__main__":
     parser = ArgumentParser(description='Entry point for market simulation')
