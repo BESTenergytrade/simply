@@ -380,16 +380,16 @@ def load(dirpath, data_format):
     return scenario
 
 
-def create_random(num_nodes, num_actors, weight_factor):
+def create_random(num_nodes, num_actors, weight_factor, nb_ts=100):
     # Create random nodes
     pn = power_network.create_random(num_nodes)
 
     # Update the shortest paths and the grid fee matrix
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
-    mm_buy_prices = np.random.random(100)
+    mm_buy_prices = np.random.random(nb_ts)
     scenario = Scenario(pn, None, buy_prices=mm_buy_prices)
-    actors = [actor.create_random("H" + str(i)) for i in range(num_actors)]
+    actors = [actor.create_random("H" + str(i), nb_ts=nb_ts) for i in range(num_actors)]
 
     # Add actor nodes at random position (leaf node) in the network
     # One network node can contain several actors (using random.choices method)
@@ -398,14 +398,14 @@ def create_random(num_nodes, num_actors, weight_factor):
     return scenario
 
 
-def create_random2(num_nodes, num_actors):
+def create_random2(num_nodes, num_actors, nb_ts=100):
     assert num_actors < num_nodes
     # num_actors has to be much smaller than num_nodes
     # Create random nodes
     pn = power_network.create_random(num_nodes)
 
     # Create random actors
-    actors = [actor.create_random("H" + str(i)) for i in range(num_actors)]
+    actors = [actor.create_random("H" + str(i), nb_ts=nb_ts) for i in range(num_actors)]
 
     # Add actor nodes at random position (leaf node) in the network
     # One selected network node (using random.sample method), directly represents a single actor
@@ -413,9 +413,7 @@ def create_random2(num_nodes, num_actors):
     actor_nodes = random.sample(pn.leaf_nodes, num_actors)
     map_actors = {actor.id: node_id for actor, node_id in zip(actors, actor_nodes)}
 
-    # TODO tbd if actors are already part of topology ore create additional nodes
-    # pn.add_actors_map(map_actors)
-    mm_buy_prices = np.random.random(100)
+    mm_buy_prices = np.random.random(nb_ts)
     scenario = Scenario(pn, map_actors, mm_buy_prices)
     scenario.add_participants(actors)
     return scenario

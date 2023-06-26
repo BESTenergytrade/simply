@@ -818,14 +818,21 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     :return: generated Actor object
     :rtype: Actor
     """
-    time_idx = pd.date_range(start_date, freq="{}min".format(int(60 / ts_hour)), periods=nb_ts)
+    # Round to next full day
+    extra_time_steps = -nb_ts % 24
+    time_idx = pd.date_range(start_date, freq="{}min".format(int(60 / ts_hour)),
+                             periods=nb_ts+extra_time_steps)
     cols = ["load", "pv", "schedule", "price"]
-    values = np.random.rand(nb_ts, len(cols))
+    values = np.random.rand(len(time_idx), len(cols))
     df = pd.DataFrame(values, columns=cols, index=time_idx)
 
     # Multiply random generation signal with gaussian/PV-like characteristic
     for day in daily(df, 24 * ts_hour):
         day["pv"] *= gaussian_pv(ts_hour, 3)
+
+    # delete the added time steps
+    if extra_time_steps > 0:
+        df = df.drop(df.iloc[-extra_time_steps:].index)
 
     # Random scale factor generation, load and price time series in boundaries
     ls = random.uniform(0.5, 1.3)
