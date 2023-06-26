@@ -384,8 +384,7 @@ def create_random(num_nodes, num_actors, weight_factor):
     # Create random nodes
     pn = power_network.create_random(num_nodes)
 
-
-    # Update shortest paths and the grid fee matrix
+    # Update the shortest paths and the grid fee matrix
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
     mm_buy_prices = np.random.random(100)
@@ -435,7 +434,6 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
     """
     # Create random nodes in the power network
     pn = power_network.create_random(num_nodes)
-
 
     # Read all filenames from given directory
     filenames = dirpath.glob("*.csv")
