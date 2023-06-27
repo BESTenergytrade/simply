@@ -1,12 +1,61 @@
 import json
+import warnings
+from typing import Sized, Iterable
+
 from networkx.readwrite import json_graph
 import pandas as pd
+import numpy as np
 import random
 import matplotlib.pyplot as plt
-
-from simply import actor
+import simply.config as cfg
+from simply import actor, market_maker
 from simply import power_network
 from simply.util import get_all_data
+from simply.market_maker import MarketMaker
+from simply.actor import Actor
+from simply.market import Market
+
+
+class Environment:
+    """Representation of the environment which is visible to all actors. Decouples scenario
+    information from actors.
+
+    :param iterable buy_prices: iterable of prices the market maker would buy energy for
+    :param int steps_per_hour: amount of simulation steps per hour
+    :param function add_actor_to_scenario: Function which adds the actor to
+        py:attr:`~simply.scenario.actors`
+    :param dict kwargs: kwargs for MarketMaker generation
+
+    Members:
+
+    time_step : int
+        current time_step of the environment
+    steps_per_hour : int
+        amount of simulation steps per hour
+    add_actor_to_scenario : function
+        Function which adds the actor to py:attr:`~simply.scenario.actors`
+    get_grid_fee : method
+        getter function of grid_fee of the Market
+    market_maker : py:class:`~simply.market_maker.MarketMaker`
+        market_maker in this environment
+    """
+
+    def __init__(self, steps_per_hour, add_actor_to_scenario, **kwargs):
+        self.time_step = cfg.config.start
+        self.steps_per_hour = steps_per_hour
+        self.add_actor_to_scenario = add_actor_to_scenario
+        # Get grid fee method of market to make grid fees accessible for actors. Will be overwritten
+        # when market is added to scenario
+        self.get_grid_fee = Market().get_grid_fee
+        self.market_maker: MarketMaker = None
+
+
+def is_scenario_participant(obj):
+    if isinstance(obj, Actor):
+        return True
+    if isinstance(obj, MarketMaker):
+        return True
+    return False
 
 
 class Scenario:
@@ -15,29 +64,163 @@ class Scenario:
      connected (power_network). RNG seed is preserved so results can be reproduced.
     """
 
-    def __init__(self, network, actors, map_actors, rng_seed=None, steps_per_hour=4):
+    def __init__(self, network, map_actors=None, buy_prices: np.array = None, rng_seed=None,
+                 steps_per_hour=4, **kwargs):
+
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
-
-        self.power_network = network
-        self.actors = list(actors)
-        self.steps_per_hour = steps_per_hour
+        self._market = None
+        self.power_network: power_network.PowerNetwork = network
+        self.market_participants = list()
         # maps node ids to actors
-        self.map_actors = map_actors
+        if map_actors is None:
+            map_actors = {}
+        self.map_actors: dict = map_actors
+
+        if buy_prices is None:
+            buy_prices = np.array(())
+        else:
+            buy_prices = np.array(buy_prices)
+        self.kwargs = kwargs
+        self.environment = Environment(steps_per_hour, self.add_participant, **kwargs)
+        self.add_market_maker(buy_prices, **kwargs)
+
+    def add_market_maker(self, buy_prices: Sized, **kwargs):
+        if len(buy_prices) == 0:
+            warnings.warn("Environment was created without a market maker since no buy_prices, "
+                          "were provided.")
+        else:
+            # Create the Market maker. Since the environment is passed the MarketMaker automatically
+            # adds itself to the environment and also to the scenario participants
+            MarketMaker(buy_prices=buy_prices, environment=self.environment, **kwargs)
+
+    def get_market(self):
+        return self._market
+
+    def set_market(self, market):
+        assert isinstance(market, Market), "Scenario.market can only be changed to type 'Market'"
+        self._market = market
+        self._market.t_step = self.environment.time_step
+        self.environment.get_grid_fee = self._market.get_grid_fee
+
+    # creating a property object. This way changing markets also leads to changes in grid fee
+    market = property(get_market, set_market)
+
+    def add_participants(self, participants: Iterable, map_actors=None, add_to_network=False):
+        """Add participants to the scenario.
+
+        If added to the network nodes, this is either done using the provided mapping dictionary or
+        randomly.
+
+        :param participants: participants to be added
+        :type participants: simply.actor.Actor or simply.scenario.MarketMaker
+        :param map_actors: dictionary with actor_ids as key and node_id as value
+        :param add_to_network: should the actors be added to the power network
+        :type add_to_network: bool
+        :return:
+        """
+        actors = list(filter(lambda x: isinstance(x, Actor), participants))
+
+        if map_actors is None:
+            if add_to_network:
+                # Add the only actors randomly to the power network
+
+                map_actors = self.power_network.add_actors_random(actors)
+            else:
+                map_actors = {}
+        else:
+            # Make sure there are as many unique actor_ids as actors
+            actor_ids = [actor_.id for actor_ in actors]
+            assert len(actors) == len(set(actor_ids))
+
+            # Make sure every actor is found exactly once in map_actors and map_actors does not
+            # contain not used actors
+            assert set(actor_ids) == set(map_actors.keys())
+
+            if add_to_network:
+                self.power_network.add_actors_map(map_actors)
+
+        # Only update the node mapping of the provided actors
+        self.map_actors.update(map_actors)
+
+        for participant in participants:
+            self._add_participant(participant)
+
+        # Make sure not to have more than 1 MarketMaker
+        error = "Can not add a 2nd MarketMaker to a scenario, which already has one."
+        assert len([x for x in self.market_participants if isinstance(x, MarketMaker)]) <= 1, error
+
+    def add_participant(self, participant, map_node=None, add_to_network=False):
+        self._add_participant(participant)
+        map_actors = {}
+        if map_node is None:
+            if add_to_network:
+                map_actors = self.power_network.add_actors_random([participant])
+        else:
+            map_actors = {participant.id: map_node}
+            if add_to_network:
+                _ = self.power_network.add_actors_map(map_actors)
+        self.map_actors.update(map_actors)
+        # Make sure not to have more than 1 MarketMaker
+        error = "Can not add a 2nd MarketMaker to a scenario, which already has one."
+        assert len([x for x in self.market_participants if isinstance(x, MarketMaker)]) <= 1, error
+
+    def _add_participant(self, participant):
+        assert is_scenario_participant(participant)
+        if participant not in self.market_participants:
+            if isinstance(participant, MarketMaker):
+                try:
+                    self.market_participants.remove(self.environment.market_maker)
+                    warnings.warn("MarketMaker overwritten")
+                except ValueError or AttributeError:
+                    # No Market Maker in environment or market_participants
+                    # This can be ignored
+                    pass
+                self.environment.market_maker = participant
+            self.market_participants.append(participant)
+        else:
+            warnings.warn(f"Participant {participant} is already part of the scenario, and was "
+                          f"not added again.")
+        participant.environment = self.environment
+        participant.create_prediction()
+
+    def create_strategies(self):
+        for participant in self.market_participants:
+            if isinstance(participant, Actor):
+                participant.get_market_schedule()
+
+    def add_market(self, market):
+        self.market = market
+        market.t_step = self.environment.time_step
+
+    def market_step(self):
+        for participant in self.market_participants:
+            orders = participant.generate_orders()
+            for order in orders:
+                self.market.accept_order(order, callback=participant.receive_market_results)
+        self.market.clear(reset=cfg.config.reset_market)
+
+    def next_time_step(self):
+        for participant in self.market_participants:
+            participant.prepare_next_time_step()
+        self.environment.time_step += 1
+        for participant in self.market_participants:
+            participant.create_prediction()
+        self.market.t_step = self.environment.time_step
 
     def from_config(self):
         pass
 
     def __str__(self):
         return "Scenario(network: {}, actors: {}, map_actors: {})".format(
-            self.power_network, self.actors, self.map_actors
+            self.power_network, self.market_participants, self.map_actors
         )
 
     def to_dict(self):
         return {
             "rng_seed": self.rng_seed,
             "power_network": {self.power_network.name: self.power_network.to_dict()},
-            "actors": {a.id: a.to_dict() for a in self.actors},
+            "actors": {a.id: a.to_dict() for a in self.market_participants},
             "map_actors": self.map_actors,
         }
 
@@ -65,15 +248,15 @@ class Scenario:
         if data_format == "csv":
             # Save data in separate csv file and all actors in one config file
             a_dict = {}
-            for actor_variable in self.actors:
-                a_dict[actor_variable.id] = actor_variable.to_dict(external_data=True)
-                actor_variable.save_csv(dirpath)
+            for participant in self.market_participants:
+                a_dict[participant.id] = participant.to_dict(external_data=True)
+                participant.save_csv(dirpath)
             dirpath.joinpath('actors.json').write_text(json.dumps(a_dict, indent=2))
         else:
             # Save config and data per actor in a single file
-            for actor_variable in self.actors:
-                dirpath.joinpath(f'actor_{actor_variable.id}.{data_format}').write_text(
-                    json.dumps(actor_variable.to_dict(external_data=False), indent=2)
+            for participant in self.market_participants:
+                dirpath.joinpath(f'actor_{participant.id}.{data_format}').write_text(
+                    json.dumps(participant.to_dict(external_data=False), indent=2)
                 )
 
         # save map_actors
@@ -81,20 +264,22 @@ class Scenario:
 
         self.power_network.to_image(dirpath)
 
-    def concat_actor_data(self):
+    def concat_actors_data(self):
         """
         Create a list of all actor data DataFrames and concatenate them using multi-column keys
         :return: DataFrame with multi-column-index (actor-level, asset-level)
         """
-        data = [a.data for a in self.actors]
-        return pd.concat(data, keys=range(len(self.actors)), axis=1)
+        actors = list(filter(lambda x: isinstance(x, Actor), self.market_participants))
+        data = [a.data for a in actors]
 
-    def plot_actor_data(self):
+        return pd.concat(data, keys=[actor_.id for actor_ in actors], axis=1)
+
+    def plot_participant_data(self):
         """
         Extracts asset data from all actors of the scenario and plots all time series per asset type
         as well as the aggregated sum per asset.
         """
-        actor_data = self.concat_actor_data()
+        actor_data = self.concat_actors_data()
         fig, ax = plt.subplots(3, sharex=True)
         ax[0].set_title("PV")
         ax[1].set_title("Load")
@@ -109,6 +294,24 @@ class Scenario:
         ax[2].legend(["pv", "load"])
         plt.show()
 
+    def reset(self):
+        """ Reset the scenario after a simulation is run"""
+        # Reset the time step
+        self.environment.time_step = cfg.config.start
+        if self.market is not None:
+            self.market.t_step = self.environment.time_step
+            self.market.reset()
+
+        # Remove previous participants
+        self.market_participants = []
+
+        # Store the old market maker
+        if self.environment.market_maker is not None:
+            market_maker = self.environment.market_maker
+            market_maker.reset()
+            # But add the market maker again
+            self.add_participant(market_maker)
+
 
 def from_dict(scenario_dict):
     pn_name, pn_dict = scenario_dict["power_network"].popitem()
@@ -118,11 +321,11 @@ def from_dict(scenario_dict):
                                          multigraph=pn_dict.get("multigraph", False))
     pn = power_network.PowerNetwork(pn_name, network)
 
-    actors = [
-        actor.Actor(actor_id, pd.read_json(ai["df"]), ai["ls"], ai["ps"], ai["pm"])
-        for actor_id, ai in scenario_dict["actors"].items()]
-
-    return Scenario(pn, actors, scenario_dict["map_actors"], scenario_dict["rng_seed"])
+    scen = Scenario(pn, scenario_dict["map_actors"], scenario_dict["rng_seed"])
+    for actor_id, ai in scenario_dict["actors"].items():
+        actor_ = actor.Actor(actor_id, pd.read_json(ai["df"]), ai["ls"], ai["ps"], ai["pm"])
+        scen.add_participant(actor_)
+    return scen
 
 
 def load(dirpath, data_format):
@@ -140,63 +343,80 @@ def load(dirpath, data_format):
     pn = power_network.create_power_network_from_config(next(dirpath.glob('network.*')))
 
     # read actors
-    actors = []
+    participants = []
     if data_format == "csv":
         actors_file = next(dirpath.glob("actors.*"))
         at = actors_file.read_text()
         actors_j = json.loads(at)
         for aj in actors_j.values():
-            ai = [aj["id"], pd.read_csv(dirpath / aj["csv"]), aj["csv"], aj["ls"], aj["ps"],
-                  aj["pm"]]
-            actors.append(actor.Actor(*ai))
+            if aj["id"] == market_maker.MARKETMAKERID:
+                participant = market_maker.MarketMaker(**aj)
+            else:
+                aj["df"] = pd.read_csv(dirpath / aj["csv"])
+                participant = actor.Actor(**aj)
+            participants.append(participant)
     else:
         actor_files = dirpath.glob(f"actor_*.{data_format}")
         for f in sorted(actor_files):
             at = f.read_text()
             aj = json.loads(at)
-            ai = [aj["id"], pd.read_json(aj["df"]), aj["csv"], aj["ls"], aj["ps"], aj["pm"]]
-            actors.append(actor.Actor(*ai))
+            if aj["id"] == market_maker.MARKETMAKERID:
+                participant = market_maker.MarketMaker(**aj)
+            else:
+                aj["df"] = pd.read_json(aj["df"])
+                participant = actor.Actor(**aj)
+            participants.append(participant)
 
     # Give actors knowledge of the cluster they belong to
-    for aj in actors:
+    for aj in participants:
         if aj.id in pn.node_to_cluster:
             aj.cluster = pn.node_to_cluster[aj.id]
 
     # read map_actors
     map_actor_text = next(dirpath.glob('map_actors.*')).read_text()
     map_actors = json.loads(map_actor_text)
+    scenario = Scenario(pn, map_actors, rng_seed=rng_seed)
+    scenario.add_participants(participants)
+    return scenario
 
-    return Scenario(pn, actors, map_actors, rng_seed)
 
-
-def create_random(num_nodes, num_actors, weight_factor):
+def create_random(num_nodes, num_actors, weight_factor, nb_ts=100):
+    # Create random nodes
     pn = power_network.create_random(num_nodes)
-    actors = [actor.create_random("H" + str(i)) for i in range(num_actors)]
+
+    # Update the shortest paths and the grid fee matrix
+    pn.update_shortest_paths()
+    pn.generate_grid_fee_matrix(weight_factor)
+    mm_buy_prices = np.random.random(nb_ts)
+    scenario = Scenario(pn, None, buy_prices=mm_buy_prices)
+    actors = [actor.create_random("H" + str(i), nb_ts=nb_ts) for i in range(num_actors)]
 
     # Add actor nodes at random position (leaf node) in the network
     # One network node can contain several actors (using random.choices method)
-    map_actors = pn.add_actors_random(actors)
-    # Update shortest paths and the grid fee matrix
-    pn.update_shortest_paths()
-    pn.generate_grid_fee_matrix(weight_factor)
-
-    return Scenario(pn, actors, map_actors)
+    scenario.map_actors = pn.add_actors_random(actors)
+    scenario.add_participants(actors)
+    return scenario
 
 
-def create_random2(num_nodes, num_actors):
+def create_random2(num_nodes, num_actors, nb_ts=100):
     assert num_actors < num_nodes
     # num_actors has to be much smaller than num_nodes
+    # Create random nodes
     pn = power_network.create_random(num_nodes)
-    actors = [actor.create_random("H" + str(i)) for i in range(num_actors)]
 
-    # Give actors a random position in the network
+    # Create random actors
+    actors = [actor.create_random("H" + str(i), nb_ts=nb_ts) for i in range(num_actors)]
+
+    # Add actor nodes at random position (leaf node) in the network
+    # One selected network node (using random.sample method), directly represents a single actor
+    # No nodes and edges are added to the network
     actor_nodes = random.sample(pn.leaf_nodes, num_actors)
     map_actors = {actor.id: node_id for actor, node_id in zip(actors, actor_nodes)}
 
-    # TODO tbd if actors are already part of topology ore create additional nodes
-    # pn.add_actors_map(map_actors)
-
-    return Scenario(pn, actors, map_actors)
+    mm_buy_prices = np.random.random(nb_ts)
+    scenario = Scenario(pn, map_actors, mm_buy_prices)
+    scenario.add_participants(actors)
+    return scenario
 
 
 def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_hour=4, nb_ts=None):
@@ -210,7 +430,7 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
     :param ts_hour: number of time slot of equal length within one hour
     :param nb_ts: number of time slots to be generated
     """
-    # Create random nodes for power network
+    # Create random nodes in the power network
     pn = power_network.create_random(num_nodes)
 
     # Read all filenames from given directory
@@ -229,23 +449,20 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
         household_type.update({i: filename.stem})
         print('actor_id: {} - household: {}'.format(i, household_type[i]))
         # read file
-        a = actor.create_from_csv(
-            "H_" + str(i),
-            asset_dict={
-                "load": {"csv": filename, "col_index": 1},
-                "pv": {}
-            },
-            start_date="2021-01-01",
-            nb_ts=nb_ts,
-            ts_hour=ts_hour
-        )
+        a = actor.create_from_csv("H_" + str(i), asset_dict={
+            "load": {"csv": filename, "col_index": 1},
+            "pv": {}
+        }, start_date="2021-01-01", nb_ts=nb_ts, ts_hour=ts_hour)
 
         actors.append(a)
 
+    # Add actor nodes at random position (leaf node) in the network
+    # One network node can contain several actors (using random.choices method)
     map_actors = pn.add_actors_random(actors)
 
-    # Update shortest paths and the grid fee matrix
+    # Update the shortest paths and the grid fee matrix
     pn.update_shortest_paths()
     pn.generate_grid_fee_matrix(weight_factor)
-
-    return Scenario(pn, actors, map_actors, steps_per_hour=ts_hour)
+    scenario = Scenario(pn, map_actors, steps_per_hour=ts_hour)
+    scenario.add_participants(actors)
+    return

@@ -2,8 +2,9 @@ import pandas as pd
 
 from simply.market import Market
 import simply.config as cfg
-LARGE_ORDER_THRESHOLD = 2**32
-MARKET_MAKER_THRESHOLD = 2**63-1
+
+from simply.market import LARGE_ORDER_THRESHOLD
+from simply.market import MARKET_MAKER_THRESHOLD
 
 
 class BestMarket(Market):
@@ -19,8 +20,8 @@ class BestMarket(Market):
     This converges to an optimal solution.
     """
 
-    def __init__(self, time, network=None, grid_fee_matrix=None):
-        super().__init__(time, network, grid_fee_matrix)
+    def __init__(self, network=None, grid_fee_matrix=None, time_step=None):
+        super().__init__(network, grid_fee_matrix, time_step)
 
     def match(self, show=False):
         asks = self.get_asks()
@@ -111,7 +112,7 @@ class BestMarket(Market):
                     if ask.adjusted_price <= bid.price:
                         # bid and ask match: append to local solution
                         _matches.append({
-                            "time": self.t,
+                            "time": self.t_step,
                             "bid_id": bid_id,
                             "ask_id": ask_id,
                             "bid_actor": bid.actor_id,
@@ -207,7 +208,7 @@ class BestMarket(Market):
             asks = asks[asks["price"] <= bid_mm.price]
             for ask_id, ask in asks.iterrows():
                 matches.append({
-                    "time": self.t,
+                    "time": self.t_step,
                     "bid_id": bid_mm_id,
                     "ask_id": ask_id,
                     "bid_actor": bid_mm.actor_id,
@@ -230,7 +231,7 @@ class BestMarket(Market):
             bids = bids[bids["price"] >= ask_mm.price]
             for bid_id, bid in bids.iterrows():
                 matches.append({
-                    "time": self.t,
+                    "time": self.t_step,
                     "bid_id": bid_id,
                     "ask_id": ask_mm_id,
                     "bid_actor": bid.actor_id,

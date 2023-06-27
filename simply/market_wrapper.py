@@ -60,13 +60,14 @@ class MatchingAlgorithm(ABC):
             [[0,1],[1,0]]
         :return: list of dictionaries with matches in all given markets and time slots
         """
+        # ToDo in doc above Market object? Is it not a Market constructor?
 
         recommendations = []
+        # Market is coupled with scenario and environment data. Market looks up time in environment.
 
         for market_id, market_name in mycoDict.items():
             for time, orders in market_name.items():
-
-                m = market(time=time, grid_fee_matrix=grid_fee_matrix)
+                m = market(grid_fee_matrix=grid_fee_matrix, time_step=time)
                 bids = {bid["id"]: bid for bid in orders["bids"]}
                 asks = {ask["id"]: ask for ask in orders["offers"]}
 

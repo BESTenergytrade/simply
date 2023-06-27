@@ -4,16 +4,19 @@ from simply.power_network import PowerNetwork
 import networkx as nx
 import pytest
 
+from simply.scenario import Scenario
+
 
 class TestBestMarket:
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
     pn = PowerNetwork("", nw, weight_factor=1)
+    scenario = Scenario(None, None, [])
 
     def test_basic(self):
         """Tests the basic functionality of the BestMarket object to accept bids and asks via the
         accept_order method and correctly match asks and bids when the match method is called."""
-        m = BestMarket(0, self.pn)
+        m = BestMarket(time_step=0, network=self.pn)
         # no orders: no matches
         matches = m.match()
         assert len(matches) == 0
@@ -38,7 +41,7 @@ class TestBestMarket:
         """Tests that the prices of the orders are correctly affected by the weights of
         the PowerNetwork."""
         # test prices with a given power network
-        m = BestMarket(0, self.pn)
+        m = BestMarket(time_step=0, network=self.pn)
         # ask above bid: no match
         m.accept_order(Order(-1, 0, 2, None, 1, 2))
         m.accept_order(Order(1, 0, 3, None, 1, 2.5))
@@ -99,7 +102,7 @@ class TestBestMarket:
     def test_prices_matrix(self):
         # test prices with a given grid fee matrix
         # example: cost 1 for trade between clusters
-        m = BestMarket(0, grid_fee_matrix=[[0, 1], [1, 0]])
+        m = BestMarket(time_step=0, grid_fee_matrix=[[0, 1], [1, 0]])
 
         # ask above bid: no match
         m.accept_order(Order(-1, 0, 2, 0, 1, 2))
@@ -162,7 +165,7 @@ class TestBestMarket:
         """Tests that the amount of energy traded equals the maximum amount available that is
         less than or equal to the amount requested by the bid."""
         # different energies
-        m = BestMarket(0, self.pn)
+        m = BestMarket(time_step=0, network=self.pn)
         m.accept_order(Order(-1, 0, 2, None, .1, 1))
         m.accept_order(Order(1, 0, 3, None, 1, 1))
         matches = m.match()
@@ -178,7 +181,7 @@ class TestBestMarket:
 
     def test_setting_order_id(self):
         # Check if matched orders retain original ID
-        m = BestMarket(0, self.pn)
+        m = BestMarket(time_step=0, network=self.pn)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
         m.accept_order(Order(1, 0, 3, None, 1, 1), "ID2")
         matches = m.match()
@@ -189,7 +192,7 @@ class TestBestMarket:
 
     def test_setting_id_market_maker(self):
         # Check if matched orders retain original ID for selling or buying market makers
-        m = BestMarket(0, self.pn)
+        m = BestMarket(time_step=0, network=self.pn)
         # Test asking market maker with order ID
         m.accept_order(Order(-1, 0, 2, None, .3, 1), "ID1")
         m.accept_order(Order(1, 0, 5, None, MARKET_MAKER_THRESHOLD, 1), "ID2")
@@ -218,7 +221,7 @@ class TestBestMarket:
         """Tests that matches can be made which require multiple asks to satisfy one bid or multiple
         bids to satisfy one ask."""
         # multiple bids to satisfy one ask
-        m = BestMarket(0, self.pn)
+        m = BestMarket(time_step=0, network=self.pn)
         m.accept_order(Order(-1, 0, 2, None, .1, 4))
         m.accept_order(Order(-1, 0, 3, None, 3, 3))
         m.accept_order(Order(1, 0, 4, None, 2, 1))
@@ -243,7 +246,7 @@ class TestBestMarket:
 
     def test_match_ordering(self):
         """Test to check that matching favors local orders in case of equal (adjusted) price."""
-        m = BestMarket(0, self.pn)
+        m = BestMarket(time_step=0, network=self.pn)
         m.accept_order(Order(-1, 0, 2, None, 1, 4))
         m.accept_order(Order(1, 0, 3, None, 1, 4))
         m.accept_order(Order(1, 0, 4, None, 1, 3))
@@ -257,7 +260,7 @@ class TestBestMarket:
         lnw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4),
                             (2, 5, {"weight": 1}), (5, 6)])
         lpn = PowerNetwork("", lnw)
-        m = BestMarket(0, lpn)
+        m = BestMarket(time_step=0, network=lpn)
         m.accept_order(Order(-1, 0, 6, None, 1, 5))
         m.accept_order(Order(1, 0, 3, None, 1, 4))
         m.accept_order(Order(1, 0, 4, None, 1, 3))
@@ -267,7 +270,7 @@ class TestBestMarket:
         assert matches[0]['ask_cluster'] == 1
 
         # test that match doesn't prioritise local with price differential
-        m = BestMarket(0, lpn)
+        m = BestMarket(time_step=0, network=lpn)
         m.accept_order(Order(-1, 0, 6, None, 1, 100))
         m.accept_order(Order(1, 0, 3, None, 1, 50))
         m.accept_order(Order(1, 0, 4, None, 1, 3))
@@ -277,7 +280,7 @@ class TestBestMarket:
 
     def test_filter_large_orders(self):
         """Test to check that very large orders are ignored."""
-        m = BestMarket(0, self.pn)
+        m = BestMarket(time_step=0, network=self.pn)
         m.accept_order(Order(-1, 0, 2, None, 1, 4))
         m.accept_order(Order(1, 0, 3, None, LARGE_ORDER_THRESHOLD + 1, 4))
         matches = m.match()
@@ -286,7 +289,7 @@ class TestBestMarket:
 
     def test_market_maker_orders(self):
         """Test to check that market maker orders are not being ignored."""
-        m = BestMarket(0, self.pn)
+        m = BestMarket(time_step=0, network=self.pn)
         m.accept_order(Order(-1, 0, 2, None, 1, 4))
         m.accept_order(Order(1, 0, 3, None, MARKET_MAKER_THRESHOLD, 4))
         matches = m.match()
@@ -298,7 +301,7 @@ class TestBestMarket:
     def test_update_clearing_cluster(self):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
-        m = BestMarket(0, self.pn)
+        m = BestMarket(time_step=0, network=self.pn)
         # add bids
         m.accept_order(Order(-1, 0, 1, 1, 0.1, 10))
         m.accept_order(Order(-1, 0, 1, 1, 0.1, 7))

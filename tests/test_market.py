@@ -6,17 +6,20 @@ import networkx as nx
 
 import pytest
 
+from simply.scenario import Scenario
+
 
 class TestMarket:
     cfg.Config("")
+    scenario = Scenario(None, None, [])
 
     def test_init(self):
         """
         Tests the initialisation of instance of the Market class with current market time
          set to 0.
         """
-        m = Market(0)
-        assert m.t == 0
+        m = Market(time_step=0)
+        assert m.t_step == 0
 
     def test_accept_order(self):
         """
@@ -25,7 +28,7 @@ class TestMarket:
         time and type are added.
         """
         # Order(type, time, actor_id, energy, price), order_id, callback
-        m = Market(0)
+        m = Market(time_step=0)
         assert len(m.orders) == 0
         m.accept_order(Order(1, 0, 0, None, 1, 1))
         assert len(m.orders) == 1
@@ -35,7 +38,7 @@ class TestMarket:
         assert len(m.orders) == 2
         # order IDs are numbered consecutively by default, so order ID 0 should already exist
         with pytest.raises(ValueError):
-            m.accept_order(Order(1, 1, 0, None, 1, 1), 0)
+            m.accept_order(Order(1, 0, 0, None, 1, 1), order_id=0)
         # reject orders from the future
         with pytest.raises(ValueError):
             m.accept_order(Order(1, 1, 0, None, 1, 1))
@@ -48,14 +51,14 @@ class TestMarket:
 
     def test_not_accept_existing_order_id(self):
         # The order ID is used twice, but should be unique -> else raise ValueError
-        m = Market(0)
+        m = Market(time_step=0)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
         with pytest.raises(ValueError):
             m.accept_order(Order(1, 0, 3, None, 1, 1), "ID1")
 
     def test_setting_order_id_wrong(self):
         # Check if error is raised when previously defined order IDs will be overridden i.e. ignored
-        m = Market(0)
+        m = Market(time_step=0)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
         with pytest.raises(IndexError):
             m.accept_order(Order(1, 0, 3, None, 1, 1))
@@ -65,7 +68,7 @@ class TestMarket:
         Tests that orders are accepted based on energy unit with energy above the unit being rounded
         down and energy below the unit not being accepted.
         """
-        m = Market(0)
+        m = Market(time_step=0)
         # round to energy unit
         cfg.config.energy_unit = 0.1
         m.accept_order(Order(1, 0, 0, None, 0.1, 1))
@@ -100,7 +103,7 @@ class TestMarket:
         Tests the Market class get_bids method returns a dataframe with the correct number of bids
          when new bids and asks are added to the Market instance via the accept_orders method.
         """
-        m = Market(0)
+        m = Market(time_step=0)
         assert m.get_bids().shape[0] == 0
         # add ask
         m.accept_order(Order(1, 0, 0, None, 1, 1))
@@ -117,7 +120,7 @@ class TestMarket:
         Tests the Market class get_asks method returns a dataframe with the correct number of asks
         when new bids and asks are added to the Market instance via the accept_orders method.
         """
-        m = Market(0)
+        m = Market(time_step=0)
         assert m.get_asks().shape[0] == 0
         # add bid
         m.accept_order(Order(-1, 0, 0, None, 1, 1))
@@ -134,7 +137,7 @@ class TestMarket:
         Tests that new list of matches is saved when the Market class's clear method
         is called.
         """
-        m = Market(0)
+        m = Market(time_step=0)
         m.accept_order(Order(-1, 0, 0, None, 1, 1))
         # no match possible (only one order)
         m.clear(reset=False)
@@ -154,13 +157,14 @@ class TestMarket:
 
 
 class TestPayAsBid:
+    scenario = Scenario(None, None, [])
 
     def test_basic(self):
         """
         Tests the basic functionality of the Market object to accept bids and asks via the
         accept_order method and correctly match asks and bids when the match method is called.
         """
-        m = Market(0)
+        m = Market(time_step=0)
         # no orders
         assert len(m.match()) == 0
         # bid and ask with same energy and price
@@ -181,7 +185,7 @@ class TestPayAsBid:
         to the bid. If matched, the price of the bid is taken.
         """
         # different prices, pay as bid
-        m = Market(0)
+        m = Market(time_step=0)
         # ask above bid: no match
         m.accept_order(Order(-1, 0, 0, None, 1, 2))
         m.accept_order(Order(1, 0, 1, None, 1, 2.5))
@@ -204,7 +208,7 @@ class TestPayAsBid:
         from the total amount of energy being offered by the ask.
         """
         # different energies
-        m = Market(0)
+        m = Market(time_step=0)
         m.accept_order(Order(-1, 0, 0, None, .1, 1))
         m.accept_order(Order(1, 0, 1, None, 1, 1))
         matches = m.match()
@@ -220,7 +224,7 @@ class TestPayAsBid:
 
     def test_setting_order_id(self):
         # Check if matched orders retain original ID
-        m = Market(0)
+        m = Market(time_step=0)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
         m.accept_order(Order(1, 0, 3, None, 1, 1), "ID2")
         matches = m.match()
@@ -235,7 +239,7 @@ class TestPayAsBid:
         within the order.
         """
         # multiple bids to satisfy one ask
-        m = Market(0)
+        m = Market(time_step=0)
         m.accept_order(Order(-1, 0, 0, None, .1, 1.1))
         m.accept_order(Order(-1, 0, 1, None, 11, 1))
         m.accept_order(Order(1, 0, 2, None, 2, 1))
@@ -261,7 +265,7 @@ class TestPayAsBid:
     def test_prices_matrix(self):
         # test prices with a given grid fee matrix
         # example: cost 1 for trade between clusters
-        m = Market(0, grid_fee_matrix=[[0, 1], [1, 0]])
+        m = Market(grid_fee_matrix=[[0, 1], [1, 0]], time_step=0)
 
         # grid-fees between nodes only allow for partial matching
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
@@ -277,7 +281,7 @@ class TestPayAsBid:
         nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
         pn = PowerNetwork("", nw, weight_factor=2)
         grid_fee_matrix = [[0, 1], [1, 0]]
-        m = Market(0, network=pn, grid_fee_matrix=grid_fee_matrix)
+        m = Market(network=pn, grid_fee_matrix=grid_fee_matrix, time_step=0)
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
         m.accept_order(Order(1, 0, 0, 1, 1, 2))
         matches = m.match()

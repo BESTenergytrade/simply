@@ -1,9 +1,16 @@
+import warnings
+
 import pandas as pd
 from pathlib import Path
 import csv
 
 import simply.config as cfg
 from simply.actor import Order
+
+LARGE_ORDER_THRESHOLD = 2**32
+MARKET_MAKER_THRESHOLD = 2**63-1
+ASK = +1
+BID = -1
 
 
 class Market:
@@ -16,12 +23,12 @@ class Market:
 
     This class provides a basic matching strategy which may be overridden.
     """
-
-    def __init__(self, time, network=None, grid_fee_matrix=None):
+    def __init__(self, network=None, grid_fee_matrix=None, time_step=None):
         self.orders = pd.DataFrame(columns=Order._fields)
-        self.t = time
+
         self.trades = None
         self.matches = []
+        self.t_step = time_step
         self.actor_callback = {}
         self.network = network
         self.save_csv = cfg.config.save_csv
@@ -58,11 +65,16 @@ class Market:
         print(self.get_bids())
         print(self.get_asks())
 
+    def reset(self):
+        self.matches = []
+        self.trades = None
+        self.actor_callback = {}
+
     def accept_order(self, order, order_id=None, callback=None):
         """
         Handle new order.
 
-        Order must have same timestep as market, type must be -1 or +1.
+        Order must have same time step as market, type must be -1 or +1.
         Energy is quantized according to the market's energy unit (round down).
         Signature of callback function: matching time, sign for energy direction
         (opposite of order type), matched energy, matching price.
@@ -77,9 +89,9 @@ class Market:
         if order is None:
             return
 
-        if order.time != self.t:
+        if order.time != self.t_step:
             raise ValueError("Wrong order time ({}), market is at time {}".format(order.time,
-                                                                                  self.t))
+                                                                                  self.t_step))
         # Ignore Orders without energy volume
         if order.energy == 0:
             return
@@ -139,9 +151,9 @@ class Market:
             energy = match["energy"]
             price = match["price"]
             if bid_actor_callback is not None:
-                bid_actor_callback(self.t, 1, energy, price)
+                bid_actor_callback(self.t_step, 1, energy, price)
             if ask_actor_callback is not None:
-                ask_actor_callback(self.t, -1, energy, price)
+                ask_actor_callback(self.t_step, -1, energy, price)
         if reset:
             # don't retain orders for next cycle
             self.orders = pd.DataFrame(columns=Order._fields)
@@ -188,7 +200,7 @@ class Market:
                     self.orders.loc[ask_id] = ask
                     self.orders.loc[bid_id] = bid
                     matches.append({
-                        "time": self.t,
+                        "time": self.t_step,
                         "bid_id": bid_id,
                         "ask_id": ask_id,
                         "bid_actor": bid.actor_id,
@@ -231,21 +243,33 @@ class Market:
             writer = csv.writer(f)
             writer.writerow(headers)
 
-    def get_grid_fee(self, match):
+    def get_grid_fee(self, match=None, bid_cluster=None, ask_cluster=None):
         """
         Returns the grid fee associated with the bid and ask clusters of a given match.
 
         :param match: a dictionary representing a match, with keys 'bid_cluster' and 'ask_cluster'
+        :param bid_cluster: cluster id of ask
+        :param ask_cluster: cluster id of bid
         :return: the grid fee associated with the given bid and ask clusters
         """
+        if match or match is not None:
+            if bid_cluster or ask_cluster:
+                warnings.warn('Either pass match OR ("bid_cluster" and "ask_cluster"),'
+                              'otherwise only match information is considered')
+            # if match is given, data from the match is used. In other cases bid
+            bid_cluster = match['bid_cluster']
+            ask_cluster = match['ask_cluster']
+
         if not self.grid_fee_matrix:
-            return 0
+            return cfg.config.default_grid_fee
         else:
-            if match['bid_cluster'] is None or match['ask_cluster'] is None:
+            if bid_cluster is None or ask_cluster is None:
+                warnings.warn("At least one cluster is 'None', returning default grid fee.")
+
                 # default grid fee
                 return self.grid_fee_matrix[0][-1]
             else:
-                return self.grid_fee_matrix[match['bid_cluster']][match['ask_cluster']]
+                return self.grid_fee_matrix[bid_cluster][ask_cluster]
 
     def add_grid_fee_info(self, matches):
         """
@@ -274,6 +298,6 @@ class Market:
         try:
             ask.price += self.grid_fee_matrix[bid.cluster][ask.cluster]
         except TypeError:
-            # if an actor as none as cluster, e.g. the market maker, a TypeError will be thrown.
+            # if an actor has none as cluster, e.g. the market maker, a TypeError will be thrown.
             # use default grid fee in this case.
             ask.price += cfg.config.default_grid_fee
