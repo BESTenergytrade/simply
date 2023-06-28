@@ -17,7 +17,7 @@ import numpy as np
 class TestMultipleActors:
     np.random.seed(42)
     num_actors = 0
-    NUM_STEPS = 20
+    NUM_STEPS = 24
     df = pd.DataFrame(np.random.rand(NUM_STEPS+24, 2), columns=["load", "pv"])
     cfg.Config("")
     df = df - df %  cfg.config.energy_unit
@@ -39,10 +39,11 @@ class TestMultipleActors:
         return scenario
 
     def test_interaction(self, scenario):
+
         cfg.config.default_grid_fee = 0.1
         actor_strat = 2
         pricing_strategy = {"name":"linear","param":[0.0]}
-        capacity = 2
+        capacity = 4
         num_actor=2
 
         actors = [self.create_actor(cluster=0, capacity=capacity, load_factor=3)

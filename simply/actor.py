@@ -441,7 +441,7 @@ class Actor:
                 # found at the highest_price_index. At this index only as much energy can be sold as
                 # the min predicted soc, in between this index and the time of overcharge, provides.
                 soc_to_zero = np.min(soc_prediction[highest_price_index:i + 1])
-                assert soc_to_zero <= 1
+                assert soc_to_zero <= 1 + cfg.config.EPS
                 energy_to_zero = soc_to_zero * self.battery.capacity
                 sellable_energy = min(energy_to_zero, overcharge)
                 self.market_schedule[highest_price_index] -= sellable_energy
@@ -688,7 +688,7 @@ class Actor:
             return max(min(energy, delta_soc*self.battery.capacity), 0)
         # selling energy
         else:
-            delta_soc = -socs.max()
+            delta_soc = -socs.min()
             return min(max(energy, delta_soc*self.battery.capacity), 0)
 
     def adjust_energy(self, energy, index=0):
