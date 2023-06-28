@@ -41,7 +41,7 @@ class TestMultipleActors:
     def test_interaction(self, scenario):
         cfg.config.default_grid_fee = 0.1
         actor_strat = 2
-        pricing_strategy = {"name":"linear","param":[0.05]}
+        pricing_strategy = {"name":"linear","param":[0.0]}
         capacity = 2
         num_actor=2
 
@@ -99,7 +99,7 @@ class TestMultipleActors:
         # With interaction the actors should get better or the same prices as if they had inter-
         # acted with only the MM
         # assert all([actor.bank - banks_only_mm[actor.id] >=0 for actor in actors])
-        print([actor.bank - banks_only_mm[actor.id] for actor in actors])
+        print("Profit from interaction with other actors ",[actor.bank - banks_only_mm[actor.id] for actor in actors])
         print("MarketMaker sold ", sum(scenario.environment.market_maker.energy_sold))
         print("MarketMaker bought ", sum(scenario.environment.market_maker.energy_bought))
 
