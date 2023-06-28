@@ -1,4 +1,3 @@
 [flake8]
-exclude = docs,src,data, venv,config
 max-line-length=100
-docstring_style=sphinx
+exclude = .git,__pycache__,docs/source/conf.py,old,build,dist,venv

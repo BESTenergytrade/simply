@@ -1,6 +1,9 @@
+import warnings
+
 import matplotlib.pyplot as plt
 
 from simply.market import Market
+import simply.config as cfg
 
 
 class TwoSidedPayAsClear(Market):
@@ -11,14 +14,17 @@ class TwoSidedPayAsClear(Market):
     Each timestep, the highest bids are matched with the lowest offers.
     """
 
-    def __init__(self, time, network=None, grid_fee_matrix=None, default_grid_fee=None):
-        assert default_grid_fee is not None, "Default grid fee as to be given as an argument for" \
-                                             "TwoSidedPayAsClear Market initialization. '0' is " \
-                                             "allowed"
-        assert grid_fee_matrix is None, "Grid fee matrix is not used in two" \
-                                        "sided pay as clear. Only the default_grid_fee is" \
-                                        "applied"
-        super().__init__(time, network, grid_fee_matrix, default_grid_fee)
+    def __init__(self, network=None, grid_fee_matrix=None, time_step=None, default_grid_fee=None): # time, network=None, grid_fee_matrix=None, default_grid_fee=None):
+        if default_grid_fee is None:
+            warnings.warn("Two sided Pay-As-Clear market was generated without a default grid fee "
+                          "in its constructor. The market will use the grid fee from the "
+                          f"configuration \n Default Grid Fee = {cfg.config.default_grid_fee}")
+
+            default_grid_fee = cfg.config.default_grid_fee
+        self.default_grid_fee = default_grid_fee
+        assert grid_fee_matrix is not None, "Grid fee matrix is not used in two sided pay as clear. " \
+                                            "Only the default_grid_fee is applied"
+        super().__init__(network=network, grid_fee_matrix=grid_fee_matrix, time_step=time_step)
 
     def match(self, show=False):
         # order orders by price
@@ -48,7 +54,7 @@ class TwoSidedPayAsClear(Market):
                 self.orders.loc[ask_id] = ask
                 self.orders.loc[bid_id] = bid
                 matches.append({
-                    "time": self.t,
+                    "time": self.t_step,
                     "bid_id": bid_id,
                     "ask_id": ask_id,
                     "bid_actor": bid.actor_id,
@@ -58,13 +64,13 @@ class TwoSidedPayAsClear(Market):
                     "energy": energy,
                     "price": ask.price
                 })
-                if bid.energy < self.energy_unit:
+                if bid.energy < cfg.config.energy_unit:
                     # bid finished: next bid
                     try:
                         bid_id, bid = next(bid_iter)
                     except StopIteration:
                         bid = None
-                if ask.energy < self.energy_unit:
+                if ask.energy < cfg.config.energy_unit:
                     # ask finished: next ask
                     break
 

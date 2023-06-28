@@ -1,3 +1,4 @@
+import warnings
 from configparser import ConfigParser, MissingSectionHeaderError
 from numpy import linspace
 from pathlib import Path
@@ -35,7 +36,7 @@ class Config:
         - energy_unit: size of energy units to be traded individually [0.01]\n
         - weight_factor: conversion factor from grid fees to power network node weight [0.1]\n
     [actor]
-        - horizon - number of timesteps to look ahead for prediction [24]
+        - horizon - number of time steps to look ahead for prediction [24]
 
     :param cfg_file: configuration file path with the attributes listed above.
     :type cfg_file: str
@@ -47,6 +48,11 @@ class Config:
         config = self
         global parser
         parser = ConfigParser()
+        if not cfg_file:
+            warnings.warn("No Configuration file path was provided. Default values will be used.")
+        elif not Path(cfg_file).is_file():
+            warnings.warn(f"{cfg_file} was provided as Configuration file, but this file does not "
+                          "exist. Default values will be used.")
         try:
             parser.read(cfg_file)
         except MissingSectionHeaderError:
@@ -74,6 +80,9 @@ class Config:
         # weight factor: network charges to power network weight
         self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
 
+        # Tolerance value for assertions, comparison and so on
+        self.EPS = parser.getfloat("default", "EPS", fallback=1e-6)
+
         # --------------------------
         # market
         # --------------------------
@@ -87,8 +96,8 @@ class Config:
         self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
 
         # time related
-        # start timestep
-        self.start = parser.getint("default", "start", fallback=8)
+        # start time step
+        self.start = parser.getint("default", "start", fallback=0)
         # number of timesteps in simulation
         self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
         # interval between simulation timesteps
@@ -96,8 +105,14 @@ class Config:
         # list of timesteps in simulation
         # not read from file but created from above information
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
-        # actor section
+
+        # --------------------------
+        # actor
+        # --------------------------
+        # Horizon up to which energy management is considered and predictions are made
         self.horizon = parser.getint("default", "horizon", fallback=24)
+        # strategy that every actor uses
+        self.actor_strategy = parser.getint("default", "actor_strategy", fallback=0)
 
         # --------------------------
         # output
@@ -107,4 +122,4 @@ class Config:
         # print debug info to console
         self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
         # save orders and matching results to csv files
-        self.save_csv = parser.getboolean("default", "save_csv", fallback=True)
+        self.save_csv = parser.getboolean("default", "save_csv", fallback=False)

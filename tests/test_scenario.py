@@ -7,23 +7,27 @@ from simply.power_network import PowerNetwork
 class TestScenario:
 
     def test_init(self):
-        # network, actors, map_actors, [rng_seed]
+        # Scenario Constructor
+        # (network, map_actors=None, buy_prices: np.array = None, rng_seed=None,
+        # steps_per_hour=4, **kwargs)
+
         pn = PowerNetwork("", nx.random_tree(1))
-        s = Scenario(pn, [], None)
         # random seed, but None
-        s = Scenario(pn, [], None)
+        s = Scenario(pn, None, [])
         assert s.rng_seed is not None
-        s = Scenario(pn, [], None, 0)
+        s = Scenario(pn, None, [], 0)
         assert s.rng_seed == 0
 
     def test_to_dict(self):
         pn = PowerNetwork("", nx.random_tree(1))
-        s = Scenario(pn, [], None)
+        s = Scenario(pn, None, [])
         assert set(s.to_dict()).issuperset({"rng_seed", "power_network", "actors", "map_actors"})
 
     def test_random(self):
         # num nodes, num actors
-        s = create_random(3, 2, 1)
-        assert len(s.actors) == 2
+        num_actors = 2
+        s = create_random(3, num_actors, 1)
+        # actors are generated plus 1 market_maker
+        assert len(s.market_participants) == num_actors + 1
         assert len(s.map_actors) == 2
         assert len(s.power_network.network.nodes) == 3 + 2

@@ -1,9 +1,10 @@
 import pandas as pd
 
 from simply.market import Market
+import simply.config as cfg
 
-LARGE_ORDER_THRESHOLD = 2**32
-MARKET_MAKER_THRESHOLD = 2**63-1
+from simply.market import LARGE_ORDER_THRESHOLD
+from simply.market import MARKET_MAKER_THRESHOLD
 
 
 class BestMarket(Market):
@@ -19,8 +20,8 @@ class BestMarket(Market):
     This converges to an optimal solution.
     """
 
-    def __init__(self, time, network=None, grid_fee_matrix=None, default_grid_fee=0):
-        super().__init__(time, network, grid_fee_matrix, default_grid_fee)
+    def __init__(self, network=None, grid_fee_matrix=None, time_step=None):
+        super().__init__(network, grid_fee_matrix, time_step)
 
     def match(self, show=False):
         asks = self.get_asks()
@@ -58,13 +59,13 @@ class BestMarket(Market):
         asks = pd.DataFrame(asks)
         asks["order_id"] = asks.index
         asks = pd.DataFrame(asks.values.repeat(
-            asks.energy * (1/self.energy_unit), axis=0), columns=asks.columns)
-        asks.energy = self.energy_unit
+            asks.energy * (1/cfg.config.energy_unit), axis=0), columns=asks.columns)
+        asks.energy = cfg.config.energy_unit
         bids = pd.DataFrame(bids)
         bids["order_id"] = bids.index
         bids = pd.DataFrame(bids.values.repeat(
-            bids.energy * (1/self.energy_unit), axis=0), columns=bids.columns)
-        bids.energy = self.energy_unit
+            bids.energy * (1/cfg.config.energy_unit), axis=0), columns=bids.columns)
+        bids.energy = cfg.config.energy_unit
 
         # keep track which clusters have to be (re)matched
         # start with all clusters
@@ -111,14 +112,14 @@ class BestMarket(Market):
                     if ask.adjusted_price <= bid.price:
                         # bid and ask match: append to local solution
                         _matches.append({
-                            "time": self.t,
+                            "time": self.t_step,
                             "bid_id": bid_id,
                             "ask_id": ask_id,
                             "bid_actor": bid.actor_id,
                             "ask_actor": ask.actor_id,
                             "bid_cluster": bid.cluster,
                             "ask_cluster": ask.cluster,
-                            "energy": self.energy_unit,
+                            "energy": cfg.config.energy_unit,
                             "price": ask.adjusted_price,
                             "included_grid_fee": ask.adjusted_price - ask.price
                         })
@@ -193,7 +194,7 @@ class BestMarket(Market):
 
         # match with market maker
         # find unmatched orders
-        orders = self.orders[(self.orders["energy"] + self.EPS) > self.energy_unit]
+        orders = self.orders[(self.orders["energy"] + cfg.config.EPS) > cfg.config.energy_unit]
         # ignore large orders
         orders = orders[~orders.index.isin(large_asks.index)]
         orders = orders[~orders.index.isin(large_bids.index)]
@@ -201,13 +202,13 @@ class BestMarket(Market):
         asks = orders[orders.type == 1]
         if not bids_mm.empty:
             # select bidding market maker by order ID, that has highest price
-            bids_mm['price'] += self.default_grid_fee
+            bids_mm['price'] += cfg.config.default_grid_fee
             bid_mm_id = bids_mm['price'].astype(float).idxmax()
             bid_mm = bids_mm.loc[bid_mm_id]
             asks = asks[asks["price"] <= bid_mm.price]
             for ask_id, ask in asks.iterrows():
                 matches.append({
-                    "time": self.t,
+                    "time": self.t_step,
                     "bid_id": bid_mm_id,
                     "ask_id": ask_id,
                     "bid_actor": bid_mm.actor_id,
@@ -216,21 +217,21 @@ class BestMarket(Market):
                     "ask_cluster": ask.cluster,
                     "energy": ask.energy,
                     "price": bid_mm.price,
-                    "included_grid_fee": self.default_grid_fee
+                    "included_grid_fee": cfg.config.default_grid_fee
                 })
 
         # match bids only with ask market maker with lowest price
         bids = orders[orders.type == -1]
         if not asks_mm.empty:
             # select asking market maker by order ID, that has lowest price
-            asks_mm['price'] += self.default_grid_fee
+            asks_mm['price'] += cfg.config.default_grid_fee
             ask_mm_id = asks_mm['price'].astype(float).idxmin()
             ask_mm = asks_mm.loc[ask_mm_id]
             # indices of matched bids equal order IDs respectively
             bids = bids[bids["price"] >= ask_mm.price]
             for bid_id, bid in bids.iterrows():
                 matches.append({
-                    "time": self.t,
+                    "time": self.t_step,
                     "bid_id": bid_id,
                     "ask_id": ask_mm_id,
                     "bid_actor": bid.actor_id,
@@ -239,7 +240,7 @@ class BestMarket(Market):
                     "ask_cluster": ask_mm.cluster,
                     "energy": bid.energy,
                     "price": ask_mm.price,
-                    "included_grid_fee": self.default_grid_fee
+                    "included_grid_fee": cfg.config.default_grid_fee
                 })
 
         if show:
