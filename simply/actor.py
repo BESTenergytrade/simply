@@ -669,11 +669,16 @@ class Actor:
 
         # buying energy
         if energy > 0:
+            # The energy to be bought is bound by the remaining energy until fully charged battery
+            # within the predicted horizon
             delta_soc = 1-socs.max()
             return max(min(energy, delta_soc*self.battery.capacity), 0)
         # selling energy
         else:
+            # the energy to be sold is bound by the minimal energy level
+            # within the predicted horizon
             delta_soc = -socs.min()
+            # energy and delta_soc are negative valued
             return min(max(energy, delta_soc*self.battery.capacity), 0)
 
     def adjust_energy(self, energy, index=0):
