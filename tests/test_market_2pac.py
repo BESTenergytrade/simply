@@ -149,7 +149,10 @@ class TestTwoSidedPayAsClear:
         matches = m.match()
         # Bid actor 1 gets matched with 4,5 and the MM
         assert len(matches) == 3
-        all([m["bid_actor"] == 1 and m["ask_actor"] in [4, 5, "MarketMaker"] for m in matches])
+        for m in matches:
+            assert m["bid_actor"] == 1
+            assert m["ask_actor"] in [4, 5, "MarketMaker"]
+            assert m["price"] == mm_price + 1
 
         # Without a grid fee MarketMaker could match with itself
         # this should not happen
