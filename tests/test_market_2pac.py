@@ -6,6 +6,7 @@ import pytest
 from simply.scenario import Scenario
 from simply.market import MARKET_MAKER_THRESHOLD
 
+
 class TestTwoSidedPayAsClear:
     scenario = Scenario(None, None, [])
 
@@ -153,7 +154,7 @@ class TestTwoSidedPayAsClear:
         # this should not happen
         m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
         # Market Maker
-        mm_price=1
+        mm_price = 1
         m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
         m.accept_order(Order(1, 0, "MarketMaker", 1, MARKET_MAKER_THRESHOLD, mm_price))
 
@@ -164,18 +165,16 @@ class TestTwoSidedPayAsClear:
         # but market maker should still match with other orders
         m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
         # Market Maker
-        mm_price=1
+        mm_price = 1
         m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
         m.accept_order(Order(1, 0, "MarketMaker", 1, MARKET_MAKER_THRESHOLD, mm_price))
 
         # grid-fees between nodes only allow for partial matching
         # Bids
-        m.accept_order(Order(-1, 0, 2, 0, 3,mm_price*3))
+        m.accept_order(Order(-1, 0, 2, 0, 3, mm_price * 3))
         matches = m.match()
         # 1 bid gets matched, MM doesn't match with itself
         assert len(matches) == 1
-
-
 
     def test_prices_matrix(self):
         # test prices with a given grid fee matrix
