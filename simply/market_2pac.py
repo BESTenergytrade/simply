@@ -79,13 +79,13 @@ class TwoSidedPayAsClear(Market):
                     "price": ask.price + self.grid_fee_matrix,
                     "included_grid_fee": self.grid_fee_matrix,
                 })
-                if bid.energy < cfg.config.energy_unit:
+                if bid.energy + cfg.config.EPS < cfg.config.energy_unit:
                     # bid finished: next bid
                     try:
                         bid_id, bid = next(bid_iter)
                     except StopIteration:
                         bid = None
-                if ask.energy < cfg.config.energy_unit:
+                if ask.energy + cfg.config.EPS < cfg.config.energy_unit:
                     # ask finished: next ask
                     break
 
