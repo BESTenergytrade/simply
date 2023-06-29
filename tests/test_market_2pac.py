@@ -129,7 +129,7 @@ class TestTwoSidedPayAsClear:
 
     def test_prices_matrix(self):
         # test prices with a given grid fee matrix
-        #"Assertion Error because grid_fee_matrix"
+        # "Assertion Error because grid_fee_matrix"
         with pytest.raises(AssertionError, ):
             m = TwoSidedPayAsClear(0, grid_fee_matrix=[[0, 1], [1, 0]])
 
@@ -163,7 +163,3 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["energy"] == 1.5
         assert matches[1]["energy"] == 0.5
         assert matches[0]["price"] == 3
-
-
-
-
