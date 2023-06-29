@@ -148,7 +148,7 @@ class TestTwoSidedPayAsClear:
         matches = m.match()
         # Bid actor 1 gets matched with 4,5 and the MM
         assert len(matches) == 3
-        
+
         # Without a grid fee MarketMaker could match with itself
         # this should not happen
         m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
