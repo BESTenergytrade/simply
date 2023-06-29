@@ -584,8 +584,8 @@ class Actor:
         """
 
         energy = self.market_schedule[0]
-        assert not np.isnan(energy), "Market schedule is not a number. Is the simulation longer " \
-                                     "than the provided data?"
+        assert not np.isnan(energy), "Market schedule is not a number. Is the simulation time " \
+                                     "longer than the provided data?"
         if energy == 0 and self.pricing_strategy is None or all(self.market_schedule == 0):
             return []
 
