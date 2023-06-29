@@ -117,10 +117,10 @@ def plot_merit_order(bids, asks):
 
     # value assignment in iterrows does not change dataframe -> original shown
     bid_x, bid_y = bids["energy"].to_list(), bids["price"].to_list()
-    bid_y = [bid_y[0]] + bid_y
+    bid_y = [next(iter(bid_y), None)] + bid_y
     bid_x_sum = [0] + [sum(bid_x[:(i + 1)]) for i, _ in enumerate(bid_x)]
     ask_x, ask_y = asks["energy"].to_list(), asks["price"].to_list()
-    ask_y = [ask_y[0]] + ask_y
+    ask_y = [next(iter(ask_y), None)] + ask_y
     ask_x_sum = [0] + [sum(ask_x[:(i + 1)]) for i, _ in enumerate(ask_x)]
 
     plt.figure()
