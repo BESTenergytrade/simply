@@ -56,7 +56,7 @@ class TwoSidedPayAsClear(Market):
                         bid_id, bid = next(bid_iter)
                     except StopIteration:
                         bid = None
-                if ask.energy < cfg.config.energy_unit:
+                if ask.energy + cfg.config.EPS < cfg.config.energy_unit:
                     # ask finished: next ask
                     break
 
