@@ -1,4 +1,5 @@
 from simply.market_wrapper import (BestPayAsBidMatchingAlgorithm,
+                                   BestPayAsClearMatchingAlgorithm,
                                    BestClusterPayAsClearMatchingAlgorithm)
 import pytest
 
@@ -339,6 +340,41 @@ class TestPayAsBidMatchingAlgorithm:
         ]
         # ordering of matches within recommendation list is not important
         assert [i for i in recommendations if i not in expected_recommendations] == []
+
+
+class TestPayAsClearMatchingAlgorithm:
+    """Test the pay-as-bid matching algorithm"""
+
+    @staticmethod
+    def test_perform_simple_merit_order_match():
+        """
+        Test whether the matches from a list of offers and bids are the expected ones.
+        Single bid and single offer with floating point tolerance
+        """
+        grid_fee_matrix = 1
+        data = {
+            "market1": {
+                "2021-10-06T12:00": {
+                    "bids": [
+                        {"id": 3, "buyer": "C", "energy_rate": 5, "energy": 0.2, 'cluster': 0}
+                    ],
+                    "offers": [
+                        {"id": 4, "seller": "A", "energy_rate": 3,
+                         "energy": 0.3, 'cluster': 1}
+                    ],
+                }
+            }
+        }
+        recommendations = BestPayAsClearMatchingAlgorithm.get_matches_recommendations(
+            data, grid_fee_matrix)
+        expected_recommendations = [
+            {"market_id": "market1",
+             "time_slot": "2021-10-06T12:00",
+             "bid": {"id": 3, "buyer": "C", "energy_rate": 5, "energy": 0.2, 'cluster': 0},
+             "offer": {"id": 4, "seller": "A", "energy_rate": 3, "energy": 0.3, 'cluster': 1},
+             "selected_energy": 0.2, "trade_rate": 4, "matching_requirements": None},
+        ]
+        compare_dicts(expected_recommendations, recommendations)
 
 
 class TestBestClusterPayAsClearMatchingAlgorithm:
