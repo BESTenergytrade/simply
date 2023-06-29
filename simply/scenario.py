@@ -186,7 +186,7 @@ class Scenario:
             for order in orders:
                 self.market.accept_order(order, callback=participant.receive_market_results)
         # print([order for order in orders if "MarketMaker" != order.actor_id])
-        # print(self.market.orders)
+        print(self.market.orders)
         self.market.clear(reset=cfg.config.reset_market)
         # print([m for ma in self.market.matches for m in ma if m["time"]== self.environment.time_step])
         # print([m for matches in self.market.matches for m in matches

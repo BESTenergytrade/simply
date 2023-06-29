@@ -103,6 +103,7 @@ class Market:
             raise ValueError("Wrong order type ({})".format(order.type))
 
         # look up cluster
+        # look up cluster
         if order.cluster is None and self.network is not None:
             cluster = self.network.node_to_cluster.get(order.actor_id)
             order = order._replace(cluster=cluster)

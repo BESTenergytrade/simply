@@ -17,7 +17,7 @@ import numpy as np
 class TestMultipleActors:
     np.random.seed(42)
     num_actors = 0
-    NUM_STEPS = 24
+    NUM_STEPS = 10
     df = pd.DataFrame(np.random.rand(NUM_STEPS+24, 2), columns=["load", "pv"])
     cfg.Config("")
     df = df - df %  cfg.config.energy_unit
@@ -42,9 +42,9 @@ class TestMultipleActors:
 
         cfg.config.default_grid_fee = 0.1
         actor_strat = 2
-        pricing_strategy = {"name":"linear","param":[0.0]}
-        capacity = 4
-        num_actor=2
+        pricing_strategy = {"name":"linear","param":[0]}
+        capacity = 10
+        num_actor=1
 
         actors = [self.create_actor(cluster=0, capacity=capacity, load_factor=3)
                   for _ in range(num_actor)]
@@ -56,6 +56,7 @@ class TestMultipleActors:
         for actor in actors:
             actor.strategy = actor_strat
             actor.pricing_strategy = pricing_strategy
+        actors[-1].strategy = 0
 
         self.compare_interaction_w_strats(actor_strat, pricing_strategy, scenario, actors, capacity=capacity)
 
@@ -100,6 +101,8 @@ class TestMultipleActors:
         # With interaction the actors should get better or the same prices as if they had inter-
         # acted with only the MM
         # assert all([actor.bank - banks_only_mm[actor.id] >=0 for actor in actors])
+        print("Summed cost for all actors:  " , sum(banks))
+        print("Summed socs for all actors:  " , sum([actor.battery.soc for actor in actors]))
         print("Profit from interaction with other actors ",[actor.bank - banks_only_mm[actor.id] for actor in actors])
         print("MarketMaker sold ", sum(scenario.environment.market_maker.energy_sold))
         print("MarketMaker bought ", sum(scenario.environment.market_maker.energy_bought))

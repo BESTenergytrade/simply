@@ -607,7 +607,7 @@ class Actor:
         # the market schedule does not demand to buy or sell energy at the current time slot, but
         # a pricing strategy is provided which allows to generate orders for future demands, with
         # better than guaranteed prices
-        if energy == 0:
+        if cfg.config.energy_unit > energy > -cfg.config.energy_unit:
             next_order_index = None
             for i, energy in enumerate(self.market_schedule):
                 if energy != 0:
