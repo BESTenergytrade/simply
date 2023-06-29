@@ -37,7 +37,7 @@ class Actor:
     a market maker price time series as input.
     After matching took place, the (monetary) bank and resulting soc is calculated taking into
     consideration the schedule and the acquired energy of this time step, i.e. bank and soc at the
-    end of the time step. Afterwards the time step is increased and a new prediction for the
+    end of the time step. Afterward the time step is increased and a new prediction for the
     schedule and price is generated.
 
     :param int id: unique identifier of the actor
@@ -425,7 +425,7 @@ class Actor:
                 # found at the highest_price_index. At this index only as much energy can be sold as
                 # the min predicted soc, in between this index and the time of overcharge, provides.
                 soc_to_zero = np.min(soc_prediction[highest_price_index:i + 1])
-                assert soc_to_zero <= 1
+                assert soc_to_zero <= 1 + cfg.config.EPS
                 energy_to_zero = soc_to_zero * self.battery.capacity
                 sellable_energy = min(energy_to_zero, overcharge)
                 self.market_schedule[highest_price_index] -= sellable_energy
@@ -584,14 +584,15 @@ class Actor:
         """
 
         energy = self.market_schedule[0]
-
+        assert not np.isnan(energy), "Market schedule is not a number. Is the simulation time " \
+                                     "longer than the provided data?"
         if energy == 0 and self.pricing_strategy is None or all(self.market_schedule == 0):
             return []
 
         # the market schedule does not demand to buy or sell energy at the current time slot, but
         # a pricing strategy is provided which allows to generate orders for future demands, with
         # better than guaranteed prices
-        if energy == 0:
+        if cfg.config.energy_unit > energy > -cfg.config.energy_unit:
             next_order_index = None
             for i, energy in enumerate(self.market_schedule):
                 if energy != 0:
@@ -668,11 +669,16 @@ class Actor:
 
         # buying energy
         if energy > 0:
+            # The energy to be bought is bound by the remaining energy until fully charged battery
+            # within the predicted horizon
             delta_soc = 1-socs.max()
             return max(min(energy, delta_soc*self.battery.capacity), 0)
         # selling energy
         else:
-            delta_soc = -socs.max()
+            # the energy to be sold is bound by the minimal energy level
+            # within the predicted horizon
+            delta_soc = -socs.min()
+            # energy and delta_soc are negative valued
             return min(max(energy, delta_soc*self.battery.capacity), 0)
 
     def adjust_energy(self, energy, index=0):
@@ -685,12 +691,13 @@ class Actor:
         :return: energy amount for order generation the current time step
         :rtype: float
         """
+        index = max(1, index)
         # buying energy
         if energy > 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
-            if (self.battery.energy() + self.pred.schedule[0:index+1].sum() +
-                    ((energy+cfg.config.EPS) // cfg.config.energy_unit *
+            if (self.battery.energy() + self.pred.schedule[0:index].sum() +
+                    ((energy + cfg.config.EPS) // cfg.config.energy_unit *
                      cfg.config.energy_unit) < 0):
                 energy += cfg.config.energy_unit
 
@@ -698,7 +705,7 @@ class Actor:
         elif energy < 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or over 1 socs.
             # In these cases decrease the order by one energy unit, i.e. sell more energy
-            if self.battery.energy() + self.pred.schedule[0:index+1].sum() + (
+            if self.battery.energy() + self.pred.schedule[0:index].sum() + (
                     ((energy+cfg.config.EPS) // cfg.config.energy_unit+1) *
                     cfg.config.energy_unit) > self.battery.capacity:
                 energy -= cfg.config.energy_unit
