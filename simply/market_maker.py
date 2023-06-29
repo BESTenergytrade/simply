@@ -1,14 +1,15 @@
 import warnings
+from typing import TYPE_CHECKING, Sized
 
 import numpy as np
 import pandas as pd
-from typing import TYPE_CHECKING, Sized
+
 import simply.config as cfg
 from simply.actor import Order
 from simply.market import MARKET_MAKER_THRESHOLD, ASK, BID
+
 if TYPE_CHECKING:
     from simply.scenario import Environment
-
 
 MARKETMAKERID = "MarketMaker"
 

@@ -3,8 +3,9 @@ from collections.abc import Iterable
 
 import matplotlib.pyplot as plt
 
-from simply.market import Market
+from simply.market import Market, MARKET_MAKER_THRESHOLD
 import simply.config as cfg
+from simply.market_maker import MARKETMAKERID
 
 
 class TwoSidedPayAsClear(Market):
@@ -52,7 +53,12 @@ class TwoSidedPayAsClear(Market):
             if clearing_price_reached:
                 break
             while bid is not None:
-                if ask.price + self.grid_fee_matrix > bid.price:
+                if (ask.price + self.grid_fee_matrix > bid.price or
+                    ask.actor_id == bid.actor_id == MARKETMAKERID or
+                    ask.energy + bid.energy > MARKET_MAKER_THRESHOLD * 2 * 0.9):
+                    # Clearing price reached when ask + grid fee > bid price but also when
+                    # market maker matches with itself. In case the market maker is not named
+                    # properly it might be recognized by the order volume
                     clearing_price_reached = True
                     break
                 # get common energy value
