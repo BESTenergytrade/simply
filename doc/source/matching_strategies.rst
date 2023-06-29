@@ -103,10 +103,10 @@ Two-sided Pay-as-Clear Algorithm
 Similarly to Pay-as-Bid, during each time slot, Two-sided Pay-as-Clear (found here: :ref:`2pac`)
 sorts bids in descending order and asks in ascending order. After the matching has taken place at
 this time slot, the highest matched ask price becomes the *clearing price* for all matched
-orders of
-this time slot.
+orders of this time slot. As one single clearing prices is identified, varying grid fees
+cannot be incorporated. Instead the default grid fee or a numeric grid fee matrix is used. 
 
-The table below illustrates the matching of the :ref:`example_scenario`:
+The table below illustrates the matching of the :ref:`example_scenario` with grid fee matrix of 1:
 
 +--------------------------------+-------------------------------+----------------+
 | Bids                           | Asks                          | Matched Price  |
