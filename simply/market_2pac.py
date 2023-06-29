@@ -110,7 +110,12 @@ class TwoSidedPayAsClear(Market):
 
 
 def plot_merit_order(bids, asks):
-    # value asignment in iterrows does not change dataframe -> original shown
+    mm_bid = bids[bids["actor_id"] == MARKETMAKERID]
+    mm_ask = asks[asks["actor_id"] == MARKETMAKERID]
+    bids = bids[bids["actor_id"] != MARKETMAKERID]
+    asks = asks[asks["actor_id"] != MARKETMAKERID]
+
+    # value assignment in iterrows does not change dataframe -> original shown
     bid_x, bid_y = bids["energy"].to_list(), bids["price"].to_list()
     bid_y = [bid_y[0]] + bid_y
     bid_x_sum = [0] + [sum(bid_x[:(i + 1)]) for i, _ in enumerate(bid_x)]
@@ -121,6 +126,8 @@ def plot_merit_order(bids, asks):
     plt.figure()
     plt.step(bid_x_sum, bid_y, where="pre", label="bids")
     plt.step(ask_x_sum, ask_y, where="pre", label="asks")
+    plt.hlines(mm_bid.price, 0, bid_x_sum[-1], colors='b', ls='dashdot', label="mm_bid")
+    plt.hlines(mm_ask.price, 0, ask_x_sum[-1], colors='y', ls='dashed', label="mm_bid")
     plt.legend()
     plt.xlabel("volume")
     plt.ylabel("price")
