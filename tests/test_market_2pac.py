@@ -149,6 +149,7 @@ class TestTwoSidedPayAsClear:
         matches = m.match()
         # Bid actor 1 gets matched with 4,5 and the MM
         assert len(matches) == 3
+        all([m["bid_actor"] == 1 and m["ask_actor"] in [4, 5, "MarketMaker"] for m in matches])
 
         # Without a grid fee MarketMaker could match with itself
         # this should not happen
@@ -182,13 +183,10 @@ class TestTwoSidedPayAsClear:
         with pytest.raises(AssertionError, ):
             m = TwoSidedPayAsClear(0, grid_fee_matrix=[[0, 1], [1, 0]])
 
-        with pytest.raises(AssertionError, ):
-            m = TwoSidedPayAsClear(0, grid_fee_matrix=[[0, 1], [1, 0]])
-
         # example: cost 1 for trade between clusters
         m = TwoSidedPayAsClear(grid_fee_matrix=1, time_step=0)
 
-        # grid-fees between nodes only allow for partial matching
+        # grid-fees only allow for partial matching
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
         m.accept_order(Order(1, 0, 4, 1, 0.9, 3))
         m.accept_order(Order(1, 0, 0, 1, 0.1, 2))
@@ -196,12 +194,13 @@ class TestTwoSidedPayAsClear:
         assert len(matches) == 1
         assert matches[0]["energy"] == 0.1
         assert matches[0]["price"] == 3
+        assert matches[0]["included_grid_fee"] == 1
 
         # default grid fee should only be applied once
         # example: cost 1 for trade between clusters
         m = TwoSidedPayAsClear(grid_fee_matrix=1, time_step=0)
 
-        # grid-fees between nodes only allow for partial matching
+        # grid-fees only allow for partial matching
         # type, time, actor_id, cluster, amount, price
         m.accept_order(Order(-1, 0, 2, 0, 1.5, 3.8))
         m.accept_order(Order(-1, 0, 3, 0, 1, 3))
