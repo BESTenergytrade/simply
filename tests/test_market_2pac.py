@@ -129,8 +129,15 @@ class TestTwoSidedPayAsClear:
 
     def test_prices_matrix(self):
         # test prices with a given grid fee matrix
+        #"Assertion Error because grid_fee_matrix"
+        with pytest.raises(AssertionError, ):
+            m = TwoSidedPayAsClear(0, grid_fee_matrix=[[0, 1], [1, 0]])
+
+        with pytest.raises(AssertionError, ):
+            m = TwoSidedPayAsClear(0, grid_fee_matrix=[[0, 1], [1, 0]])
+
         # example: cost 1 for trade between clusters
-        m = TwoSidedPayAsClear(grid_fee_matrix=[[0, 1], [1, 0]], time_step=0)
+        m = TwoSidedPayAsClear(grid_fee_matrix=1, time_step=0)
 
         # grid-fees between nodes only allow for partial matching
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
@@ -141,7 +148,22 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["energy"] == 0.1
         assert matches[0]["price"] == 3
 
-        #"Assertion Error because grid_fee_matrix"
-        with pytest.raises(AssertionError, ):
-            m = TwoSidedPayAsClear(0, grid_fee_matrix=[[0, 1], [1, 0]])
+        # default grid fee should only be applied once
+        # example: cost 1 for trade between clusters
+        m = TwoSidedPayAsClear(grid_fee_matrix=1, time_step=0)
+
+        # grid-fees between nodes only allow for partial matching
+        # type, time, actor_id, cluster, amount, price
+        m.accept_order(Order(-1, 0, 2, 0, 1.5, 3.8))
+        m.accept_order(Order(-1, 0, 3, 0, 1, 3))
+        m.accept_order(Order(-1, 0, 3, 0, 1, 2))
+        m.accept_order(Order(1, 0, 0, 1, 2, 2))
+        matches = m.match()
+        assert len(matches) == 2
+        assert matches[0]["energy"] == 1.5
+        assert matches[1]["energy"] == 0.5
+        assert matches[0]["price"] == 3
+
+
+
 

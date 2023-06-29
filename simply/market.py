@@ -36,21 +36,11 @@ class Market:
         self.grid_fee_matrix = grid_fee_matrix
         if network is not None and grid_fee_matrix is None:
             self.grid_fee_matrix = network.grid_fee_matrix
-        if self.grid_fee_matrix:
-            self.add_default_grid_fee()
         if self.save_csv:
             match_header = ["time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
                             "ask_cluster", "energy", "price", 'included_grid_fee']
             self.create_csv('matches.csv', match_header)
             self.create_csv('orders.csv', Order._fields)
-
-    def add_default_grid_fee(self):
-        # append column and row containing the default grid fee
-        for row in self.grid_fee_matrix:
-            row.append(cfg.config.default_grid_fee)
-        additional_row = [cfg.config.default_grid_fee
-                          for _ in range((len(self.grid_fee_matrix) + 1))]
-        self.grid_fee_matrix.append(additional_row)
 
     def get_bids(self):
         # Get all open bids in market. Returns dataframe.
@@ -265,9 +255,8 @@ class Market:
         else:
             if bid_cluster is None or ask_cluster is None:
                 warnings.warn("At least one cluster is 'None', returning default grid fee.")
-
                 # default grid fee
-                return self.grid_fee_matrix[0][-1]
+                return cfg.config.default_grid_fee
             else:
                 return self.grid_fee_matrix[bid_cluster][ask_cluster]
 

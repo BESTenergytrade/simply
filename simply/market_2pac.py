@@ -15,19 +15,22 @@ class TwoSidedPayAsClear(Market):
     Each timestep, the highest bids are matched with the lowest offers.
     """
 
-    def __init__(self, network=None, grid_fee_matrix=None, time_step=None, default_grid_fee=None): # time, network=None, grid_fee_matrix=None, default_grid_fee=None):
-        if default_grid_fee is None:
-            warnings.warn("Two sided Pay-As-Clear market was generated without a default grid fee "
+    def __init__(self, network=None, grid_fee_matrix=None, time_step=None): # time, network=None, grid_fee_matrix=None, default_grid_fee=None):
+        if grid_fee_matrix is None:
+            warnings.warn("Two sided Pay-As-Clear market was generated without a grid_fee_matrix "
                           "in its constructor. The market will use the grid fee from the "
-                          f"configuration \n Default Grid Fee = {cfg.config.default_grid_fee}")
+                          f"configuration for all trades.\n Grid Fee = "
+                          f"{cfg.config.default_grid_fee}")
+            grid_fee_matrix = cfg.config.default_grid_fee
 
-            default_grid_fee = cfg.config.default_grid_fee
-        assert not isinstance(default_grid_fee, Iterable), "default_grid_fee must be a single value"
-        self.default_grid_fee = default_grid_fee
-        assert grid_fee_matrix is None, "Grid fee matrix is not used in two sided pay as clear. " \
-                                        "Only the default_grid_fee is applied \n Default Grid " \
-                                        "Fee = {cfg.config.default_grid_fee}"
-        super().__init__(network=network, grid_fee_matrix=None, time_step=time_step)
+        assert_error = "grid_fee_matrix must be a single value in case of wo sided Pay-As-Clear " \
+                       "markets"
+        assert not isinstance(grid_fee_matrix, Iterable), assert_error
+
+        # This will throw an error even if assertions are turned off, if grid_fee_matrix is not a
+        # numeric value
+        self.grid_fee_matrix = float(grid_fee_matrix)
+        super().__init__(network=network, grid_fee_matrix=grid_fee_matrix, time_step=time_step)
 
     def match(self, show=False):
         # order orders by price
@@ -49,7 +52,7 @@ class TwoSidedPayAsClear(Market):
             if clearing_price_reached:
                 break
             while bid is not None:
-                if ask.price + self.default_grid_fee > bid.price:
+                if ask.price + self.grid_fee_matrix > bid.price:
                     clearing_price_reached = True
                     break
                 # get common energy value
@@ -67,8 +70,8 @@ class TwoSidedPayAsClear(Market):
                     "bid_cluster": bid.cluster,
                     "ask_cluster": ask.cluster,
                     "energy": energy,
-                    "price": ask.price + self.default_grid_fee,
-                    "included_grid_fee": self.default_grid_fee,
+                    "price": ask.price + self.grid_fee_matrix,
+                    "included_grid_fee": self.grid_fee_matrix,
                 })
                 if bid.energy < cfg.config.energy_unit:
                     # bid finished: next bid
@@ -98,7 +101,7 @@ class TwoSidedPayAsClear(Market):
         :param match: a dictionary representing a match, with keys 'bid_cluster' and 'ask_cluster'
         :return: the grid fee associated with the given bid and ask clusters
         """
-        return self.default_grid_fee
+        return self.grid_fee_matrix
 
 
 def plot_merit_order(bids, asks):
