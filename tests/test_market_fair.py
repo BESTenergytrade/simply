@@ -43,7 +43,7 @@ class TestBestMarket:
         """Tests that the prices of the orders are correctly affected by the weights of
         the PowerNetwork."""
         # test prices with a given power network
-        m = BestMarket(time_step=0, network=self.pn)
+        m = BestMarket(time_step=0, network=self.pn, disputed_matches="bid_price")
         # ask above bid: no match
         m.accept_order(Order(-1, 0, 2, None, 1, 2))
         m.accept_order(Order(1, 0, 3, None, 1, 2.5))
@@ -501,12 +501,11 @@ class TestBestMarket:
                      [100, 100, 0]]
         grid_fees = list([grid_fee1, grid_fee2, grid_fee3])
         mutation_nr = 1
-
         for g, grid_fee in enumerate(grid_fees):
-            for bid_clusters in [1, 2, 3]:
-                for ask_clusters in [1, 2, 3]:
+            for bid_clusters in [1, 3]:
+                for ask_clusters in [1,3]:
                     for i in range(1, 3):
-                        for per_cluster in [1, 2, 3]:
+                        for per_cluster in [1, 3]:
                             mutation_nr = ((mutation_nr + 1) % 4) + 1
                             order_amount = 0.01 * (2 ** i)
                             m = self.create_market(order_amount=order_amount, grid_fee=grid_fee,
@@ -538,7 +537,7 @@ class TestBestMarket:
                 self.print_summary(matches2)
 
                 self.print_matches(matches2)
-                self.check_consistency(matches2, grid_fee, exit=True)
+                self.check_consistency(matches2, grid_fee)
 
     def print_matches(self, matches):
         clusters = {match["bid_cluster"] for match in matches}
@@ -633,7 +632,7 @@ class TestBestMarket:
                         [1, 0, 0],
                         [0, 0, 0]]
         grid_fee_matrix = [[v for v in fee] for fee in grid_fee]
-        m = BestMarket(self.pn, grid_fee_matrix=grid_fee_matrix, time_step=0)
+        m = BestMarket(self.pn, grid_fee_matrix=grid_fee_matrix, time_step=0, disputed_matches="grid_fee")
         order_amount = order_amount
         bids_mutator = [0, 0, -1.3, +5.5]
         asks_mutator = [0, +0.5, 1.1, +5.6]

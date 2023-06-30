@@ -82,12 +82,12 @@ class BestCluster:
             # An ask was inserted but the matched energy stayed the same. In other words an old
             # matched ask got removed from matching in this cluster. therefore it becomes available
             # in other clusters
-            ask = self.asks.iloc[self.matched_energy_units-1]
+            ask = self.asks.iloc[self.matched_energy_units - 1]
             clusters = [cluster for cluster in self.market.clusters if cluster != self]
-            best_grid_fee = float("inf")
+            dispute_value = -float("inf")
             best_profit = -float("inf")
             best_clearing, best_cluster, best_profit = \
-                self.market.get_best_cluster(best_grid_fee, best_profit, ask, clusters)
+                self.market.get_best_cluster(dispute_value, best_profit, ask, clusters)
             if (best_profit > 0 or
                     best_profit == 0 and
                     best_clearing["matched_energy_units"] > best_cluster.matched_energy_units):
@@ -119,9 +119,31 @@ class BestMarket(Market):
     This converges to an optimal solution.
     """
 
-    def __init__(self, network=None, grid_fee_matrix=None, time_step=None):
+    def __init__(self, network=None, grid_fee_matrix=None, time_step=None,
+                 disputed_matches='bid_price'):
         super().__init__(network, grid_fee_matrix, time_step)
         self.clusters: List[BestCluster] = []
+        # ToDo: enum-type would be nicer than string
+        self.disputed_matches = disputed_matches
+
+    def resolve_dispute(self,ask, bid_cluster):
+        if self.disputed_matches == "grid_fee":
+            # for dispute values bigger is better, therefore negative price
+            return -self.get_grid_fee(bid_cluster=bid_cluster.idx,
+                                                  ask_cluster=ask.cluster)
+        elif self.disputed_matches == "bid_price" :
+            try:
+                asks = bid_cluster.asks.copy()
+                ask = ask.copy()
+                ask.adjusted_price = self.get_grid_fee(bid_cluster=bid_cluster.idx, ask_cluster=ask.cluster)
+                asks[ask.name] = ask
+                asks = asks.sort_values(["adjusted_price", "price"], ascending=[True, False])
+                val = bid_cluster.bids.iloc[asks.index.get_loc(ask.name)].price
+            except (KeyError, IndexError):
+                val = -float("inf")
+            return val
+        raise ValueError
+
 
     def clusters_to_match_exist(self):
         for cluster in self.clusters:
@@ -364,7 +386,7 @@ class BestMarket(Market):
         matches = [m for ask_matches in _matches.values() for m in ask_matches.values()]
         return matches
 
-    def match(self):
+    def match(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
 
@@ -485,10 +507,9 @@ class BestMarket(Market):
                 best_profit = bid_cluster.clearing_price - bottom_ask.adjusted_price
                 if best_profit < 0:
                     continue
-                best_grid_fee = self.get_grid_fee(bid_cluster=bid_cluster.idx,
-                                                  ask_cluster=bottom_ask.cluster)
+                dispute_value = self.resolve_dispute(bottom_ask, bid_cluster)
                 clusters = [cluster for cluster in self.clusters if cluster != bid_cluster]
-                best_clearing, best_cluster, _ = self.get_best_cluster(best_grid_fee, best_profit,
+                best_clearing, best_cluster, _ = self.get_best_cluster(dispute_value, best_profit,
                                                                        bottom_ask, clusters)
                 if best_cluster is None:
                     # no better cluster found than the current one
@@ -524,7 +545,7 @@ class BestMarket(Market):
 
         return matches
 
-    def get_best_cluster(self, best_grid_fee, best_profit, ask, clusters):
+    def get_best_cluster(self, best_dispute_value, best_profit, ask, clusters):
         best_clearing = None
         best_cluster = None
         for cluster in clusters:
@@ -534,12 +555,13 @@ class BestMarket(Market):
                 # compete with current best profit, skipping the rest increases function speed
                 continue
             insertion_profit, clearing = cluster.get_insertion_profit(ask)
+            dispute_value = self.resolve_dispute(ask, cluster)
             if (insertion_profit > best_profit or
-                    insertion_profit == best_profit and grid_fee < best_grid_fee):
+                    insertion_profit == best_profit and dispute_value > best_dispute_value):
                 best_profit = insertion_profit
                 best_cluster = cluster
                 best_clearing = clearing
-                best_grid_fee = grid_fee
+                best_dispute_value = dispute_value
         return best_clearing, best_cluster, best_profit
 
     def get_bottom_asks(self):
@@ -556,7 +578,7 @@ class BestMarket(Market):
 
     def find_best_profit_cluster(self, ask_id):
         best_profit = float("-inf")
-        best_grid_fee = float("inf")
+        best_dispute_value = -float("inf")
         best_match_cluster = None
         # find best cluster for this ask
         # best price AND also capacity to take the energy
@@ -566,15 +588,15 @@ class BestMarket(Market):
             # not deleted yet
             try:
                 ask = cluster.asks.loc[ask_id]
-                profit = cluster.clearing_price - ask.adjusted_price
-                grid_fee = ask.adjusted_price - ask.price
             except KeyError:
                 continue
+            profit = cluster.clearing_price - ask.adjusted_price
+            dispute_value = self.resolve_dispute(ask, cluster)
             if ((profit > best_profit and profit >= 0) or
-                    (profit == best_profit and grid_fee < best_grid_fee)):
+                    (profit == best_profit and dispute_value > best_dispute_value)):
                 best_profit = profit
                 best_match_cluster = cluster
-                best_grid_fee = grid_fee
+                best_dispute_value = dispute_value
         return best_match_cluster
 
     def split_orders_to_energy_unit(self, orders):
