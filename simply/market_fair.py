@@ -120,18 +120,18 @@ class BestMarket(Market):
     """
 
     def __init__(self, network=None, grid_fee_matrix=None, time_step=None,
-                 disputed_matches='bid_price'):
+                 disputed_matching='bid_price'):
         super().__init__(network, grid_fee_matrix, time_step)
         self.clusters: List[BestCluster] = []
         # ToDo: enum-type would be nicer than string
-        self.disputed_matches = disputed_matches
+        self.disputed_matching = disputed_matching
 
     def resolve_dispute(self,ask, bid_cluster):
-        if self.disputed_matches == "grid_fee":
+        if self.disputed_matching == "grid_fee":
             # for dispute values bigger is better, therefore negative price
             return -self.get_grid_fee(bid_cluster=bid_cluster.idx,
                                                   ask_cluster=ask.cluster)
-        elif self.disputed_matches == "bid_price" :
+        elif self.disputed_matching == "bid_price" :
             try:
                 asks = bid_cluster.asks.copy()
                 ask = ask.copy()
