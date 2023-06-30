@@ -1,10 +1,109 @@
-import pandas as pd
+import warnings
 
+import pandas as pd
 from simply.market import Market
 import simply.config as cfg
-
+from typing import List
 from simply.market import LARGE_ORDER_THRESHOLD
 from simply.market import MARKET_MAKER_THRESHOLD
+
+
+class BestCluster:
+    """Class which keeps track of attributes resolving around a cluster and
+    implements functionality to keep the best algorithm more readable.
+
+    A single BestCluster contains the bids of this cluster, the asks which are
+    matched at the current state with these bids, a copy of unmatched asks,
+    its own clearing price, and offers methods like getting possible profits if
+    asks would be inserted"""
+
+    def __init__(self, idx, bestmarket: "BestMarket"):
+        self.market: BestMarket = bestmarket
+        self.idx = idx
+        self.bids: pd.DataFrame = pd.DataFrame()
+        self.asks: pd.DataFrame = pd.DataFrame()
+        self.matches = []
+        self.clearing_price: float = -float("inf")
+        self.bid_clearing_price: float = None
+        self.clearing_price_reached: bool = False
+        self.matched_energy_units: int = 0
+        self._row: int
+
+    def __repr__(self):
+        return f"BestCluster with matched units: {self.matched_energy_units}, clearing price: " \
+               f"{self.clearing_price}"
+
+    def match_locally(self):
+        clearing = get_clearing(self.bids, self.asks)
+        self.matched_energy_units = clearing["matched_energy_units"]
+        self.clearing_price = clearing["clearing_price"]
+        self.bid_clearing_price = clearing["bid_clearing_price"]
+
+    def get_insertion_profit(self, ask):
+        ask = ask.copy()
+        ask.adjusted_price = ask.price + self.market.get_grid_fee(bid_cluster=self.idx,
+                                                                  ask_cluster=ask.cluster)
+        asks = self.asks.copy()
+        asks.loc[ask.name] = ask
+        asks = asks.sort_values(["adjusted_price", "price"], ascending=[True, False])
+        clearing = get_clearing(self.bids, asks)
+        return clearing["clearing_price"] - ask.adjusted_price, clearing
+
+    def remove(self, ask):
+        print(f"removing {ask.name} from cluster {self.idx}")
+        old_matched_energy = self.matched_energy_units
+        self.asks = self.asks.drop(ask.name)
+        # removing ask can change clearing. if the amount of energy stays the
+        # same, this ask should be removed from other clusters, where it was
+        # not matched before
+        self.match_locally()
+        if old_matched_energy == self.matched_energy_units:
+            for cluster in self.market.clusters:
+                if cluster == self:
+                    continue
+                try:
+                    cluster.asks = cluster.asks.drop(ask.name)
+                except KeyError:
+                    pass
+
+    def insert(self, ask, clearing):
+
+        old_matched_energy = self.matched_energy_units
+        ask.adjusted_price = ask.price + self.market.get_grid_fee(
+            bid_cluster=self.idx, ask_cluster=ask.cluster)
+        self.asks.loc[ask.name] = ask
+        self.asks = self.asks.sort_values(["adjusted_price", "price"], ascending=[True, False])
+        # use the clearing which was calculated for insertion already
+        self.matched_energy_units = clearing["matched_energy_units"]
+        self.clearing_price = clearing["clearing_price"]
+        self.bid_clearing_price = clearing["bid_clearing_price"]
+
+        if old_matched_energy == self.matched_energy_units:
+            # An ask was inserted but the matched energy stayed the same. In other words an old
+            # matched ask got removed from matching in this cluster. therefore it becomes available
+            # in other clusters
+            ask = self.asks.iloc[self.matched_energy_units-1]
+            clusters = [cluster for cluster in self.market.clusters if cluster != self]
+            best_grid_fee = float("inf")
+            best_profit = -float("inf")
+            best_clearing, best_cluster, best_profit = \
+                self.market.get_best_cluster(best_grid_fee, best_profit, ask, clusters)
+            if (best_profit > 0 or
+                    best_profit == 0 and
+                    best_clearing["matched_energy_units"] > best_cluster.matched_energy_units):
+                # insert the ask if it generates profit or if it at least increases the amount of
+                # matched energy at 0 profit
+                best_cluster.insert(ask, best_clearing)
+            else:
+                # best_profit is negative. therefore it will not be matched at this state. all other
+                # clusters get this ask, for possible matching
+                for cluster in clusters:
+                    cluster.asks[ask.name] = ask
+                    cluster.asks = cluster.asks.sort_values(["adjusted_price", "price"],
+                                                            ascending=[True, False])
+        elif old_matched_energy > clearing["matched_energy_units"]:
+            # this should never happen
+            raise Exception
 
 
 class BestMarket(Market):
@@ -20,11 +119,21 @@ class BestMarket(Market):
     This converges to an optimal solution.
     """
 
-    def __init__(self, network=None, grid_fee_matrix=None, time_step=None, disputed_matching='price',):
+    def __init__(self, network=None, grid_fee_matrix=None, time_step=None):
         super().__init__(network, grid_fee_matrix, time_step)
-        self.disputed_matching = disputed_matching
+        self.clusters: List[BestCluster] = []
 
-    def match(self, show=False):
+    def clusters_to_match_exist(self):
+        for cluster in self.clusters:
+            if not cluster.clearing_price_reached:
+                # at least on cluster still has not reached its clearing price
+                return True
+        return False
+
+    def get_clusters_to_match(self):
+        return [cluster for cluster in self.clusters if not cluster.clearing_price_reached]
+
+    def match_old(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
 
@@ -46,8 +155,8 @@ class BestMarket(Market):
         if len(large_bids) > len(bids_mm):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
 
-        if (asks.empty and bids.empty)\
-                or (asks.empty and asks_mm.empty)\
+        if (asks.empty and bids.empty) \
+                or (asks.empty and asks_mm.empty) \
                 or (bids.empty and bids_mm.empty):
             # no asks or bids at all: no matches
             return []
@@ -60,12 +169,12 @@ class BestMarket(Market):
         asks = pd.DataFrame(asks)
         asks["order_id"] = asks.index
         asks = pd.DataFrame(asks.values.repeat(
-            asks.energy * (1/cfg.config.energy_unit), axis=0), columns=asks.columns)
+            asks.energy * (1 / cfg.config.energy_unit), axis=0), columns=asks.columns)
         asks.energy = cfg.config.energy_unit
         bids = pd.DataFrame(bids)
         bids["order_id"] = bids.index
         bids = pd.DataFrame(bids.values.repeat(
-            bids.energy * (1/cfg.config.energy_unit), axis=0), columns=bids.columns)
+            bids.energy * (1 / cfg.config.energy_unit), axis=0), columns=bids.columns)
         bids.energy = cfg.config.energy_unit
 
         # keep track which clusters have to be (re)matched
@@ -162,36 +271,7 @@ class BestMarket(Market):
                     # new match does not conflict: insert as-is
                     matches.append(_match)
 
-        # group matches: ask -> bid -> match
-        _matches = {}
-        for match in matches:
-            # get original order id of ask/bid and adjust order energy
-            ask_id = match["ask_id"]
-            ask_order_id = asks.loc[ask_id].order_id
-            self.orders.loc[ask_order_id, "energy"] -= match["energy"]
-            bid_id = match["bid_id"]
-            bid_order_id = bids.loc[bid_id].order_id
-            self.orders.loc[bid_order_id, "energy"] -= match["energy"]
-
-            if ask_order_id not in _matches:
-                # ask not seen before: create empty dict
-                _matches[ask_order_id] = dict()
-            ask_matches = _matches[ask_order_id]
-            try:
-                m = ask_matches[bid_order_id]
-                # bid has already been matched with this ask: price has to be identical
-                assert m["price"] == match["price"]
-                m["energy"] += match["energy"]
-            except KeyError:
-                # new bid was matched
-                m = match
-                m["ask_id"] = ask_order_id
-                m["bid_id"] = bid_order_id
-            # update dictionary
-            ask_matches[bid_order_id] = m
-
-        # retrieve matches from nested dict
-        matches = [m for ask_matches in _matches.values() for m in ask_matches.values()]
+        matches = self.group_matches(asks, bids, matches)
 
         # match with market maker
         # find unmatched orders
@@ -252,29 +332,44 @@ class BestMarket(Market):
 
         return matches
 
+    def group_matches(self, asks, bids, matches):
+        # group matches: ask -> bid -> match
+        _matches = {}
+        for match in matches:
+            # get original order id of ask/bid and adjust order energy
+            ask_id = match["ask_id"]
+            ask_order_id = asks.loc[ask_id].order_id
+            self.orders.loc[ask_order_id, "energy"] -= match["energy"]
+            bid_id = match["bid_id"]
+            bid_order_id = bids.loc[bid_id].order_id
+            self.orders.loc[bid_order_id, "energy"] -= match["energy"]
 
-    def match_single_loop(self, show=False):
+            if ask_order_id not in _matches:
+                # ask not seen before: create empty dict
+                _matches[ask_order_id] = dict()
+            ask_matches = _matches[ask_order_id]
+            try:
+                m = ask_matches[bid_order_id]
+                # bid has already been matched with this ask: price has to be identical
+                assert m["price"] == match["price"]
+                m["energy"] += match["energy"]
+            except KeyError:
+                # new bid was matched
+                m = match
+                m["ask_id"] = ask_order_id
+                m["bid_id"] = bid_order_id
+            # update dictionary
+            ask_matches[bid_order_id] = m
+        # retrieve matches from nested dict
+        matches = [m for ask_matches in _matches.values() for m in ask_matches.values()]
+        return matches
+
+    def match(self):
         asks = self.get_asks()
         bids = self.get_bids()
 
         # filter out market makers (infinite bus) and really large orders
-        large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
-        large_asks = asks[large_asks_mask]
-        asks_mm = large_asks[large_asks.energy >= MARKET_MAKER_THRESHOLD]
-        if len(asks_mm) > 1:
-            print(f"WARNING! More than one ask market maker:{len(asks_mm)}")
-        asks = asks[~large_asks_mask]
-        if len(large_asks) > len(asks_mm):
-            print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
-        large_bids_mask = bids.energy >= LARGE_ORDER_THRESHOLD
-        large_bids = bids[large_bids_mask]
-        bids_mm = large_bids[large_bids.energy >= MARKET_MAKER_THRESHOLD]
-
-        if len(bids_mm) > 1:
-            print(f"WARNING! More than one bid market maker: {len(bids_mm)}")
-        bids = bids[~large_bids_mask]
-        if len(large_bids) > len(bids_mm):
-            print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
+        asks, asks_mm, bids, bids_mm = self.filter_orders(asks, bids)
 
         if (asks.empty and bids.empty) \
                 or (asks.empty and asks_mm.empty) \
@@ -286,448 +381,245 @@ class BestMarket(Market):
         asks = asks[~asks.cluster.isna()]
         bids = bids[~bids.cluster.isna()]
 
-        # split asks and bids into smallest energy unit, save original index, add cluster idx
-        asks = pd.DataFrame(asks)
-        asks["order_id"] = asks.index
-        asks = pd.DataFrame(asks.values.repeat(
-            asks.energy * (1 / cfg.config.energy_unit), axis=0), columns=asks.columns)
-        asks.energy = cfg.config.energy_unit
-        bids = pd.DataFrame(bids)
-        bids["order_id"] = bids.index
-        bids = pd.DataFrame(bids.values.repeat(
-            bids.energy * (1 / cfg.config.energy_unit), axis=0), columns=bids.columns)
-        bids.energy = cfg.config.energy_unit
+        # split asks and bids into the smallest energy unit, save original index, add cluster idx
+        asks = self.split_orders_to_energy_unit(asks)
+        bids = self.split_orders_to_energy_unit(bids)
 
         # keep track which clusters have to be (re)matched
         # start with all clusters
-        clusters_to_match = set(range(len(self.grid_fee_matrix)))
 
-        # keep track of matches, bids and asks for each bid cluster separately
-        all_matches = {cluster_idx: [] for cluster_idx in clusters_to_match}
-
-        # this will store the sorted Dataframe for each cluster later on
-        matched_bids = {cluster_idx: pd.DataFrame() for cluster_idx in clusters_to_match}
-
-        all_asks = {cluster_idx: pd.DataFrame() for cluster_idx in clusters_to_match}
-        all_bids = {cluster_idx: pd.DataFrame() for cluster_idx in clusters_to_match}
-
-        all_clearing_prices = {cluster_idx: float('-inf') for cluster_idx in clusters_to_match}
-        # exclusion list is not needed anymore since matching is not done iteratively anymore
-
-        # keep track which asks to exclude in each zone (initially empty)
-        # exclude = {cluster_idx: set() for cluster_idx in clusters_to_match}
-
-        # iterate over all clusters and match the cluster bids with all the asks. This will lead to
-        # asks full filling multiple bids. These duplicate matches will be taken care of later
-        clusters_to_match_copy = {idx for idx in clusters_to_match}
+        self.clusters = [BestCluster(idx=idx, bestmarket=self) for idx in
+                         range(len(self.grid_fee_matrix))]
 
         # Work with copy to be able to remove empty bid clusters
-        for cluster_idx in clusters_to_match_copy:
+        cluster_to_match = self.get_clusters_to_match()
+        for cluster in cluster_to_match:
             # simulate local market within cluster
 
-            # initialize current matches
-            matches = all_matches[cluster_idx]
-
             # get local bids
-            _bids = bids[bids.cluster == cluster_idx]
-            if len(_bids) == 0:
+            cluster.bids = bids[bids.cluster == cluster.idx]
+
+            cluster.asks = asks.copy()
+            # annotate asking price by grid-fee:
+            cluster.asks["adjusted_price"] = cluster.asks["price"] + cluster.asks["cluster"].apply(
+                lambda x: self.get_grid_fee(bid_cluster=cluster.idx, ask_cluster=x))
+
+            if len(cluster.bids) == 0:
                 # no bids within this cluster: can't match here
                 # remove cluster from clusters to match
-                clusters_to_match.remove(cluster_idx)
+                cluster.clearing_price_reached = True
                 continue
 
-            _asks = asks.copy()
-
-            # annotate asking price by grid-fee:
-            # get cluster ID for all asks, preserve ordering
-            ask_cluster_ids = list(_asks.cluster)
-            # get grid_fees from any node in cluster to different ask actors
-            # get grid_fees in same order as ask node IDs
-
-            ask_grid_fees = [self.get_grid_fee(bid_cluster=cluster_idx,ask_cluster=i)
-                             for i in ask_cluster_ids]
-            # set adjusted price with network grid-fee
-            _asks["adjusted_price"] = pd.Series(_asks.price + ask_grid_fees, index=_asks.index)
-
             # order local bids and asks by price
-            _bids = _bids.sort_values(["price"], ascending=False)
-            _asks = _asks.sort_values(["adjusted_price", "price"], ascending=[True, False])
-
-            # Store the sorted and adjusted asks
-            all_asks[cluster_idx] = _asks.copy()
-            all_bids[cluster_idx] = _bids.copy()
+            cluster.bids = cluster.bids.sort_values(["price"], ascending=False)
+            cluster.asks = cluster.asks.sort_values(["adjusted_price", "price"],
+                                                    ascending=[True, False])
 
             # match local bids and asks
-            bid_iter = _bids.iterrows()
-            bid_id, bid = next(bid_iter)
-            _matches = []
-            highest_bid_row = -1
-            for ask_id, ask in _asks.iterrows():
-                # compare with next bid
-                if bid is not None:
-                    # still bids in queue
-                    if ask.adjusted_price <= bid.price:
-                        # the lowest bid which still got matched. Taking the row is equivalent to
-                        # the energy amount.
-                        highest_bid_row = _bids.index.get_loc(bid.name)
-                    else:
-                        # bid price is lower than ask. Continuing iteration does not make sense
-                        break
+            cluster.match_locally()
 
-                    # get next bid
-                    try:
-                        bid_id, bid = next(bid_iter)
-                    except (StopIteration, IndexError):
-                        break
-                # get next ask
-
-            matched_bids[cluster_idx] = _bids.iloc[0:highest_bid_row+1].copy()
-
-
-        # All bids are matched with all asks. Get the clearing price for each cluster
-        for cluster_idx in clusters_to_match.copy():
-            if len(matched_bids[cluster_idx]) == 0:
-                # No matches in this bid cluster although all asks were available. No need to check
-                # this cluster further
-                clusters_to_match.remove(cluster_idx)
-            else:
-                amount = len(matched_bids[cluster_idx])
-                # amount of 1 should lead to clearing price of row=0 --> decrement amount by 1
-                row = amount-1
-                all_clearing_prices[cluster_idx] = all_asks[cluster_idx].iloc[row]["adjusted_price"]
+        # Clusters without matches can be discarded
+        for cluster in self.clusters:
+            if cluster.matched_energy_units <= 0:
+                cluster.clearing_price_reached = True
 
         # Cycle through the clusters.
         # Check the other clusters for the same ask
         # and remove the matches with lower profit. Make sure to change the clearing price
         # each cluster gets an iterator for its index to keep track on checked matches
-        index_iterators = {idx: iter(range(len(matched_bids[idx]))) for idx in clusters_to_match}
-        indices = {idx: next(index_iterators[idx]) for idx in clusters_to_match}
-        clusters_to_match_copy = {idx for idx in clusters_to_match}
+        for cluster in self.clusters:
+            cluster._row = 0
 
         counter = 0
-        while len(clusters_to_match_copy)>0:
-            clusters_to_match = {idx for idx in clusters_to_match_copy}
+        while self.clusters_to_match_exist():
+            clusters_to_match = self.get_clusters_to_match()
+            bid_cluster = clusters_to_match[counter % len(clusters_to_match)]
+            idx = bid_cluster._row
 
-            current_cluster = list(clusters_to_match)[counter % len(clusters_to_match)]
-            idx = indices[current_cluster]
+            try:
+                ask = bid_cluster.asks.iloc[idx]
+                assert idx + 1 <= bid_cluster.matched_energy_units
+            except (IndexError, AssertionError):
+                bid_cluster.clearing_price_reached = True
+                continue
             counter += 1
 
-            cluster_idx = current_cluster
-            try:
-                ask = all_asks[cluster_idx].iloc[idx]
-            except IndexError:
-                clusters_to_match_copy.remove(cluster_idx)
-                continue
-
             ask_id = ask.name
-            best_profit = float("-inf")
-            best_match_cluster = current_cluster
-
-            # find best cluster for this ask
-            # best price AND also capacity to take the energy
-            for ii in clusters_to_match:
-                # Note: ask_price does not influence the best cluster, since the "pure" ask price is
-                # the same for all clusters. The all_asks is still used to confirm the ask is
-                # not deleted yet
-                try:
-                    profit = all_clearing_prices[ii] - all_asks[ii].loc[ask_id]["adjusted_price"]
-                except KeyError:
-                    continue
-
-                energy_in_bids_to_match = len(matched_bids[ii]) - 1
-                energy_in_asks = all_asks[ii].index.get_loc(ask_id)
-                if profit > best_profit and energy_in_bids_to_match>=energy_in_asks:
-                    best_profit = profit
-                    best_match_cluster = ii
+            best_match_cluster = self.find_best_profit_cluster(ask_id)
+            assert best_match_cluster is not None
 
             # best cluster to match found. Remove matches from other clusters and adjust their
             # clearing price
-            for ii in clusters_to_match:
-                if ii == best_match_cluster:
+            for cluster in self.clusters:
+                if cluster == best_match_cluster:
                     continue
-                # drop the ask from the asks in the "bad" cluster
                 try:
-                    all_asks[ii]=all_asks[ii].drop(ask_id)
+                    cluster.asks = cluster.asks.drop(ask_id)
+                    cluster.match_locally()
                 except KeyError:
                     # ask_id not found. Already deleted
                     continue
 
-                # update clearing price and make sure the matched_bids get adjusted if need be
-                bid_price = matched_bids[ii].iloc[-1]["price"]
-                row = len(matched_bids[ii]) - 1
-                if (all_asks[ii].iloc[row]["adjusted_price"] == all_clearing_prices[ii] and
-                    all_asks[ii].iloc[row]["adjusted_price"] < bid_price):
-                    # all good, ask was removed, but another ask can still fulfill the same energy
-                    # amount for the same clearing price
-                    pass
-                elif all_asks[ii].iloc[row]["adjusted_price"] <= bid_price:
-                    # same amount of bids are met, but for a higher clearing price.
-                    all_clearing_prices[ii] = all_asks[ii].iloc[row]["adjusted_price"]
-                else:
-                    # matched energy for the cluster has to be reduced. clearing price remains
-                    # or in case the highest ask was removed it sinks
-                    assert all_clearing_prices[ii] >= all_asks[ii].iloc[row-1]["adjusted_price"]
-                    matched_bids[ii].drop(matched_bids[ii].iloc[-1].name, inplace=True)
-                    row = len(matched_bids[ii]) - 1
-                    all_clearing_prices[ii] = all_asks[ii].iloc[row]["adjusted_price"]
-
-            if best_match_cluster == cluster_idx:
-                # if the best match cluster was the current cluster, the index should increment
+            if best_match_cluster == bid_cluster:
+                # if the best match cluster was the current cluster, the row index should increment
                 # if not the idx stays the same, since the element was removed.
-                try:
-                    indices[cluster_idx] = next(index_iterators[cluster_idx])
-                except StopIteration:
-                    clusters_to_match_copy.remove(cluster_idx)
+                bid_cluster._row += 1
 
         # All asks for each cluster should be unique now
-        # assert len(set(all_asks[0].index[0:len(matched_bids[0])]).intersection(all_asks[1].index[0:len(matched_bids[1])])) == 0
-
         # since ask went to the best clusters at a moment when the total matched energy was not
         # decided, the following part runs through all asks, and checks if moving them is profitable
         # for them
 
         # move ask around / insert them for as long as they find higher profit chances
         asks_changed = True
-        counter=0
+        # ToDo Might want to have a counter which stops this loop if it does not converge.
         while asks_changed:
-            # leave loop if nothing changes. Set asks_changed to true if smth changed this
-            # iteration
-            counter +=1
-            if counter>100:
-                warnings.warn("Balancing markets through profit oriented shuffling does not"
-                              "converge", stacklevel=100)
-                break
             asks_changed = False
 
-            bottom_asks=[]
-            clusters = [i for i in matched_bids]
-            for i, df_bids in matched_bids.items():
-                if len(df_bids) == 0:
+            # List tuples (ask, bid_cluster), which has the lowest ask per ask cluster for each
+            # (bid) cluster, and is sorted by price, e.g. 2 clusters with bids and asks each, would
+            # result in a list of maximum 4 entries with 2 entries for each cluster
+            bottom_asks = self.get_bottom_asks()
+
+            for bottom_ask, bid_cluster in bottom_asks:
+                best_profit = bid_cluster.clearing_price - bottom_ask.adjusted_price
+                if best_profit < 0:
                     continue
-                for cluster_idx in clusters:
-                    asks_with_cluster= all_asks[i][all_asks[i].cluster == cluster_idx]
-                    if len(asks_with_cluster)>0:
-                        bottom_asks.append((asks_with_cluster.iloc[0], i))
-
-                # bottom_asks.append((all_asks[i].iloc[0], i))
-
-            bottom_asks = sorted(bottom_asks, key=lambda x: x[0].price)
-            for bottom_ask,i in bottom_asks:
-                best_profit = float("-inf")
-                best_insert_cluster = None
-                best_lower_bid = None
-                best_clearing_price = float("-inf")
-                best_insertion_price = float("-inf")
-                for ii, df_bids_2 in matched_bids.items():
-                    # check how the ask would interact in another cluster ii
-                    if i == ii:
-                        continue
-                    # what would be the price of the ask in this other cluster be
-                    insertion_price = bottom_ask.price+self.grid_fee_matrix[bottom_ask.cluster][ii]
-                    if insertion_price >= all_clearing_prices[ii]:
-                        # if its worse than the clearing price, it will not be inserted
-                        continue
-                    # ask is lower than clearing price of other cluster. Insertion only makes sense
-                    # if the ask does not become the new clearing price
-
-                    next_lower_bid = all_bids[ii].iloc[len(df_bids_2)]
-                    if next_lower_bid.price < all_clearing_prices[ii]:
-                        # inserting an ask will move the highest ask out of the matches
-                        # clearing price will be the second highest ask before insertion OR the new ask
-                        new_clearing_price = max(all_asks[ii].iloc[len(df_bids_2)-2].adjusted_price,
-                                                 insertion_price)
-                    else:
-                        # next bid is still over clearing price. Insertion will not change the
-                        # clearing price, but the matched bids need to bee appended
-                        new_clearing_price = all_clearing_prices[ii]
-
-                    profit_new = new_clearing_price-insertion_price
-                    if profit_new > best_profit:
-                        best_profit = profit_new
-                        best_clearing_price = new_clearing_price
-                        best_insertion_price= insertion_price
-                        best_insert_cluster = ii
-                        best_lower_bid = next_lower_bid
-
-                insertion_price = best_insertion_price
-                new_clearing_price = best_clearing_price
-                next_lower_bid = best_lower_bid
-                ii = best_insert_cluster
-                profit_new = best_profit
-
-                profit_before = all_clearing_prices[i]-bottom_ask.adjusted_price
-                if profit_new > profit_before:
-                    print(f"Moving Actor {bottom_ask.actor_id} from cluster {i} with clearing price"
-                          f" of {all_clearing_prices[i]} to cluster{best_insert_cluster} with new clearing price of"
-                          f" {best_clearing_price}")
-
-                    # ask will be moved from cluster i to other cluster ii
-                    asks_changed = True
-                    all_asks[i] = all_asks[i].drop(bottom_ask.name)
-                    new_clearing_price_i=all_asks[i].iloc[len(matched_bids[i])-1].adjusted_price
-
-                    original_clearing_bid = all_bids[i].iloc[len(matched_bids[i])-1]
-
-                    if new_clearing_price_i <= matched_bids[i].iloc[-1].price:
-                        # all good. New clearing price of more expensive ask is below bid cap
-                        all_clearing_prices[i] = new_clearing_price_i
-
-                    else:
-                        # removing the ask reduced the matched energy. Adjust clearing price
-                        # and matched bids
-                        new_clearing_price_i = all_asks[i].iloc[len(matched_bids[i])-2].adjusted_price
-                        all_clearing_prices[i] = new_clearing_price_i
-                        matched_bids[i]=matched_bids[i].drop(matched_bids[i].iloc[-1].name)
-
-
-                    all_asks[ii].loc[bottom_ask.name] = bottom_ask
-                    all_asks[ii].loc[bottom_ask.name, "adjusted_price"] = insertion_price
-                    all_asks[ii] = all_asks[ii].sort_values(by=["adjusted_price", "price"])
-                    all_clearing_prices[ii] = new_clearing_price
-
-                    new_cap_ask_ii=all_asks[ii].iloc[len(matched_bids[ii])-1]
-                    # new cap of ii could also be the cap of i. Therefore its moved and the original
-                    # clearing price for ii is recovered
-
-                    # original_clearing_bid_price_i=original_clearing_bid.price
-                    # if (new_cap_ask_ii.price + self.grid_fee_matrix[new_cap_ask_ii.cluster][ii]
-                    #         <= original_clearing_bid_price_i):
-                    #     all_asks[ii]=all_asks[ii].drop(new_cap_ask_ii.name)
-                    #     all_clearing_prices[ii] = all_asks[ii].iloc[len(matched_bids[ii])-1].adjusted_price
-                    #
-                    #     all_asks[i].loc[new_cap_ask_ii.name] = new_cap_ask_ii
-                    #     new_cap_adjusted_price = new_cap_ask_ii.price + \
-                    #                              self.grid_fee_matrix[new_cap_ask_ii.cluster][i]
-                    #     all_clearing_prices[i] = new_cap_adjusted_price
-                    #     all_asks[i].loc[new_cap_ask_ii.name, "adjusted_price"] = new_cap_adjusted_price
-                    #     all_asks[i] = all_asks[i].sort_values(by=["adjusted_price", "price"])
-                    #     matched_bids[i].loc[original_clearing_bid.name] = original_clearing_bid
-
-
-
-                    appended_clearing_price=all_asks[ii].iloc[len(matched_bids[ii])].adjusted_price
-                    if next_lower_bid.price >= appended_clearing_price:
-                        matched_bids[ii].loc[next_lower_bid.name] = next_lower_bid
-                        all_clearing_prices[ii] = appended_clearing_price
-
-
-
-
-                    # cluster i lost an ask. An unmatched ask might want to cap this cluster
-                    next_bid = all_bids[i].iloc[len(matched_bids[i])]
-                    lowest_ask_price = float("inf")
-                    current_cluster = None
-                    for iii, df_bids_iii in matched_bids.items():
-                        if len(df_bids_iii) == 0:
-                            continue
-                        # is unmatched ask viable for capping cluster i?
-                        checked_ask = all_asks[iii].iloc[len(df_bids_iii)]
-                        if checked_ask.price+self.grid_fee_matrix[checked_ask.cluster][i] < lowest_ask_price:
-                            ask_4_cap = checked_ask
-                            lowest_ask_price = ask_4_cap.price+self.grid_fee_matrix[ask_4_cap.cluster][i]
-                            current_cluster = iii
-                    if lowest_ask_price < next_bid.price:
-                        # an ask was found to fill the gap left by moving the ask.
-                        # adjust clearing price of cluster, drop ask from old cluster,
-                        # add ask to new cluster and append matched bids
-
-                        all_asks[current_cluster] = all_asks[current_cluster].drop(ask_4_cap.name)
-                        all_asks[i].loc[ask_4_cap.name] = ask_4_cap
-                        all_asks[i].loc[ask_4_cap.name, "adjusted_price"] = ask_4_cap.price+self.grid_fee_matrix[ask_4_cap.cluster][i]
-                        all_asks[i] = all_asks[i].sort_values(by=["adjusted_price", "price"])
-                        matched_bids[i].loc[next_bid.name]=next_bid
-                        all_asks[i] = all_asks[i].sort_values(by=["price"])
-                        # sometimes, an inserted ask pushes the previous last match out of
-                        # matching. Here it is checked that no impossible matches exist
-                        impossible_matches = True
-                        while impossible_matches:
-                            impossible_matches = False
-                            row = matched_bids[i].index.get_loc(matched_bids[i].iloc[-1].name)
-                            if all_asks[i].iloc[row].adjusted_price > matched_bids[i].iloc[row].price:
-                                matched_bids[i]=matched_bids[i].drop(matched_bids[i].iloc[row].name)
-                                impossible_matches = True
-                        all_clearing_prices[i] = all_asks[i].iloc[row].adjusted_price
-
-                        print(
-                            f"Capping Actor {ask_4_cap.actor_id} from cluster {current_cluster} with clearing price"
-                            f" of {all_clearing_prices[current_cluster]} to cluster{i} with new clearing price of"
-                            f" {all_clearing_prices[i]}")
-
-                    break
-
-                else:
-                    # ask would become the new clearing price. since the profit is zero it
-                    # would only make sense, in case the ask was not matched before.
-                    # Since only matched bids are checked right now, no need for checking
-                    # if it was matched before is needed
+                best_grid_fee = self.get_grid_fee(bid_cluster=bid_cluster.idx,
+                                                  ask_cluster=bottom_ask.cluster)
+                clusters = [cluster for cluster in self.clusters if cluster != bid_cluster]
+                best_clearing, best_cluster, _ = self.get_best_cluster(best_grid_fee, best_profit,
+                                                                       bottom_ask, clusters)
+                if best_cluster is None:
+                    # no better cluster found than the current one
                     continue
+                asks_changed = True
+                bid_cluster.remove(bottom_ask)
+                best_cluster.insert(bottom_ask, best_clearing)
 
-
-        for i, _ in enumerate(matched_bids.values()):
-            asks = all_asks[i]
-            m_bids = matched_bids[i]
-            for ii, single_bid in enumerate(m_bids.itertuples()):
+        matches = []
+        for cluster in self.clusters:
+            asks_ = cluster.asks
+            bids_ = cluster.bids
+            # at this point the matched energy unit should be correct already
+            assert cluster.matched_energy_units == \
+                   get_clearing(bids_, asks_)["matched_energy_units"]
+            for i in range(cluster.matched_energy_units):
+                ask = asks_.iloc[i]
+                bid = bids_.iloc[i]
                 matches.append({
                     "time": self.t_step,
-                    "bid_id": single_bid.Index,
-                    "ask_id": asks.iloc[ii].name,
-                    "bid_actor": single_bid.actor_id,
-                    "ask_actor": asks.iloc[ii].actor_id,
-                    "bid_cluster": single_bid.cluster,
-                    "ask_cluster": asks.iloc[ii].cluster,
+                    "bid_id": bid.name,
+                    "ask_id": ask.name,
+                    "bid_actor": bid.actor_id,
+                    "ask_actor": ask.actor_id,
+                    "bid_cluster": bid.cluster,
+                    "ask_cluster": ask.cluster,
                     "energy": cfg.config.energy_unit,
-                    "price": all_clearing_prices[i],
-                    "included_grid_fee": asks.iloc[ii].adjusted_price - asks.iloc[ii].price
+                    "price": cluster.clearing_price,
+                    "included_grid_fee": ask.adjusted_price - ask.price
                 })
+
+        matches = self.group_matches(asks, bids, matches)
+
         return matches
 
+    def get_best_cluster(self, best_grid_fee, best_profit, ask, clusters):
+        best_clearing = None
+        best_cluster = None
+        for cluster in clusters:
+            grid_fee = self.get_grid_fee(bid_cluster=cluster.idx, ask_cluster=ask.cluster)
+            if cluster.clearing_price - (ask.price + grid_fee) < best_profit:
+                # insertion of an ask can only lower the profit. If even the upper bound can not
+                # compete with current best profit, skipping the rest increases function speed
+                continue
+            insertion_profit, clearing = cluster.get_insertion_profit(ask)
+            if (insertion_profit > best_profit or
+                    insertion_profit == best_profit and grid_fee < best_grid_fee):
+                best_profit = insertion_profit
+                best_cluster = cluster
+                best_clearing = clearing
+                best_grid_fee = grid_fee
+        return best_clearing, best_cluster, best_profit
 
-    def remove_double_matches(self, exclude, match, _match, clusters_to_match, matches, bids,
-                              match_idx=None):
-        if self.disputed_matching == 'price':
-            if _match["price"] > match["price"]:
-                # new match is better:
-                # exclude old match
-                self.exclude_matches(exclude, match, _match, clusters_to_match, matches,
-                                     match_idx=match_idx, exclude_exisiting=True)
-            else:
-                # old match is better: exclude new match
-                self.exclude_matches(exclude, _match, match, clusters_to_match, matches,
-                                     exclude_exisiting=False)
+    def get_bottom_asks(self):
+        bottom_asks = []
+        for cluster in self.clusters:
+            if cluster.matched_energy_units == 0:
+                continue
+            for _cluster in self.clusters:
+                asks_with_cluster = cluster.asks[cluster.asks.cluster == _cluster.idx]
+                if len(asks_with_cluster) > 0:
+                    bottom_asks.append((asks_with_cluster.iloc[0], cluster))
+        bottom_asks = sorted(bottom_asks, key=lambda x: x[0].price)
+        return bottom_asks
 
-        elif self.disputed_matching == 'grid_fee':
-            if _match["included_grid_fee"] < match["included_grid_fee"] \
-                    or _match["included_grid_fee"] == match["included_grid_fee"] \
-                    and bids.loc[_match['bid_id'], 'price'] > bids.loc[match['bid_id'], 'price']:
-                # new match is better:
-                # exclude old match
-                self.exclude_matches(exclude, match, _match, clusters_to_match,
-                                     matches, match_idx=match_idx, exclude_exisiting=True)
-            else:
-                # old match is better: exclude new match
-                self.exclude_matches(exclude, _match, match, clusters_to_match, matches,
-                                     exclude_exisiting=False)
+    def find_best_profit_cluster(self, ask_id):
+        best_profit = float("-inf")
+        best_grid_fee = float("inf")
+        best_match_cluster = None
+        # find best cluster for this ask
+        # best price AND also capacity to take the energy
+        for cluster in self.get_clusters_to_match():
+            # Note: ask_price does not influence the best cluster, since the "pure" ask price is
+            # the same for all clusters. The all_asks is still used to confirm the ask is
+            # not deleted yet
+            try:
+                ask = cluster.asks.loc[ask_id]
+                profit = cluster.clearing_price - ask.adjusted_price
+                grid_fee = ask.adjusted_price - ask.price
+            except KeyError:
+                continue
+            if ((profit > best_profit and profit >= 0) or
+                    (profit == best_profit and grid_fee < best_grid_fee)):
+                best_profit = profit
+                best_match_cluster = cluster
+                best_grid_fee = grid_fee
+        return best_match_cluster
 
-        elif self.disputed_matching == 'bid_price':
-            if bids.loc[_match['bid_id'], 'price'] > bids.loc[match['bid_id'], 'price'] or \
-                    bids.loc[_match['bid_id'], 'price'] == bids.loc[match['bid_id'], 'price'] and \
-                    _match['included_grid_fee'] < match['included_grid_fee']:
-                # new match is better:
-                # exclude old match
-                self.exclude_matches(exclude, match, _match, clusters_to_match, matches,
-                                     match_idx=match_idx, exclude_exisiting=True)
-            else:
-                # old match is better: exclude new match
-                self.exclude_matches(exclude, _match, match, clusters_to_match, matches,
-                                     exclude_exisiting=False)
-        elif self.disputed_matching == 'profit':
-            if _match["price"] - _match["included_grid_fee"] > \
-                    match["price"] - match["included_grid_fee"]:
-                # new match is better:
-                # exclude old match
-                self.exclude_matches(exclude, match, _match, clusters_to_match, matches,
-                                     match_idx=match_idx, exclude_exisiting=True)
-            else:
-                # old match is better: exclude new match
-                self.exclude_matches(exclude, _match, match, clusters_to_match, matches,
-                                     exclude_exisiting=False)
+    def split_orders_to_energy_unit(self, orders):
+        orders = pd.DataFrame(orders)
+        orders["order_id"] = orders.index
+        orders = pd.DataFrame(orders.values.repeat(
+            orders.energy * (1 / cfg.config.energy_unit), axis=0), columns=orders.columns)
+        orders.energy = cfg.config.energy_unit
+        return orders
+
+    def filter_orders(self, asks, bids):
+        large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
+        large_asks = asks[large_asks_mask]
+        asks_mm = large_asks[large_asks.energy >= MARKET_MAKER_THRESHOLD]
+        if len(asks_mm) > 1:
+            print(f"WARNING! More than one ask market maker:{len(asks_mm)}")
+        asks = asks[~large_asks_mask]
+        if len(large_asks) > len(asks_mm):
+            print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
+        large_bids_mask = bids.energy >= LARGE_ORDER_THRESHOLD
+        large_bids = bids[large_bids_mask]
+        bids_mm = large_bids[large_bids.energy >= MARKET_MAKER_THRESHOLD]
+        if len(bids_mm) > 1:
+            print(f"WARNING! More than one bid market maker: {len(bids_mm)}")
+        bids = bids[~large_bids_mask]
+        if len(large_bids) > len(bids_mm):
+            print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
+        return asks, asks_mm, bids, bids_mm
+
+
+def get_clearing(bids, asks):
+    clearing = dict()
+    clearing["matched_energy_units"] = 0
+    clearing["clearing_price"] = -float("inf")
+    clearing["bid_clearing_price"] = None
+    for row, item in enumerate(bids.price.items()):
+        _, bid_price = item
+        try:
+            ask_price = asks.adjusted_price.iloc[row]
+        except IndexError:
+            return clearing
+        if ask_price <= bid_price:
+            clearing["matched_energy_units"] = row + 1
+            clearing["clearing_price"] = ask_price
+            clearing["bid_clearing_price"] = bid_price
+        else:
+            return clearing
+    return clearing
