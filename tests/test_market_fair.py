@@ -1,5 +1,5 @@
 from simply.actor import Order
-from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD
+from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD, time_it
 from simply.power_network import PowerNetwork
 import simply.config as cfg
 
@@ -223,7 +223,7 @@ class TestBestMarket:
         """Tests that matches can be made which require multiple asks to satisfy one bid or multiple
         bids to satisfy one ask."""
         # multiple bids to satisfy one ask
-        m = BestMarket(time_step=0, network=self.pn)
+        m = BestMarket(time_step=0, network=self.pn, disputed_matching="grid_fee")
         m.accept_order(Order(-1, 0, 2, None, .1, 4))
         m.accept_order(Order(-1, 0, 3, None, 3, 3))
         m.accept_order(Order(1, 0, 4, None, 2, 1))

@@ -596,7 +596,7 @@ class BestMarket(Market):
 
             ask_row = cluster.asks.index.get_loc(ask_id)
             try:
-                print(f"remove row {ask_row} from cluster {cluster.idx}")
+                # print(f"remove row {ask_row} from cluster {cluster.idx}")
                 cluster.ask_iterator.remove(ask_row)
             except ValueError:
                 # ask_id not found. Already deleted
