@@ -1,12 +1,44 @@
-import warnings
-
 import pandas as pd
 from simply.market import Market
 import simply.config as cfg
 from typing import List
 from simply.market import LARGE_ORDER_THRESHOLD
 from simply.market import MARKET_MAKER_THRESHOLD
+from time import time
 
+def time_it(function, timers={}):
+    """Decorator function to time the duration and number of function calls.
+
+    :param function: function do be decorated
+    :type function: function
+    :param timers: storage for cumulated time and call number
+    :type timers: dict
+    :return: decorated function or timer if given function is None
+    :rtype function or dict
+
+    """
+    if function == "flush":
+        keys = [key for key in timers.keys()]
+        for key in keys:
+            del timers[key]
+        return
+    if function:
+        def decorated_function(*this_args, **kwargs):
+            key = function.__name__
+            start_time = time()
+            return_value = function(*this_args, **kwargs)
+            delta_time = time() - start_time
+            try:
+                timers[key]["time"] += delta_time
+                timers[key]["calls"] += 1
+            except KeyError:
+                timers[key] = dict(time=0, calls=1)
+                timers[key]["time"] += delta_time
+            return return_value
+
+        return decorated_function
+    sorted_timer = dict(sorted(timers.items(), key=lambda x: x[1]["time"] / x[1]["calls"]))
+    return sorted_timer
 
 class BestCluster:
     """Class which keeps track of attributes resolving around a cluster and
@@ -27,18 +59,22 @@ class BestCluster:
         self.bid_clearing_price: float = None
         self.clearing_price_reached: bool = False
         self.matched_energy_units: int = 0
+        self.ask_iterator = []
         self._row: int
 
     def __repr__(self):
-        return f"BestCluster with matched units: {self.matched_energy_units}, clearing price: " \
+        return f"BestCluster {self.idx} with matched units: {self.matched_energy_units}, clearing price: " \
                f"{self.clearing_price}"
-
+    @time_it
     def match_locally(self):
-        clearing = get_clearing(self.bids, self.asks)
+        clearing = get_clearing(self.bids, self.asks,
+                                prev_clearing_energy=self.matched_energy_units,
+                                ask_iterator=self.ask_iterator)
         self.matched_energy_units = clearing["matched_energy_units"]
         self.clearing_price = clearing["clearing_price"]
         self.bid_clearing_price = clearing["bid_clearing_price"]
 
+    @time_it
     def get_insertion_profit(self, ask):
         ask = ask.copy()
         ask.adjusted_price = ask.price + self.market.get_grid_fee(bid_cluster=self.idx,
@@ -49,6 +85,7 @@ class BestCluster:
         clearing = get_clearing(self.bids, asks)
         return clearing["clearing_price"] - ask.adjusted_price, clearing
 
+    @time_it
     def remove(self, ask):
         print(f"removing {ask.name} from cluster {self.idx}")
         old_matched_energy = self.matched_energy_units
@@ -63,9 +100,11 @@ class BestCluster:
                     continue
                 try:
                     cluster.asks = cluster.asks.drop(ask.name)
+                    cluster.asks = cluster.asks.drop(ask.name)
                 except KeyError:
                     pass
 
+    @time_it
     def insert(self, ask, clearing):
 
         old_matched_energy = self.matched_energy_units
@@ -126,12 +165,13 @@ class BestMarket(Market):
         # ToDo: enum-type would be nicer than string
         self.disputed_matching = disputed_matching
 
+    @time_it
     def resolve_dispute(self,ask, bid_cluster):
         if self.disputed_matching == "grid_fee":
             # for dispute values bigger is better, therefore negative price
             return -self.get_grid_fee(bid_cluster=bid_cluster.idx,
                                                   ask_cluster=ask.cluster)
-        elif self.disputed_matching == "bid_price" :
+        elif self.disputed_matching == "bid_price":
             try:
                 asks = bid_cluster.asks.copy()
                 ask = ask.copy()
@@ -144,7 +184,7 @@ class BestMarket(Market):
             return val
         raise ValueError
 
-
+    @time_it
     def clusters_to_match_exist(self):
         for cluster in self.clusters:
             if not cluster.clearing_price_reached:
@@ -155,6 +195,7 @@ class BestMarket(Market):
     def get_clusters_to_match(self):
         return [cluster for cluster in self.clusters if not cluster.clearing_price_reached]
 
+    @time_it
     def match_old(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
@@ -354,6 +395,7 @@ class BestMarket(Market):
 
         return matches
 
+    @time_it
     def group_matches(self, asks, bids, matches):
         # group matches: ask -> bid -> match
         _matches = {}
@@ -386,9 +428,11 @@ class BestMarket(Market):
         matches = [m for ask_matches in _matches.values() for m in ask_matches.values()]
         return matches
 
+    @time_it
     def match(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
+
 
         # filter out market makers (infinite bus) and really large orders
         asks, asks_mm, bids, bids_mm = self.filter_orders(asks, bids)
@@ -412,7 +456,6 @@ class BestMarket(Market):
 
         self.clusters = [BestCluster(idx=idx, bestmarket=self) for idx in
                          range(len(self.grid_fee_matrix))]
-
         # Work with copy to be able to remove empty bid clusters
         cluster_to_match = self.get_clusters_to_match()
         for cluster in cluster_to_match:
@@ -420,8 +463,9 @@ class BestMarket(Market):
 
             # get local bids
             cluster.bids = bids[bids.cluster == cluster.idx]
-
             cluster.asks = asks.copy()
+            cluster.ask_iterator = [*range(0, len(cluster.asks))]
+
             # annotate asking price by grid-fee:
             cluster.asks["adjusted_price"] = cluster.asks["price"] + cluster.asks["cluster"].apply(
                 lambda x: self.get_grid_fee(bid_cluster=cluster.idx, ask_cluster=x))
@@ -453,13 +497,14 @@ class BestMarket(Market):
             cluster._row = 0
 
         counter = 0
+        t = time()
         while self.clusters_to_match_exist():
             clusters_to_match = self.get_clusters_to_match()
             bid_cluster = clusters_to_match[counter % len(clusters_to_match)]
             idx = bid_cluster._row
 
             try:
-                ask = bid_cluster.asks.iloc[idx]
+                ask = bid_cluster.asks.iloc[bid_cluster.ask_iterator[idx]]
                 assert idx + 1 <= bid_cluster.matched_energy_units
             except (IndexError, AssertionError):
                 bid_cluster.clearing_price_reached = True
@@ -472,26 +517,24 @@ class BestMarket(Market):
 
             # best cluster to match found. Remove matches from other clusters and adjust their
             # clearing price
-            for cluster in self.clusters:
-                if cluster == best_match_cluster:
-                    continue
-                try:
-                    cluster.asks = cluster.asks.drop(ask_id)
-                    cluster.match_locally()
-                except KeyError:
-                    # ask_id not found. Already deleted
-                    continue
+            self.remove_from_other_clusters(ask_id, best_match_cluster)
 
             if best_match_cluster == bid_cluster:
                 # if the best match cluster was the current cluster, the row index should increment
                 # if not the idx stays the same, since the element was removed.
                 bid_cluster._row += 1
 
+        # So far asks, were not removed from dataframes but only from the index in
+        # cluster.ask_iterator. This was done since removing single asks is computationally heavy.
+        # The dataframes are now set to the remaining indices
+        for cluster in self.clusters:
+            cluster.asks = cluster.asks.iloc[cluster.ask_iterator]
+
+        print (time() -t )
         # All asks for each cluster should be unique now
         # since ask went to the best clusters at a moment when the total matched energy was not
         # decided, the following part runs through all asks, and checks if moving them is profitable
         # for them
-
         # move ask around / insert them for as long as they find higher profit chances
         asks_changed = True
         # ToDo Might want to have a counter which stops this loop if it does not converge.
@@ -544,7 +587,22 @@ class BestMarket(Market):
         matches = self.group_matches(asks, bids, matches)
 
         return matches
+    @time_it
+    def remove_from_other_clusters(self, ask_id, best_match_cluster):
+        for cluster in self.clusters:
+            if cluster == best_match_cluster:
+                continue
 
+            ask_row = cluster.asks.index.get_loc(ask_id)
+            try:
+                print(f"remove row {ask_row} from cluster {cluster.idx}")
+                cluster.ask_iterator.remove(ask_row)
+            except ValueError:
+                # ask_id not found. Already deleted
+                continue
+            cluster.match_locally()
+
+    @time_it
     def get_best_cluster(self, best_dispute_value, best_profit, ask, clusters):
         best_clearing = None
         best_cluster = None
@@ -563,7 +621,7 @@ class BestMarket(Market):
                 best_clearing = clearing
                 best_dispute_value = dispute_value
         return best_clearing, best_cluster, best_profit
-
+    @time_it
     def get_bottom_asks(self):
         bottom_asks = []
         for cluster in self.clusters:
@@ -575,7 +633,7 @@ class BestMarket(Market):
                     bottom_asks.append((asks_with_cluster.iloc[0], cluster))
         bottom_asks = sorted(bottom_asks, key=lambda x: x[0].price)
         return bottom_asks
-
+    @time_it
     def find_best_profit_cluster(self, ask_id):
         best_profit = float("-inf")
         best_dispute_value = -float("inf")
@@ -598,7 +656,7 @@ class BestMarket(Market):
                 best_match_cluster = cluster
                 best_dispute_value = dispute_value
         return best_match_cluster
-
+    @time_it
     def split_orders_to_energy_unit(self, orders):
         orders = pd.DataFrame(orders)
         orders["order_id"] = orders.index
@@ -606,7 +664,7 @@ class BestMarket(Market):
             orders.energy * (1 / cfg.config.energy_unit), axis=0), columns=orders.columns)
         orders.energy = cfg.config.energy_unit
         return orders
-
+    @time_it
     def filter_orders(self, asks, bids):
         large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
         large_asks = asks[large_asks_mask]
@@ -626,16 +684,22 @@ class BestMarket(Market):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
         return asks, asks_mm, bids, bids_mm
 
-
-def get_clearing(bids, asks):
+@time_it
+def get_clearing(bids, asks, prev_clearing_energy: int = None, ask_iterator=None):
     clearing = dict()
     clearing["matched_energy_units"] = 0
     clearing["clearing_price"] = -float("inf")
     clearing["bid_clearing_price"] = None
-    for row, item in enumerate(bids.price.items()):
-        _, bid_price = item
+    start_row = 0
+    if prev_clearing_energy:
+        start_row = min(prev_clearing_energy - 5, 0)
+
+    if ask_iterator is None:
+        ask_iterator = [*range(start_row, len(bids))]
+    for row in range(start_row, len(bids)):
         try:
-            ask_price = asks.adjusted_price.iloc[row]
+            bid_price = bids.price.iloc[row]
+            ask_price = asks.adjusted_price.iloc[ask_iterator[row]]
         except IndexError:
             return clearing
         if ask_price <= bid_price:

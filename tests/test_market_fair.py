@@ -377,7 +377,7 @@ class TestBestMarket:
         # Scenario 0 / Simple case
         # bids and asks are in a single cluster. Get the amount of matches and clearing price
         grid_fee_matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
-        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix, disputed_matching='profit')
+        m = BestMarket(self.pn, grid_fee_matrix=grid_fee_matrix, time_step=0)
         order_amount = 0.01
         for price in range(20, 0, -1):
             actor_id = price
@@ -386,7 +386,6 @@ class TestBestMarket:
 
         for price in range(0, 30, +1):
             price = max(price, 0.001)
-            price = price
             actor_id = price
             # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
             m.accept_order(Order(1, 0, actor_id, 0, order_amount, price))
@@ -399,7 +398,7 @@ class TestBestMarket:
         # Simple case with two clusters with the same asks and bids as Scenario 0 in each cluster
         # Nr of matches should double and clearing price should be the same
         grid_fee_matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
-        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix, disputed_matching='profit')
+        m = BestMarket(self.pn, grid_fee_matrix=grid_fee_matrix, time_step=0)
         order_amount = 0.01
         for price in range(20, 0, -1):
             actor_id = price
@@ -409,7 +408,6 @@ class TestBestMarket:
 
         for price in range(0, 30, +1):
             price = max(price, 0.001)
-            price = price
             actor_id = price
             # "Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
             m.accept_order(Order(1, 0, actor_id, 0, order_amount, price))
@@ -424,7 +422,7 @@ class TestBestMarket:
         # prices exist in both clusters clearing price needs to be identical
 
         grid_fee_matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
-        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix, disputed_matching='profit')
+        m = BestMarket(self.pn, grid_fee_matrix=grid_fee_matrix, time_step=0)
         order_amount = 0.01
 
         # BIDS
@@ -459,7 +457,7 @@ class TestBestMarket:
         # in cluster 1 should increase.
 
         grid_fee_matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
-        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix, disputed_matching='profit')
+        m = BestMarket(self.pn, grid_fee_matrix=grid_fee_matrix, time_step=0)
         order_amount = 0.01
 
         # BIDS
