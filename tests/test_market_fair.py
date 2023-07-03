@@ -353,7 +353,7 @@ class TestBestMarket:
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         grid_fee_matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
-        m = BestMarket(0, self.pn, grid_fee_matrix=grid_fee_matrix)
+        m = BestMarket(self.pn, grid_fee_matrix=grid_fee_matrix, time_step=0)
 
         # add bids for two clusters. cluster 2 has higher bids
         for price in range(20, 0, -1):

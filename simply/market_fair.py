@@ -178,8 +178,9 @@ class BestMarket(Market):
                 ask.adjusted_price = self.get_grid_fee(bid_cluster=bid_cluster.idx, ask_cluster=ask.cluster)
                 asks[ask.name] = ask
                 asks = asks.sort_values(["adjusted_price", "price"], ascending=[True, False])
-                val = bid_cluster.bids.iloc[asks.index.get_loc(ask.name)].price
-            except (KeyError, IndexError):
+                ask_row = asks.index.get_loc(ask.name)
+                val = bid_cluster.bids.iloc[bid_cluster.ask_iterator.index(ask_row)].price
+            except (KeyError, IndexError,ValueError):
                 val = -float("inf")
             return val
         raise ValueError
@@ -457,8 +458,8 @@ class BestMarket(Market):
         self.clusters = [BestCluster(idx=idx, bestmarket=self) for idx in
                          range(len(self.grid_fee_matrix))]
         # Work with copy to be able to remove empty bid clusters
-        cluster_to_match = self.get_clusters_to_match()
-        for cluster in cluster_to_match:
+        clusters_to_match = self.get_clusters_to_match()
+        for cluster in clusters_to_match:
             # simulate local market within cluster
 
             # get local bids
@@ -498,7 +499,9 @@ class BestMarket(Market):
 
         counter = 0
         t = time()
+        kk = 0
         while self.clusters_to_match_exist():
+            kk +=1
             clusters_to_match = self.get_clusters_to_match()
             bid_cluster = clusters_to_match[counter % len(clusters_to_match)]
             idx = bid_cluster._row
@@ -529,6 +532,8 @@ class BestMarket(Market):
         # The dataframes are now set to the remaining indices
         for cluster in self.clusters:
             cluster.asks = cluster.asks.iloc[cluster.ask_iterator]
+            cluster.ask_iterator = [*range(0, len(cluster.asks))]
+
 
         print (time() -t )
         # All asks for each cluster should be unique now
@@ -692,7 +697,7 @@ def get_clearing(bids, asks, prev_clearing_energy: int = None, ask_iterator=None
     clearing["bid_clearing_price"] = None
     start_row = 0
     if prev_clearing_energy:
-        start_row = min(prev_clearing_energy - 5, 0)
+        start_row = max(prev_clearing_energy - 5, 0)
 
     if ask_iterator is None:
         ask_iterator = [*range(start_row, len(bids))]
