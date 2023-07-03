@@ -498,10 +498,7 @@ class BestMarket(Market):
             cluster._row = 0
 
         counter = 0
-        t = time()
-        kk = 0
         while self.clusters_to_match_exist():
-            kk +=1
             clusters_to_match = self.get_clusters_to_match()
             bid_cluster = clusters_to_match[counter % len(clusters_to_match)]
             idx = bid_cluster._row
@@ -535,7 +532,6 @@ class BestMarket(Market):
             cluster.ask_iterator = [*range(0, len(cluster.asks))]
 
 
-        print (time() -t )
         # All asks for each cluster should be unique now
         # since ask went to the best clusters at a moment when the total matched energy was not
         # decided, the following part runs through all asks, and checks if moving them is profitable
