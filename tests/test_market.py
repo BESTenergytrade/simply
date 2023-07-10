@@ -1,5 +1,5 @@
 from simply.actor import Order
-from simply.market import Market
+from simply.market import Market, MARKET_MAKER_THRESHOLD
 from simply.power_network import PowerNetwork
 import simply.config as cfg
 import networkx as nx
@@ -261,6 +261,58 @@ class TestPayAsBid:
         assert matches[1]["energy"] == 20
         assert matches[2]["energy"] == 30
         assert matches[3]["energy"] == 40  # only 100 in bid
+
+    def test_market_maker(self):
+        # Test if inserting market_maker order works
+        # example: cost 1 all trades
+        m = Market(grid_fee_matrix=[[0, 1], [1, 0]], time_step=0)
+        # Market Maker
+        mm_price = 5
+        m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(1, 0, "MarketMaker", 1, MARKET_MAKER_THRESHOLD, mm_price))
+
+        # grid-fees between nodes only allow for partial matching
+        # Bids
+        m.accept_order(Order(-1, 0, 1, 0, 5, mm_price * 3))
+        m.accept_order(Order(-1, 0, 2, 0, 5, mm_price))
+
+        # Asks
+        m.accept_order(Order(1, 0, 3, 1, 3, mm_price * 2))
+        m.accept_order(Order(1, 0, 4, 1, 2, mm_price))
+        m.accept_order(Order(1, 0, 5, 1, 1, mm_price / 2))
+        matches = m.match()
+        # Bid actor 1 gets matched with 4,5 and the MM
+        assert len(matches) == 3
+        for m in matches:
+            assert m["bid_actor"] == 1
+            assert m["ask_actor"] in [4, 5, "MarketMaker"]
+            assert m["price"] == mm_price * 3
+
+        # Without a grid fee MarketMaker could match with itself
+        # this should not happen
+        m = Market(grid_fee_matrix=0, time_step=0)
+        # Market Maker
+        mm_price = 1
+        m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(1, 0, "MarketMaker", 1, MARKET_MAKER_THRESHOLD, mm_price))
+
+        matches = m.match()
+        # 1 bid gets matched, MM doesn't match with itself
+        assert len(matches) == 0
+
+        # but market maker should still match with other orders
+        m = Market(grid_fee_matrix=0, time_step=0)
+        # Market Maker
+        mm_price = 1
+        m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(1, 0, "MarketMaker", 1, MARKET_MAKER_THRESHOLD, mm_price))
+
+        # grid-fees between nodes only allow for partial matching
+        # Bids
+        m.accept_order(Order(-1, 0, 2, 0, 3, mm_price * 3))
+        matches = m.match()
+        # 1 bid gets matched, MM doesn't match with itself
+        assert len(matches) == 1
 
     def test_prices_matrix(self):
         # test prices with a given grid fee matrix
