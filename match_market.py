@@ -6,6 +6,7 @@ from simply import market, market_2pac, market_fair
 from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading
+import os
 
 
 """
