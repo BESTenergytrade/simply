@@ -31,6 +31,6 @@ jobs:
     - name: Test with pytest
       run: |
         pytest tests/
-    - name: Run main.py
+    - name: Run match_market.py
       run: |
-        python main.py
+        python match_market.py

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import simply.config as cfg
 from simply import actor, market_maker
 from simply import power_network
+#from simply.battery import Battery
 from simply.util import get_all_data
 from simply.market_maker import MarketMaker
 from simply.actor import Actor
