@@ -19,7 +19,7 @@ class TestMultipleActors:
     num_actors = 0
     NUM_STEPS = 24
     df = pd.DataFrame(np.random.rand(NUM_STEPS+24, 2), columns=["load", "pv"])
-    cfg.Config("")
+    cfg.Config("", "")
     df = df - df %  cfg.config.energy_unit
     SELL_MULT = 1/0.8
     # Sell prices of are higher than buy_prices. This way the MarketMaker makes a profit

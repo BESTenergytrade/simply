@@ -1,0 +1,9 @@
+time,bid_id,ask_id,bid_actor,ask_actor,bid_cluster,ask_cluster,energy,price,included_grid_fee
+1.0,0,2,residential_1,market_maker,0,,0.5,1.0,0
+1.0,1,2,residential_2,market_maker,0,,1.0,1.0,0
+2.0,0,2,residential_1,market_maker,0,,1.0,1.0,0
+2.0,1,2,residential_2,market_maker,0,,1.0,1.0,0
+3.0,0,2,residential_1,market_maker,0,,0.5,1.0,0
+3.0,1,2,residential_2,market_maker,0,,1.0,1.0,0
+4.0,1,0,residential_2,residential_1,0,0,0.5100000000000002,1.0,0
+4.0,1,2,residential_2,market_maker,0,,0.48999999999999955,1.0,0

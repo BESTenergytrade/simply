@@ -1,0 +1,34 @@
+{
+  "residential_1": {
+    "id": "residential_1",
+    "df": {},
+    "csv": "actor_residential_1.csv",
+    "ls": 1,
+    "ps": 1,
+    "pm": {}
+  },
+  "residential_2": {
+    "id": "residential_2",
+    "df": {},
+    "csv": "actor_residential_2.csv",
+    "ls": 1,
+    "ps": 1,
+    "pm": {}
+  },
+  "market_maker_buy": {
+    "id": "market_maker",
+    "df": {},
+    "csv": "actor_market_maker_buy.csv",
+    "ls": 1,
+    "ps": 1,
+    "pm": {}
+  },
+  "market_maker_sell": {
+    "id": "market_maker",
+    "df": {},
+    "csv": "actor_market_maker_sell.csv",
+    "ls": 1,
+    "ps": 1,
+    "pm": {}
+  }
+}

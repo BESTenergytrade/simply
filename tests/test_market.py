@@ -10,7 +10,7 @@ from simply.scenario import Scenario
 
 
 class TestMarket:
-    cfg.Config("")
+    cfg.Config("","")
     scenario = Scenario(None, None, [])
 
     def test_init(self):

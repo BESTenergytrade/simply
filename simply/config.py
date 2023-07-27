@@ -54,6 +54,14 @@ class Config:
         elif not Path(cfg_file).is_file():
             warnings.warn(f"{cfg_file} was provided as Configuration file, but this file does not "
                           "exist. Default values will be used.")
+
+        if not project_dir:
+            warnings.warn("No project_dir was provided. Default project_dir ./projects/example_project is used")
+            project_dir = "projects/example_project"
+        elif not Path(project_dir):
+            warnings.warn(f"{project_dir} was provided as directory, but this directory does not "
+                          "exist. Default project_dir ./projects/example_project will be used.")
+            project_dir = "projects/example_project"
         try:
             parser.read(cfg_file)
         except MissingSectionHeaderError:
