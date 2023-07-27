@@ -107,22 +107,6 @@ class Actor:
         planed energy amounts for interaction with the market_maker and basis of order generation
 
     """
-    _cache = {}
-
-    def reset(self):
-        try:
-            del self._cache[self]
-        except KeyError:
-            pass
-        self.socs = []
-        self.matched_energy_current_step = 0
-        self.predicted_soc = None
-        self.orders = []
-        self.traded = {}
-        self.bank = 0
-        self.battery.reset()
-
-
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
                  cluster=None, strategy: int = 0, pricing_strategy=None):
@@ -157,7 +141,7 @@ class Actor:
         else:
             self.csv_file = f'actor_{id}.csv'
         # ToDo remove schedule from input or only allow either (load and pv) OR (schedule)
-        for column, scale in [("load", ls), ("pv", ps)]:
+        for column, scale in [("load", ls), ("pv", ps), ("schedule", 1)]:
             self.data[column] = scale * df[column]
             try:
                 self.pm[column] = np.array(pm[column])
@@ -565,23 +549,23 @@ class Actor:
         if "schedule" not in self.data.columns:
             self.pred["schedule"] = self.pred["pv"] - self.pred["load"]
 
-
-
-    def update_battery(self):
+    def update_battery(self, _cache=dict()):
         """Update the battery state with the current schedule and the matched energy in this step.
 
         This function needs to be called once per time step to track the energy inside of the
         battery. It takes the planned, i.e. predicted, schedule and changes the battery's SOC
         accordingly.
+
+        :param _cache: cache of function calls, which SHOULD NOT be provided by user
         """
         # _cache keeps track of method calls by storing the last time of the method call at the
         # key of self/object reference. This makes sure that energy is only taken once per time step
-        if self not in self._cache:
-            self._cache[self] = self.t_step
+        if self not in _cache:
+            _cache[self] = self.t_step
         else:
             error = "Actor used the battery twice in a single time step"
-            assert self._cache[self] < self.t_step, error
-            self._cache[self] = self.t_step
+            assert _cache[self] < self.t_step, error
+            _cache[self] = self.t_step
 
         # assumes schedule is positive when pv is produced, Assertion error useful during
         # development to be certain
@@ -600,14 +584,15 @@ class Actor:
         """
 
         energy = self.market_schedule[0]
-        assert not np.isnan(energy), "Market schedule"
+        assert not np.isnan(energy), "Market schedule is not a number. Is the simulation time " \
+                                     "longer than the provided data?"
         if energy == 0 and self.pricing_strategy is None or all(self.market_schedule == 0):
             return []
 
         # the market schedule does not demand to buy or sell energy at the current time slot, but
         # a pricing strategy is provided which allows to generate orders for future demands, with
         # better than guaranteed prices
-        if energy == 0:
+        if cfg.config.energy_unit > energy > -cfg.config.energy_unit:
             next_order_index = None
             for i, energy in enumerate(self.market_schedule):
                 if energy != 0:
@@ -684,11 +669,16 @@ class Actor:
 
         # buying energy
         if energy > 0:
+            # The energy to be bought is bound by the remaining energy until fully charged battery
+            # within the predicted horizon
             delta_soc = 1-socs.max()
             return max(min(energy, delta_soc*self.battery.capacity), 0)
         # selling energy
         else:
+            # the energy to be sold is bound by the minimal energy level
+            # within the predicted horizon
             delta_soc = -socs.min()
+            # energy and delta_soc are negative valued
             return min(max(energy, delta_soc*self.battery.capacity), 0)
 
     def adjust_energy(self, energy, index=0):
@@ -701,13 +691,13 @@ class Actor:
         :return: energy amount for order generation the current time step
         :rtype: float
         """
-        index = max(1,index)
+        index = max(1, index)
         # buying energy
         if energy > 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
             if (self.battery.energy() + self.pred.schedule[0:index].sum() +
-                    ((energy+cfg.config.EPS) // cfg.config.energy_unit *
+                    ((energy + cfg.config.EPS) // cfg.config.energy_unit *
                      cfg.config.energy_unit) < 0):
                 energy += cfg.config.energy_unit
 
@@ -795,14 +785,18 @@ class Actor:
         :param dict external_data: (optional) Dictionary with additional data e.g. on prediction
             error time series
         """
+        args = self.args.copy()
+        args["csv"] = self.csv_file
         if external_data:
-            args_no_df = {
-                "id": self.id, "df": {}, "csv": self.csv_file, "ls": self.load_scale,
-                "ps": self.pv_scale, "pm": {}
-            }
+            args_no_df = args
+            args_no_df.update({"df": {}, "pm": {}, "ls": 1, "ps": 1})
             return args_no_df
         else:
-            return self.args
+            # since data is already scaled by ls and ps, both of these values are set to 1, so
+            # they don't get applied twice
+            args_df = args
+            args_df.update({"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1})
+            return args_df
 
     def save_csv(self, dirpath):
         """
@@ -815,7 +809,7 @@ class Actor:
         #  also errors need to be saved.
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
-        save_df = self.data[["load", "pv"]]
+        save_df = self.data[["load", "pv", "schedule"]]
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
@@ -831,14 +825,21 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     :return: generated Actor object
     :rtype: Actor
     """
-    time_idx = pd.date_range(start_date, freq="{}min".format(int(60 / ts_hour)), periods=nb_ts)
+    # Round to next full day
+    extra_time_steps = -nb_ts % 24
+    time_idx = pd.date_range(start_date, freq="{}min".format(int(60 / ts_hour)),
+                             periods=nb_ts+extra_time_steps)
     cols = ["load", "pv", "schedule", "price"]
-    values = np.random.rand(nb_ts, len(cols))
+    values = np.random.rand(len(time_idx), len(cols))
     df = pd.DataFrame(values, columns=cols, index=time_idx)
 
     # Multiply random generation signal with gaussian/PV-like characteristic
     for day in daily(df, 24 * ts_hour):
         day["pv"] *= gaussian_pv(ts_hour, 3)
+
+    # delete the added time steps
+    if extra_time_steps > 0:
+        df = df.drop(df.iloc[-extra_time_steps:].index)
 
     # Random scale factor generation, load and price time series in boundaries
     ls = random.uniform(0.5, 1.3)
@@ -865,7 +866,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     Create actor instance with random asset time series and random scaling factors. Replace
 
     :param str actor_id: unique actor identifier
-mn ('col_index')
+    :param Dict asset_dict: nested dictionary specifying 'csv' filename and column ('col_index')
         per asset or the time series index ('index') of the Actor
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series

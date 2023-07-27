@@ -4,9 +4,7 @@ from simply.config import Config
 from match_market import main
 
 
-class TestMain():
-    # ToDo Set up test to check proper functionality of save and loading of scenario, e.g. test that
-    #  the results stay consistent
+class TestMain:
     def test_main(self, tmp_path):
         cfg = Config("", "")
         cfg.path = Path((tmp_path / "output"))
@@ -16,7 +14,7 @@ class TestMain():
         cfg = Config("","")
         # cfg.save_csv = True is the default value. Therefore, we don't set it
         cfg.data_format = "csv"
-        cfg.path = Path((tmp_path/"output"))
+        cfg.path = Path((tmp_path / "output"))
         main(cfg)
 
         cfg.load_scenario = True
@@ -26,7 +24,7 @@ class TestMain():
         cfg = Config("","")
         cfg.save_csv = True
         cfg.data_format = "json"
-        cfg.path = Path((tmp_path/"output"))
+        cfg.path = Path((tmp_path / "output"))
         main(cfg)
 
         cfg.load_scenario = True
