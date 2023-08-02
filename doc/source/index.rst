@@ -13,6 +13,7 @@ Welcome to simply's documentation!
    getting_started
    matching_strategies
    pricing_strategies
+   actor_strategies
    modules
    glossary
 
