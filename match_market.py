@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+from pathlib import Path
 from argparse import ArgumentParser
 
 from simply import market, market_2pac, market_fair
@@ -7,8 +7,7 @@ from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading
 import os
-
-
+import glob
 """
 Entry point for standalone functionality.
 
@@ -24,12 +23,29 @@ def main(cfg: Config):
 
     print(cfg)
     # Checks if actor files with the correct format exist in the cfg.scenario_path
-    scenario_exists = len([False for i in cfg.scenario_path.glob(f"actor_*.{cfg.data_format}")]) != 0
+    # --------------------------------
+    def list_files_in_path(current_path, pattern='*'):
+        file_list = glob.glob(os.path.join(current_path, pattern))
+        return file_list
 
+    current_path = Path.cwd()
+    print("Hier bin ich, jetzt:", current_path)
+    print("Das ist data_format: ", cfg.data_format)
     print(f'Scenario path: {cfg.scenario_path}')
+    files_in_path = list_files_in_path(cfg.scenario_path)
+    #print(f"${cfg.scenario_path}/*")
+    #names = [os.path.basename(x) for x in glob.glob(f"${cfg.scenario_path}/*")]
+    print("Das sind die Files in: ", cfg.scenario_path, ":  ", files_in_path)
+    # --------------------------------
+
+    scenario_exists = len([False for i in cfg.scenario_path.glob(f"*actor*_*.{cfg.data_format}")]) != 0
+    print("scenario_exists: ", scenario_exists)
+
     # load existing scenario or else create randomized new one
     sc: Scenario
+
     if cfg.load_scenario:
+        print("cfg.scenario_path: ", cfg.scenario_path)
         if scenario_exists:
             sc = load(cfg.scenario_path, cfg.data_format)
         else:

@@ -20,7 +20,7 @@ Struct to hold order
 :param actor_id: ID of ordering actor
 :param energy: amount of energy the actor wants to trade. Will be rounded down(asks)/up(bids)
     according to the market's energy unit
-:param price: bidding/asking price for one unit of energy
+:param price: bidding/asking price for 1 kWh
 """
 
 
@@ -552,7 +552,7 @@ class Actor:
     def update_battery(self, _cache=dict()):
         """Update the battery state with the current schedule and the matched energy in this step.
 
-        This function needs to be called once per time step to track the energy inside the
+        This function needs to be called once per time step to track the energy inside of the
         battery. It takes the planned, i.e. predicted, schedule and changes the battery's SOC
         accordingly.
 
@@ -569,7 +569,6 @@ class Actor:
 
         # assumes schedule is positive when pv is produced, Assertion error useful during
         # development to be certain
-
         assert self.pred.schedule[0] == approx(self.pred.pv[0] - self.pred.load[0])
         # ToDo Make sure that the balance of schedule and bought energy does not charge
         # or discharge more power than the max c rate

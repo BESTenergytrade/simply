@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import simply.config as cfg
 from simply import actor, market_maker
 from simply import power_network
-#from simply.battery import Battery
 from simply.util import get_all_data
 from simply.market_maker import MarketMaker
 from simply.actor import Actor
@@ -199,14 +198,7 @@ class Scenario:
             orders = participant.generate_orders()
             for order in orders:
                 self.market.accept_order(order, callback=participant.receive_market_results)
-        # print([order for order in orders if "MarketMaker" != order.actor_id])
-        # print(self.market.orders)
         self.market.clear(reset=cfg.config.reset_market)
-        # print([m for ma in self.market.matches for m in ma if m["time"]== self.environment.time_step])
-        # print([m for matches in self.market.matches for m in matches
-        #        if m["time"] == self.environment.time_step
-        #        and (m["bid_actor"]==2 or m["ask_actor"]==2)]
-        #       )
 
     def next_time_step(self):
         for participant in self.market_participants:
@@ -302,28 +294,6 @@ class Scenario:
         ax[2].legend(["pv", "load"])
         plt.show()
 
-    # def reset(self):
-    #     """ Reset the scenario after a simulation is run"""
-    #     # Reset the time step
-    #     self.environment.time_step = cfg.config.start
-    #     if self.market is not None:
-    #         self.market.t_step = self.environment.time_step
-    #         self.market.reset()
-    #
-    #     old_market_maker = None
-    #     if self.environment.market_maker is not None:
-    #         old_market_maker = self.environment.market_maker
-    #
-    #     for participant in self.market_participants:
-    #         participant.reset()
-    #
-    #     # Remove previous participants
-    #     self.market_participants = []
-    #
-    #     if old_market_maker is not None:
-    #         # But add the market maker again
-    #         self.add_participant(old_market_maker)
-    # FCR: the above does not work but the definition below does. Below is from main branch. No idea where the changes came from...
     def reset(self):
         """ Reset the scenario after a simulation is run"""
         # Reset the time step
@@ -341,6 +311,7 @@ class Scenario:
             market_maker.reset()
             # But add the market maker again
             self.add_participant(market_maker)
+
 
 def from_dict(scenario_dict):
     pn_name, pn_dict = scenario_dict["power_network"].popitem()
