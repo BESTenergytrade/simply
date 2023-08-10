@@ -19,6 +19,11 @@ across 2 clusters. Actors 0 and 4 are in Cluster 0 and Actors 1, 2, and 3 are in
 is a +1 grid-fee in-between the Cluster 0 and 1. Matches made between clusters, therefore, incur an
 additional cost of +1.
 
+In addition to the five actors there is a Market Market maker which is not assigned to any cluster. The Market Maker has
+a specific price time series and acts as an infinite source and sink for electrical energy. Consequently, all actors
+meeting the price criteria can be matched. In contrast to an ordinary actor the Market Maker does not have a schedule
+and is not restricted by a battery capacity or a strategy.
+
 Network
 -------
 .. figure:: _static/network.png
@@ -27,7 +32,7 @@ Network
 
    Figure 1: a basic network consisting of 5 actors across 2 clusters.
 
-Grid-Free Matrix
+Grid-Fee Matrix
 ----------------
 
 Grid-fees are calculated for each order using the following grid fee matrix:
