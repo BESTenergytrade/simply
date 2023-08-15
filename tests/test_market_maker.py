@@ -30,7 +30,7 @@ class TestMarketMaker:
         # and buys
         # Reset the market_maker to be sure there is no data present
         self.scenario.reset()
-        market_maker = self.env.market_maker
+        market_maker = MarketMaker(buy_prices=self.buy_prices, environment=self.env)
         self.scenario.add_market(Market())
         assert len(market_maker.traded) == 0
         assert sum(market_maker.energy_sold) == 0
@@ -46,6 +46,7 @@ class TestMarketMaker:
         # and buys
         # Reset the market_maker to be sure there is no data present
         self.scenario.reset()
+        MarketMaker(buy_prices=self.buy_prices, environment=self.env)
         market_maker = self.env.market_maker
         self.scenario.add_market(Market())
         assert len(market_maker.traded) == 0
@@ -71,11 +72,13 @@ class TestMarketMaker:
     def add_actor_w_constant_schedule(self, name, schedule_value):
         actor = create_random(name)
         actor.data.load[:] = 0 + (schedule_value < 0) * abs(schedule_value)
+        actor.data.schedule[:] = schedule_value
         actor.data.pv[:] = 0 + (schedule_value > 0) * schedule_value
         actor.battery.soc = 0
         # Adds actor to scenario, sets the environment and creates a prediction based on the
         # environment timestamp
         self.scenario.add_participant(actor)
+        actor.create_prediction()
 
     def test_order_generation(self):
         self.scenario.reset()

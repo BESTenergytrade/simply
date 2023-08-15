@@ -118,7 +118,7 @@ class Config:
         # start time step
         self.start = parser.getint("default", "start", fallback=0)
         # number of timesteps in simulation
-        self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
+        self.nb_ts = parser.getint("default", "nb_ts", fallback=5)
         # interval between simulation timesteps
         self.step_size = parser.getint("default", "step_size", fallback=1)
         # list of timesteps in simulation
