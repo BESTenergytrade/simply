@@ -3,15 +3,11 @@ import os
 import datetime
 
 
-
-def train_agent(algorithm_name: str,
-                initial_soc: float = None,
-                horizon: int = 96,
+def train_agent(actor: object,
+                algorithm_name: str,
                 pretrained_model: str = None,
                 restart: bool = False,
                 version: int = 0,
-                energy_unit: float = 0.001,
-                stored_value: float = 0.7,
                 cfg=None) -> tuple[str, PPO]:
 
     # Set up training variables
@@ -23,8 +19,7 @@ def train_agent(algorithm_name: str,
     models_dir = f"rl_models/{algorithm_name}"
     logdir = "logs"
 
-    env = EnergyEnv(horizon=horizon, initial_soc=initial_soc, energy_unit=energy_unit, stored_value=stored_value,
-                    training=True)
+    env = actor.rl_environment
 
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
@@ -52,13 +47,9 @@ def train_agent(algorithm_name: str,
     return algorithm_name, model
 
 
-def predict_agent(algorithm, best_timestep, initial_soc, horizon, gap=False, actor_df=None):
+def predict_agent(actor=None, algorithm=None, best_timestep=None, horizon=24):
 
-    horizon = horizon
-
-    env = EnergyEnv(horizon=horizon, initial_soc=initial_soc, energy_unit=0.001, stored_value=0.7, actor_df=None,
-                    gap=False, training=False, market=None, scenario=None, actor=None)
-
+    env = actor.rl_environment
     # load RL model to create market schedule prediction
     models_dir = f"rl-models/{algorithm}"
     model_path = f"{models_dir}/{best_timestep}"
@@ -67,23 +58,7 @@ def predict_agent(algorithm, best_timestep, initial_soc, horizon, gap=False, act
 
     observation = env.reset()
 
-    banks = []
-    banks_with_battery = []
-    socs = []
+    action = model.predict(observation)
+    next_action = round(env.action_energy_values[action[0]], 3)
 
-    for i in range(horizon):
-        action, _ = model.predict(observation)
-        observation, reward, done, _ = env.step(action)
-        if done:
-            print(f'{algorithm} agent failed')
-            break
-
-        # Update evaluation logs
-        banks.append(env.actor.bank)
-        banks_with_battery.append(env.actor.bank + (env.actor.battery.energy() * actor_df.iloc[:24, 2].mean()))
-        socs.append(env.actor.battery.soc)
-
-    if not done:
-        return banks, banks_with_battery, socs
-    else:
-        return None, _, _
+    return next_action

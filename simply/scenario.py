@@ -187,7 +187,7 @@ class Scenario:
     def create_strategies(self):
         for participant in self.market_participants:
             if isinstance(participant, Actor):
-                participant.get_market_schedule()
+                participant.get_market_schedule(market=self.market)
 
     def add_market(self, market):
         self.market = market

@@ -11,6 +11,8 @@ from simply.battery import Battery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
+from simplyrl import rl_agent, energy_env
+
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
 Struct to hold order
@@ -157,6 +159,10 @@ class Actor:
             self.environment = environment
             environment.add_actor_to_scenario(self)
 
+        # initialize rl environment for RL actor
+        self.rl_environment = None
+
+
         self.orders = []
         self.traded = {}
         self.args = {"id": id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
@@ -201,16 +207,17 @@ class Actor:
         return self.environment.steps_per_hour
     steps_per_hour = property(get_steps_per_hour)
 
-    def get_market_schedule(self, strategy=None):
+    def get_market_schedule(self, strategy=None, market=None):
         """ Generates a market_schedule for the actor which represents the strategy of the actor
         when to buy or sell energy. At the current time step the actor will always buy/ or sell
         this amount even at market maker price.
 
         :param strategy: Number representing the actor strategy from 0 to 3
         :type strategy: int
+        :type market: BestMarket
         :return: market_schedule with planed amounts of energy buying/selling per time step
         """
-        possible_choices = [0, 1, 2, 3]
+        possible_choices = [0, 1, 2, 3, 4]
         if strategy is None:
             strategy = self.strategy
         if strategy not in possible_choices:
@@ -244,7 +251,17 @@ class Actor:
         if strategy == 2:
             return self.market_schedule
         self.market_schedule = self.plan_global_trading()
-        return self.market_schedule
+        if strategy == 3:
+            return self.market_schedule
+        if strategy == 4:
+            # rl strategy
+            # import model
+            # TODO: make import of model variable to each actor and its identifier
+            algorithm = "new_start/24/1.4/norm_bank_reward_04-03-21-4"
+            best_timestep = 1600000
+            self.rl_environment = energy_env.EnergyEnv(self, market, horizon=24, training=False, energy_unit=0.001)
+            self.market_schedule[0] = rl_agent.predict_agent(self, algorithm, best_timestep)
+            return self.market_schedule
 
     def get_default_market_schedule(self):
         """ Return the default market schedule
