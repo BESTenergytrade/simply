@@ -22,7 +22,6 @@ market_type = fair
 reset_market = True
 # size of energy units to be traded individually
 energy_unit = 0.01
-horizon = 2
 
 #--------------------------
 # output

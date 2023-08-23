@@ -814,7 +814,7 @@ class Actor:
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
-def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
+def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_hour=1):
     """
     Create actor instance with random asset time series and random scaling factors
 
@@ -822,6 +822,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated
+    :param horizon: number of time slots to look into future to make the prediction for actor strategy
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :return: generated Actor object
     :rtype: Actor

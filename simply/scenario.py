@@ -418,7 +418,7 @@ def create_random(num_nodes, num_actors, weight_factor, nb_ts=100, horizon=24):
     pn.generate_grid_fee_matrix(weight_factor)
     mm_buy_prices = np.random.random(nb_ts+horizon)
     scenario = Scenario(pn, None, buy_prices=mm_buy_prices)
-    actors = [actor.create_random("H" + str(i), nb_ts=nb_ts,horizon=horizon) for i in range(num_actors)]
+    actors = [actor.create_random("H" + str(i), nb_ts=nb_ts, horizon=horizon) for i in range(num_actors)]
 
     # Add actor nodes at random position (leaf node) in the network
     # One network node can contain several actors (using random.choices method)
