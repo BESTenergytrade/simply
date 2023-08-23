@@ -70,10 +70,10 @@ def remove_existing_dir(path):
         shutil.rmtree(path)
 
 
-def dates_to_datetime(start_date="2016-01-01", nb_ts=None, ts_hour=1):
+def dates_to_datetime(start_date="2016-01-01", nb_ts=None, horizon=24, ts_hour=1):
     """Converts string dates to datetime dtype and calculates end date from timesteps parameter."""
     start_date = pd.to_datetime(start_date)
-    time_change = datetime.timedelta(minutes=(nb_ts - 1) * (60 / ts_hour))
+    time_change = datetime.timedelta(minutes=(nb_ts+horizon - 1) * (60 / ts_hour))
     end_date = start_date + time_change
     return start_date, end_date
 
@@ -118,7 +118,7 @@ def read_config_json(config_json):
 
 
 def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2016-01-01",
-                             nb_ts=None, ts_hour=1, cols=["load", "pv", "schedule", "price"],
+                             nb_ts=None, horizon=24, ts_hour=1, cols=["load", "pv", "schedule", "price"],
                              ps=None, ls=None):
     """
     Create Actor with an ID and given asset time series shifted to a specified start time and
@@ -128,6 +128,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     :param asset_dict: Dictionary of asset information
     :param start_date: Start date of the actor, defaults to "2016-01-01"
     :param nb_ts: Number of time slots to be generated, defaults to None
+    :param horizon: number of time slots to look into future to make the prediction for actor strategy
     :param ts_hour: Number of time slot of equal length within one hour, defaults to 4
     :param cols: List of columns to be included, defaults to ["load", "pv", "schedule", "price"]
     :param ps: PV scalar, defaults to None
@@ -136,7 +137,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     :return: Actor object
     """
     df = pd.DataFrame([], columns=cols)
-    start_date, end_date = dates_to_datetime(start_date, nb_ts, ts_hour)
+    start_date, end_date = dates_to_datetime(start_date, nb_ts, horizon, ts_hour)
 
     # Read csv files for each asset
     csv_peak = {}
@@ -157,7 +158,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
 
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
-                                weight_factor=1, ts_hour=4, nb_ts=None, start_date="2016-01-01",
+                                weight_factor=1, ts_hour=4, nb_ts=None, horizon=24, start_date="2016-01-01",
                                 plot_network=False, price_filename="basic_prices.csv",
                                 ps=None, ls=None):
     """
@@ -172,6 +173,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     :param weight_factor: Weight factor used to derive grid fees, defaults to 1
     :param ts_hour: Number of time slot of equal length within one hour, defaults to 4
     :param nb_ts: Number of time slots to be generated, defaults to None
+    :param horizon: number of time slots to look into future to make the prediction for actor strategy
     :param start_date: Start date of the scenario,defaults to "2016-01-01"
     :param plot_network: Boolean value to indicate whether the network should be plotted,
         defaults to False
@@ -197,7 +199,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     if plot_network is True:
         pn.plot()
 
-    start_date, end_date = dates_to_datetime(start_date, nb_ts, ts_hour)
+    start_date, end_date = dates_to_datetime(start_date, nb_ts, horizon, ts_hour)
     buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date)
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
@@ -229,7 +231,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         # actors are automatically added to the scenario environment
         _ = create_actor_from_config(actor_row['prosumerName'], scenario.environment,
                                      asset_dict=asset_dict, start_date=start_date,
-                                     nb_ts=nb_ts, ts_hour=ts_hour, ps=ps, ls=ls)
+                                     nb_ts=nb_ts, horizon=horizon, ts_hour=ts_hour, ps=ps, ls=ls)
         print(f'{i} actor added')
         print(f'{file_dict["load"]}')
 
@@ -279,6 +281,7 @@ def main(project_dir, data_dir):
         network_path,
         data_dirpath=data_dirpath,
         nb_ts=cfg.nb_ts,
+        horizon=cfg.horizon,
         loads_dir_path=loads_dir_path,
         ps=1,
         ls=None

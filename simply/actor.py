@@ -861,7 +861,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     return Actor(actor_id, df, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
 
 
-def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
+def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, horizon=24, ts_hour=1,
                     override_scaling=False):
     """
     Create actor instance with random asset time series and random scaling factors. Replace
@@ -872,6 +872,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated, derived from csv if None
+    :param horizon: number of time slots to look into future to make the prediction for actor strategy
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :param override_scaling: if True the predefined scaling factors are overridden by the peak value
         of each csv file
@@ -903,7 +904,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
             dayfirst=True
         )
         # Rename column and insert data based on dictionary
-        df.loc[:, col] = csv_df.iloc[:nb_ts, csv_dict["col_index"]]
+        df.loc[:, col] = csv_df.iloc[:nb_ts+horizon, csv_dict["col_index"]]
         # Override scaling factor by peak value (if True)
         if override_scaling:
             peak[col] = df[col].max()
@@ -914,14 +915,14 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
         df["index"] = pd.date_range(
             start_date,
             freq="{}min".format(int(60 / ts_hour)),
-            periods=nb_ts
+            periods=nb_ts+horizon
         )
     df = df.set_index("index")
 
     # If pv asset key is present but dictionary does not contain a filename
     if "pv" in asset_dict.keys() and not asset_dict["pv"].get("filename"):
         # Initialize PV with random noise
-        df["pv"] = np.random.rand(nb_ts, 1)
+        df["pv"] = np.random.rand(nb_ts+horizon, 1)
         # Multiply random generation signal with gaussian/PV-like characteristic per day
         for day in daily(df, 24 * ts_hour):
             day["pv"] *= gaussian_pv(ts_hour, 3)

@@ -1,0 +1,22 @@
+{
+  "example_network": {
+    "directed": false,
+    "multigraph": false,
+    "graph": {},
+    "nodes": [
+      {
+        "id":  "N01"
+      },
+      {
+        "id":  "N02"
+      }
+    ],
+    "links": [
+      {
+        "weight": 1,
+        "source": "N01",
+        "target": "N02"
+      }
+    ]
+  }
+}
