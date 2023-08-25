@@ -1,37 +1,77 @@
 {
-  "example_network": {
+  "random": {
     "directed": false,
     "multigraph": false,
     "graph": {},
     "nodes": [
       {
-        "id": "N01"
+        "id": 0
       },
       {
-        "id": "N02"
+        "id": 1
       },
       {
-        "id": "residential_1"
+        "id": 2
       },
       {
-        "id": "residential_2"
+        "id": 3
+      },
+      {
+        "id": "H0"
+      },
+      {
+        "id": "H3"
+      },
+      {
+        "id": "H2"
+      },
+      {
+        "id": "H1"
+      },
+      {
+        "id": "H4"
       }
     ],
     "links": [
       {
-        "weight": 0,
-        "source": "N01",
-        "target": "N02"
+        "weight": 0.30000000000000004,
+        "source": 0,
+        "target": 1
       },
       {
         "weight": 0,
-        "source": "N01",
-        "target": "residential_1"
+        "source": 0,
+        "target": 3
       },
       {
         "weight": 0,
-        "source": "N02",
-        "target": "residential_2"
+        "source": 1,
+        "target": 2
+      },
+      {
+        "weight": 0,
+        "source": 2,
+        "target": "H0"
+      },
+      {
+        "weight": 0,
+        "source": 2,
+        "target": "H2"
+      },
+      {
+        "weight": 0,
+        "source": 2,
+        "target": "H1"
+      },
+      {
+        "weight": 0,
+        "source": 2,
+        "target": "H4"
+      },
+      {
+        "weight": 0,
+        "source": 3,
+        "target": "H3"
       }
     ]
   }

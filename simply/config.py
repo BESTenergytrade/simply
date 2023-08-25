@@ -89,7 +89,7 @@ class Config:
         self.scenario_path = Path(self.scenario_path)
         self.data_format = parser.get("default", "data_format", fallback="json")
         # load existing scenario
-        self.load_scenario = parser.getboolean("default", "load_scenario", fallback=True)
+        self.load_scenario = parser.getboolean("default", "load_scenario", fallback=False)
 
         # For generating random scenario
         # number actors in simulation
