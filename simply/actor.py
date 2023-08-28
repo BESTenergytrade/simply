@@ -806,13 +806,13 @@ class Actor:
         args["csv"] = self.csv_file
         if external_data:
             args_no_df = args
-            args_no_df.update({"df": {}, "pm": {}, "ls": 1, "ps": 1})
+            args_no_df.update({"df": {}, "pm": {}, "ls": 1, "ps": 1, "strategy": self.strategy})
             return args_no_df
         else:
             # since data is already scaled by ls and ps, both of these values are set to 1, so
             # they don't get applied twice
             args_df = args
-            args_df.update({"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1})
+            args_df.update({"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1, "strategy": self.strategy})
             return args_df
 
     def save_csv(self, dirpath):
