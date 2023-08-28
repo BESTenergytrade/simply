@@ -116,6 +116,7 @@ class EnergyEnv(gym.Env):
 
     def reset(self):
         self._setup(self.actor_df)
-        observation = pd.concat([self.actor.pred, self.actor.mm_buy_prices], axis=1).values
+        # observation consists of schedule and market maker buy prices
+        observation = pd.concat([self.actor.pred["schedule"], self.actor.mm_buy_prices], axis=1).values
         observation = self._handle_observation(observation)
         return observation

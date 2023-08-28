@@ -1,6 +1,7 @@
 from stable_baselines3 import PPO
 import os
 import datetime
+import numpy as np
 
 
 def train_agent(actor: object,
@@ -59,6 +60,6 @@ def predict_agent(actor=None, algorithm=None, best_timestep=None, horizon=24):
     observation = env.reset()
 
     action = model.predict(observation)
-    next_action = round(env.action_energy_values[action[0]], 3)
+    next_action = np.round(env.action_energy_values[action[0]], 3)
 
     return next_action
