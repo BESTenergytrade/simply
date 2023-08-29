@@ -18,7 +18,7 @@ def train_agent(actor: object,
     algorithm_name = f'{algorithm_name}_{time_now}'
     TIMESTEPS = 10000
     models_dir = f"rl_models/{algorithm_name}"
-    logdir = "logs"
+    logdir = "rl-models/logs"
 
     env = actor.rl_environment
 

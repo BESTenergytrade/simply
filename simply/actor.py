@@ -623,6 +623,10 @@ class Actor:
         else:
             final_price = self.mm_buy_prices[next_order_index]
 
+        # for rl actor: check that order is within bounds of battery
+        if self.strategy == 4:
+            energy = self.check_battery_and_adjust_energy(energy)
+
         # Make sure not to over charge the battery since market schedule calculated the amount
         # for a later time slot
         energy = self.get_limited_energy(energy, index=next_order_index)
@@ -726,6 +730,44 @@ class Actor:
                     ((energy+cfg.config.EPS) // cfg.config.energy_unit+1) *
                     cfg.config.energy_unit) > self.battery.capacity:
                 energy -= cfg.config.energy_unit
+        return energy
+
+    def check_battery_and_adjust_energy(self, energy):
+        """ Check if order can be handled by the battery and excess load and adjust energy amount if not
+
+        :param energy: energy amount for next order. Positive energy stands for buying of energy
+        :type energy: float
+        :param index: number of time steps until a future order
+        :type index: int
+        :return: energy amount for order generation the current time step
+        :rtype: float
+        """
+        # Calculate soc of battery with current order
+        total_energy_available = energy + self.battery.energy() + self.pred['pv'][0]
+        remaining_energy_available = total_energy_available - self.pred['load'][0]
+        battery_soc = remaining_energy_available/self.battery.capacity
+
+        # TODO: add punishment for RL training when soc constraint is not held
+        if battery_soc > 1:
+            print(
+                f'{self.id} tried to charge battery beyond its capacity at timestep {self.t_step} with order of '
+                f'{energy} kWh. Order is capped.'
+            )
+            # decrease order energy value by exceeded amount, i.e. buy less energy
+            energy -= (battery_soc - 1) * self.battery.capacity
+            # also adjust market schedule accordingly
+            self.market_schedule[0] = energy
+
+        if battery_soc < 0:
+            print(
+                f'{self.id} tried to discharge battery beyond its capacity at timestep {self.t_step} with order of '
+                f'{energy} kWh. Order is capped.'
+            )
+            # decrease order energy value by exceeded amount, i.e. sell less energy
+            energy -= battery_soc * self.battery.capacity
+            # also adjust market schedule accordingly
+            self.market_schedule[0] = energy
+
         return energy
 
     def prepare_next_time_step(self):
