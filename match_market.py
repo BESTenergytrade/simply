@@ -54,7 +54,9 @@ def main(cfg: Config):
                             f'set load_scenario = False in config.txt.')
     else:
         # Todo: is secnario_path the right path here?
-        if cfg.scenario_path.exists():
+        #if cfg.scenario_path.exists():
+        if cfg.path.exists():
+
             raise Exception(f'The path: {cfg.scenario_path} already exists with another file structure. '
                             'Please remove or rename folder to avoid confusion and restart '
                             'simulation.')

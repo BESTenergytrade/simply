@@ -96,7 +96,7 @@ class TestMarket:
         assert m.orders.at[2, "energy"] == pytest.approx(5)
 
         # reset config
-        cfg.Config("")
+        cfg.Config("","")
 
     def test_get_bids(self):
         """
