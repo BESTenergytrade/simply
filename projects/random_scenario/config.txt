@@ -26,8 +26,8 @@ nb_ts = 12
 # interval between simulation timesteps
 step_size = 1
 
-# which market type to use? fair, merit, pac
-market_type = merit
+# which market type to use? fair, pac
+market_type = fair
 # reset market after each interval (discard unmatched orders)
 reset_market = True
 # size of energy units to be traded individually

@@ -25,7 +25,7 @@ nb_ts = 5
 # interval between simulation timesteps
 step_size = 1
 
-# which market type to use? fair, merit, pac
+# which market type to use? fair, pac
 market_type = fair
 # reset market after each interval (discard unmatched orders)
 reset_market = True

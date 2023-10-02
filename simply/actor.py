@@ -218,7 +218,7 @@ class Actor:
                 f"Strategy choice: {strategy} was not found in the list of possible "
                 f"strategies: {possible_choices}. Using default strategy 0 without "
                 "planning instead.")
-            strategy = 0
+            strategy = self.strategy
         elif strategy != 0:
             if self.battery is None or self.battery.capacity == 0:
                 warnings.warn(

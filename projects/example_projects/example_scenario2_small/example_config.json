@@ -20,7 +20,7 @@
         ]
     },
   {
-        "comment": "An example of a residential prosumer without pv specifed by their 'deviceID'",
+        "comment": "An example of a residential prosumer with load data specified by their 'deviceID' but without pv",
         "prosumerName": "residential_2",
         "prosumerType": "residential",
         "gridLocation": "N02",
@@ -32,8 +32,8 @@
         ]
     },
     {
-        "comment": "An example of a residential prosumer without pv specifed by their 'deviceID'",
-        "prosumerName": "residential_2",
+        "comment": "An example of a residential prosumer with load and pv data specified by their 'deviceID'",
+        "prosumerName": "residential_3",
         "prosumerType": "residential",
         "gridLocation": "N02",
         "devices": [

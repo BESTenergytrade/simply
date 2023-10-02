@@ -74,7 +74,7 @@ def main(cfg: Config):
     # generate requested market
     if "pac" in cfg.market_type:
         m = market_2pac.TwoSidedPayAsClear(network=sc.power_network)
-    elif cfg.market_type in ["fair", "merit"]:
+    elif "fair" in cfg.market_type:
         m = market_fair.BestMarket(network=sc.power_network)
     else:
         # default

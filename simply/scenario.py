@@ -62,7 +62,8 @@ def is_scenario_participant(obj):
 class Scenario:
     """
     Representation of the world state: who is present (actors) and how everything is
-     connected (power_network). RNG seed is preserved so results can be reproduced.
+     connected (power_network). RNG (random number generator) seed is preserved so
+     results can be reproduced.
     """
 
     def __init__(self, network, map_actors=None, buy_prices: np.array = None, rng_seed=None,
