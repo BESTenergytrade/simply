@@ -60,6 +60,10 @@ def main(cfg: Config):
         m = market.Market(network=sc.power_network)
 
     sc.add_market(m)
+
+    # add rl environments to actors that have rl strategy
+    sc.add_rl_env(m)
+
     for _ in range(cfg.nb_ts):
         # actors calculate strategy based market interaction with the market maker
         sc.create_strategies()

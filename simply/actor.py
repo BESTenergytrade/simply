@@ -160,7 +160,8 @@ class Actor:
             environment.add_actor_to_scenario(self)
 
         # initialize rl environment for RL actor
-        self.rl_environment = None
+        if self.strategy == 4:
+            self.rl_environment = None
 
 
         self.orders = []
@@ -170,6 +171,10 @@ class Actor:
 
     def get_environment(self):
         return self._environment
+
+    def set_rl_env(self, market):
+        if self.strategy == 4:
+            self.rl_environment = energy_env.EnergyEnv(self, market, horizon=24, training=False, energy_unit=0.001)
 
     def set_environment(self, environment):
         self._environment = environment
@@ -207,7 +212,7 @@ class Actor:
         return self.environment.steps_per_hour
     steps_per_hour = property(get_steps_per_hour)
 
-    def get_market_schedule(self, strategy=None, market=None):
+    def get_market_schedule(self, strategy=None):
         """ Generates a market_schedule for the actor which represents the strategy of the actor
         when to buy or sell energy. At the current time step the actor will always buy/ or sell
         this amount even at market maker price.
@@ -259,7 +264,6 @@ class Actor:
             # TODO: make import of model variable to each actor and its identifier
             algorithm = "new_start/24/1.4/norm_bank_reward_04-03-21-4"
             best_timestep = 1600000
-            self.rl_environment = energy_env.EnergyEnv(self, market, horizon=24, training=False, energy_unit=0.001)
             self.market_schedule[0] = rl_agent.predict_agent(self, algorithm, best_timestep)
             return self.market_schedule
 

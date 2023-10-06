@@ -187,11 +187,15 @@ class Scenario:
     def create_strategies(self):
         for participant in self.market_participants:
             if isinstance(participant, Actor):
-                participant.get_market_schedule(market=self.market)
+                participant.get_market_schedule()
 
     def add_market(self, market):
         self.market = market
         market.t_step = self.environment.time_step
+
+    def add_rl_env(self, market):
+        for participant in self.market_participants:
+            participant.rl_environment = participant.set_rl_env(market)
 
     def market_step(self):
         for participant in self.market_participants:
