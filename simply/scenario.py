@@ -195,7 +195,9 @@ class Scenario:
 
     def add_rl_env(self, market):
         for participant in self.market_participants:
-            participant.rl_environment = participant.set_rl_env(market)
+            if isinstance(participant, Actor):
+                if participant.strategy == 4:
+                    participant.set_rl_env(market)
 
     def market_step(self):
         for participant in self.market_participants:
