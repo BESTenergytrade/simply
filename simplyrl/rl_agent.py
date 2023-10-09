@@ -48,14 +48,10 @@ def train_agent(actor: object,
     return algorithm_name, model
 
 
-def predict_agent(actor=None, algorithm=None, best_timestep=None, horizon=24):
+def predict_agent(actor=None):
 
     env = actor.rl_environment
-    # load RL model to create market schedule prediction
-    models_dir = f"rl-models/{algorithm}"
-    model_path = f"{models_dir}/{best_timestep}"
-
-    model = PPO.load(model_path, env=env)
+    model = actor.rl_model
 
     observation = env.reset()
 
@@ -63,3 +59,11 @@ def predict_agent(actor=None, algorithm=None, best_timestep=None, horizon=24):
     next_action = np.round(env.action_energy_values[action[0]], 3)
 
     return next_action
+
+
+def load_model(actor=None, model_path=None):
+    # import model
+    # TODO: make import of model variable to each actor and its identifier
+    env = actor.rl_environment
+    model = PPO.load(model_path, env=env)
+    return model

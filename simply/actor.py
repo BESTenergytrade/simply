@@ -163,9 +163,11 @@ class Actor:
             self.environment = environment
             environment.add_actor_to_scenario(self)
 
-        # initialize rl environment for RL actor
+        # initialize rl environment, rl bank and rl model for RL actor
         if self.strategy == 4:
             self.rl_environment = None
+            self.rl_bank = 0
+            self.rl_model = None
 
 
         self.orders = []
@@ -179,6 +181,12 @@ class Actor:
     def set_rl_env(self, market):
         if self.strategy == 4:
             self.rl_environment = energy_env.EnergyEnv(self, market, horizon=24, training=False, energy_unit=0.001)
+
+    def set_rl_model(self, algorithm=None, best_timestep=None):
+        # load RL model to create market schedule prediction
+        models_dir = f"rl-models/{algorithm}"
+        model_path = f"{models_dir}/{best_timestep}"
+        self.rl_model = rl_agent.load_model(self, model_path)
 
     def set_environment(self, environment):
         self._environment = environment
@@ -264,11 +272,7 @@ class Actor:
             return self.market_schedule
         if strategy == 4:
             # rl strategy
-            # import model
-            # TODO: make import of model variable to each actor and its identifier
-            algorithm = "new_start/24/1.4/norm_bank_reward_04-03-21-4"
-            best_timestep = 1600000
-            self.market_schedule[0] = rl_agent.predict_agent(self, algorithm, best_timestep)
+            self.market_schedule[0] = rl_agent.predict_agent(self)
             return self.market_schedule
 
     def get_default_market_schedule(self):
@@ -815,6 +819,11 @@ class Actor:
         # Buying energy therefore decreases the bank
         self.bank += energy*(-sign)*price
 
+        # handle reward and train rl_agent every x timesteps
+        if self.strategy == 4:
+            reward = self.get_reward(energy*sign, price)
+            self.rl_bank += energy*(-sign)*price + reward
+
         # if there is no market planning, e.g. market_schedule, no adjustment has to take place
         if self.market_schedule is None:
             return
@@ -843,6 +852,39 @@ class Actor:
                 warnings.warn("Matched energy does not match planned energy.")
             self.market_schedule[i] -= sign*min(abs(delta_energy), abs(planned_energy))
             delta_energy -= planned_energy
+
+    def get_reward(self, action, price):
+        # TODO: Give reward for beating the rule based agent
+
+        # Punish for not operating within limitations:
+        battery_energy = self.battery.energy()
+        available_energy = battery_energy + action + self.pred['pv'][0]
+        needed_energy = self.pred['load'][0]
+
+        if available_energy < needed_energy:
+            return self._normalize_reward(-5, 10, -5)
+        if available_energy > self.battery.capacity:
+            return self._normalize_reward(-5, 10, -5)
+
+        # negative action = ask (sell)
+        # positive action = bid (buy)
+        # multiply with negative price to get negative transaction when money spent and vice versa
+        transaction = action * (-price)
+        if transaction < 0:
+            # agent buys energy
+            return self._normalize_reward(transaction, max_reward=10, min_reward=-5)
+        else:
+            # agent sells energy
+            return self._normalize_reward(transaction, max_reward=10, min_reward=-5)
+
+    def _normalize_reward(self, raw_reward, max_reward, min_reward):
+        # Calculate the range of raw reward values
+        reward_range = max_reward - min_reward
+
+        # Normalize the raw reward value using min-max scaling
+        normalized_reward = (raw_reward - min_reward) / reward_range
+
+        return normalized_reward
 
     def to_dict(self, external_data=False):
         """

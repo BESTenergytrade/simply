@@ -193,11 +193,12 @@ class Scenario:
         self.market = market
         market.t_step = self.environment.time_step
 
-    def add_rl_env(self, market):
+    def add_rl_env(self, market, algorithm, best_timestep):
         for participant in self.market_participants:
             if isinstance(participant, Actor):
                 if participant.strategy == 4:
                     participant.set_rl_env(market)
+                    participant.set_rl_model(algorithm, best_timestep)
 
     def market_step(self):
         for participant in self.market_participants:

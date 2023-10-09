@@ -90,16 +90,16 @@ class EnergyEnv(gym.Env):
         return current_reward
 
     def _process_matches(self):
-        if len(self.m.matches[-1]) > 0:
-            for match in self.m.matches[-1]:
-                if 'bid_actor' in match and match['bid_actor'] == 'RL':
+        if len(self.market.matches[-1]) > 0:
+            for match in self.market.matches[-1]:
+                if 'bid_actor' in match and match['bid_actor'] == self.actor.id:
+                    # if agent buys energy and reduces reward
                     amount_spent = match['price'] * match['energy']
-                    self.actor.bank -= amount_spent
                     return self._normalize_reward(-amount_spent, 0.868, -13)
 
-                if 'ask_actor' in match and match['ask_actor'] == 'RL':
+                if 'ask_actor' in match and match['ask_actor'] == self.actor.id:
+                    # agent sells energy and gains reward
                     amount_gained = match['price'] * match['energy']
-                    self.actor.bank += amount_gained
                     return self._normalize_reward(amount_gained, max_reward=0.868, min_reward=-3)
 
     def _normalize_reward(self, raw_reward, max_reward, min_reward):
@@ -114,7 +114,7 @@ class EnergyEnv(gym.Env):
     def render(self, mode='human'):
         pass
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         self._setup(self.actor_df)
         # observation consists of schedule and market maker buy prices
         observation = pd.concat([self.actor.pred["schedule"], self.actor.mm_buy_prices], axis=1).values
