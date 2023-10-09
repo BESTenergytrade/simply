@@ -73,7 +73,7 @@ def remove_existing_dir(path):
 def dates_to_datetime(start_date="2016-01-01", nb_ts=None, horizon=24, ts_hour=1):
     """Converts string dates to datetime dtype and calculates end date from timesteps parameter."""
     start_date = pd.to_datetime(start_date)
-    time_change = datetime.timedelta(minutes=(nb_ts+horizon - 1) * (60 / ts_hour))
+    time_change = datetime.timedelta(minutes=(nb_ts + horizon - 1) * (60 / ts_hour))
     end_date = start_date + time_change
     return start_date, end_date
 
@@ -118,8 +118,8 @@ def read_config_json(config_json):
 
 
 def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2016-01-01",
-                             nb_ts=None, horizon=24, ts_hour=1, cols=["load", "pv", "schedule", "price"],
-                             ps=None, ls=None):
+                             nb_ts=None, horizon=24, ts_hour=1,
+                             cols=["load", "pv", "schedule", "price"], ps=None, ls=None):
     """
     Create Actor with an ID and given asset time series shifted to a specified start time and
     resolution (and scaled by factors ps/ls if given).
@@ -128,7 +128,8 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     :param asset_dict: Dictionary of asset information
     :param start_date: Start date of the actor, defaults to "2016-01-01"
     :param nb_ts: Number of time slots to be generated, defaults to None
-    :param horizon: number of time slots to look into future to make the prediction for actor strategy
+    :param horizon: number of time slots to look into future to make the prediction for actor
+    strategy
     :param ts_hour: Number of time slot of equal length within one hour, defaults to 4
     :param cols: List of columns to be included, defaults to ["load", "pv", "schedule", "price"]
     :param ps: PV scalar, defaults to None
@@ -158,9 +159,9 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
 
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
-                                weight_factor=1, ts_hour=4, nb_ts=None, horizon=24, start_date="2016-01-01",
-                                plot_network=False, price_filename="basic_prices.csv",
-                                ps=None, ls=None):
+                                weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
+                                start_date="2016-01-01", plot_network=False,
+                                price_filename="basic_prices.csv", ps=None, ls=None):
     """
     Create Scenario object while creating Actor objects from config_json referencing to time series
      data in data_path. The Actors are further mapped to a defined network.
@@ -173,7 +174,8 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     :param weight_factor: Weight factor used to derive grid fees, defaults to 1
     :param ts_hour: Number of time slot of equal length within one hour, defaults to 4
     :param nb_ts: Number of time slots to be generated, defaults to None
-    :param horizon: number of time slots to look into future to make the prediction for actor strategy
+    :param horizon: number of time slots to look into future to make the prediction for actor
+        strategy
     :param start_date: Start date of the scenario,defaults to "2016-01-01"
     :param plot_network: Boolean value to indicate whether the network should be plotted,
         defaults to False
@@ -259,12 +261,13 @@ def main(project_dir, data_dir):
     data_dirpath = Path(data_dir) if data_dir else project_dir / "scenario_inputs"
     loads_dir_path = data_dirpath / "loads_dir.csv"
 
-    missing_paths = [path for path in (config_json_path, network_path, config_path, loads_dir_path, data_dirpath) if
-                     not path.exists()]
+    missing_paths = [path for path in (config_json_path, network_path, config_path, loads_dir_path,
+                                       data_dirpath) if not path.exists()]
     if missing_paths:
         missing_paths_str = "\n".join(str(path) for path in missing_paths)
         raise FileNotFoundError(
-            f"One or more required files do not exist in the scenario directory:\n{missing_paths_str}")
+            f"One or more required files do not exist in the scenario directory:"
+            f"\n{missing_paths_str}")
 
     # Build config object using configuration file
     cfg = Config(config_path, project_dir)
@@ -302,8 +305,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.project_dir is None:
-        raise FileNotFoundError("Project directory path must be specified. Please provide the path as a command-line argument.")
-    data_dir = args.data_dir if args.data_dir is not None else os.path.join(args.project_dir, "scenario_inputs")
+        raise FileNotFoundError(
+            "Project directory path must be specified. Please provide the path as a command-line "
+            "argument.")
+    data_dir = args.data_dir if args.data_dir is not None else os.path.join(args.project_dir,
+                                                                            "scenario_inputs")
     if args.data_dir is None:
         print(f"Using data directory: {data_dir}")
 

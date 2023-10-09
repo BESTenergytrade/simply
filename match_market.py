@@ -20,8 +20,8 @@ Usage: python match_market.py [config file]
 
 
 def main(cfg: Config):
-
     print(cfg)
+
     # Checks if actor files with the correct format exist in the cfg.scenario_path
     # --------------------------------
     def list_files_in_path(current_path, pattern='*'):
@@ -33,12 +33,13 @@ def main(cfg: Config):
     print("Das ist data_format: ", cfg.data_format)
     print(f'Scenario path: {cfg.scenario_path}')
     files_in_path = list_files_in_path(cfg.scenario_path)
-    #print(f"${cfg.scenario_path}/*")
-    #names = [os.path.basename(x) for x in glob.glob(f"${cfg.scenario_path}/*")]
+    # print(f"${cfg.scenario_path}/*")
+    # names = [os.path.basename(x) for x in glob.glob(f"${cfg.scenario_path}/*")]
     print("Das sind die Files in: ", cfg.scenario_path, ":  ", files_in_path)
     # --------------------------------
 
-    scenario_exists = len([False for i in cfg.scenario_path.glob(f"*actor*_*.{cfg.data_format}")]) != 0
+    scenario_exists = len(
+        [False for i in cfg.scenario_path.glob(f"*actor*_*.{cfg.data_format}")]) != 0
     print("scenario_exists: ", scenario_exists)
 
     # load existing scenario or else create randomized new one
@@ -49,17 +50,19 @@ def main(cfg: Config):
         if scenario_exists:
             sc = load(cfg.scenario_path, cfg.data_format)
         else:
-            raise Exception(f'Could not find scenario path: {cfg.scenario_path}. Make sure to include the '
-                            f'scenario directory in your project or if you want to generate a random scenario, '
-                            f'set load_scenario = False in config.txt.')
+            raise Exception(
+                f'Could not find scenario path: {cfg.scenario_path}. Make sure to include the '
+                f'scenario directory in your project or if you want to generate a random scenario, '
+                f'set load_scenario = False in config.txt.')
     else:
         # Todo: is secnario_path the right path here?
-        #if cfg.scenario_path.exists():
+        # if cfg.scenario_path.exists():
         if cfg.path.exists():
 
-            raise Exception(f'The path: {cfg.scenario_path} already exists with another file structure. '
-                            'Please remove or rename folder to avoid confusion and restart '
-                            'simulation.')
+            raise Exception(
+                f'The path: {cfg.scenario_path} already exists with another file structure. '
+                'Please remove or rename folder to avoid confusion and restart '
+                'simulation.')
         else:
             # create path if it does not exist yet
             # Todo: is secnario_path the right path here?
@@ -108,7 +111,8 @@ def main(cfg: Config):
 if __name__ == "__main__":
     parser = ArgumentParser(description='Entry point for market simulation')
     # parser.add_argument('config', nargs='?', default="", help='configuration file')
-    # Replaced the above line to take in the project directory (which will contain the config file) instead of putting in the config file
+    # Replaced the above line to take in the project directory (which will contain the config file)
+    # instead of putting in the config file
     # also made it mandatory
     parser.add_argument('project_dir', nargs='?', default=None, help='project directory path')
     args = parser.parse_args()
@@ -116,7 +120,8 @@ if __name__ == "__main__":
     if args.project_dir is None:
         raise (
             FileNotFoundError(
-                "Project directory path must be specified. Please provide the path as a command-line argument."))
+                "Project directory path must be specified. Please provide the path as a "
+                "command-line argument."))
     # This means that the config file must always be in the project directory
     config_file = os.path.join(args.project_dir, "config.txt")
     # Raise error if config.txt file not found in project directory

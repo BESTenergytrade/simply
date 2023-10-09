@@ -225,7 +225,7 @@ class Actor:
                     f"Strategy choice: {self.strategy} was found but can not be used since "
                     f"the battery capacity is 0 or no battery exists. Using default strategy "
                     f"without planning instead.")
-                strategy = 0
+                strategy = self.strategy
 
         if strategy == 0:
             self.market_schedule = self.get_default_market_schedule()
@@ -822,7 +822,8 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_ho
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated
-    :param horizon: number of time slots to look into future to make the prediction for actor strategy
+    :param horizon: number of time slots to look into future to make the prediction for actor
+        strategy
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :return: generated Actor object
     :rtype: Actor
@@ -862,8 +863,8 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_ho
     return Actor(actor_id, df, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
 
 
-def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, horizon=24, ts_hour=1,
-                    override_scaling=False):
+def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, horizon=24,
+                    ts_hour=1, override_scaling=False):
     """
     Create actor instance with random asset time series and random scaling factors. Replace
 
@@ -873,7 +874,8 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated, derived from csv if None
-    :param horizon: number of time slots to look into future to make the prediction for actor strategy
+    :param horizon: number of time slots to look into future to make the prediction for actor
+        strategy
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :param override_scaling: if True the predefined scaling factors are overridden by the peak value
         of each csv file

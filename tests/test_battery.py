@@ -9,7 +9,7 @@ from simply.scenario import Scenario
 
 
 class TestBattery:
-    Config("","")
+    Config("", "")
     scenario = Scenario(None, None, np.ones(20))
     environment = scenario.environment
 

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import simply.config as cfg
 from simply import actor, market_maker
 from simply import power_network
-#from simply.battery import Battery
+# from simply.battery import Battery
 from simply.util import get_all_data
 from simply.market_maker import MarketMaker
 from simply.actor import Actor
@@ -203,7 +203,8 @@ class Scenario:
         # print([order for order in orders if "MarketMaker" != order.actor_id])
         # print(self.market.orders)
         self.market.clear(reset=cfg.config.reset_market)
-        # print([m for ma in self.market.matches for m in ma if m["time"]== self.environment.time_step])
+        # print([m for ma in self.market.matches for m in ma if m["time"]== self.environment.
+        #      time_step])
         # print([m for matches in self.market.matches for m in matches
         #        if m["time"] == self.environment.time_step
         #        and (m["bid_actor"]==2 or m["ask_actor"]==2)]
@@ -324,7 +325,8 @@ class Scenario:
     #     if old_market_maker is not None:
     #         # But add the market maker again
     #         self.add_participant(old_market_maker)
-    # FCR: the above does not work but the definition below does. Below is from main branch. No idea where the changes came from...
+    # FCR: the above does not work but the definition below does. Below is from main branch. No idea
+    # where the changes came from...
     def reset(self):
         """ Reset the scenario after a simulation is run"""
         # Reset the time step
@@ -342,6 +344,7 @@ class Scenario:
             market_maker.reset()
             # But add the market maker again
             self.add_participant(market_maker)
+
 
 def from_dict(scenario_dict):
     pn_name, pn_dict = scenario_dict["power_network"].popitem()
@@ -419,7 +422,8 @@ def create_random(num_nodes, num_actors, weight_factor, nb_ts=100, horizon=24):
     pn.generate_grid_fee_matrix(weight_factor)
     mm_buy_prices = np.random.random(nb_ts+horizon)
     scenario = Scenario(pn, None, buy_prices=mm_buy_prices)
-    actors = [actor.create_random("H" + str(i), nb_ts=nb_ts, horizon=horizon) for i in range(num_actors)]
+    actors = [actor.create_random("H" + str(i), nb_ts=nb_ts, horizon=horizon)
+              for i in range(num_actors)]
 
     # Add actor nodes at random position (leaf node) in the network
     # One network node can contain several actors (using random.choices method)
@@ -435,7 +439,8 @@ def create_random2(num_nodes, num_actors, nb_ts=100, horizon=24):
     pn = power_network.create_random(num_nodes)
 
     # Create random actors
-    actors = [actor.create_random("H" + str(i), nb_ts=nb_ts, horizon=horizon) for i in range(num_actors)]
+    actors = [actor.create_random("H" + str(i), nb_ts=nb_ts, horizon=horizon)
+              for i in range(num_actors)]
 
     # Add actor nodes at random position (leaf node) in the network
     # One selected network node (using random.sample method), directly represents a single actor
@@ -449,7 +454,8 @@ def create_random2(num_nodes, num_actors, nb_ts=100, horizon=24):
     return scenario
 
 
-def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_hour=4, nb_ts=None, horizon=24):
+def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_hour=4, nb_ts=None,
+                             horizon=24):
     """
     Load csv files from path and randomly select num_actors to be randomly
 
@@ -459,7 +465,8 @@ def create_scenario_from_csv(dirpath, num_nodes, num_actors, weight_factor, ts_h
     :param weight_factor: weight factor used to derive grid fees
     :param ts_hour: number of time slot of equal length within one hour
     :param nb_ts: number of time slots to be generated
-    :param horizon: number of time slots to look into future to make the prediction for actor strategy
+    :param horizon: number of time slots to look into future to make the prediction for actor
+        strategy
     """
     # Create random nodes in the power network
     pn = power_network.create_random(num_nodes)
