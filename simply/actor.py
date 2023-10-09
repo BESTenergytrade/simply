@@ -111,7 +111,7 @@ class Actor:
     """
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
-                 cluster=None, strategy: int = 0, pricing_strategy=None):
+                 cluster=None, strategy: int = 0, pricing_strategy=None, battery_cap=None, battery_initial_soc=None):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -133,6 +133,10 @@ class Actor:
         self.battery = battery
         if self.battery is None:
             self.battery = Battery(capacity=2*cfg.config.energy_unit)
+        if battery_cap is not None:
+            self.battery.capacity = battery_cap
+        if battery_initial_soc is not None:
+            self.battery.soc = battery_initial_soc
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -852,13 +856,19 @@ class Actor:
         args["csv"] = self.csv_file
         if external_data:
             args_no_df = args
-            args_no_df.update({"df": {}, "pm": {}, "ls": 1, "ps": 1, "strategy": self.strategy})
+            args_no_df.update(
+                {"df": {}, "pm": {}, "ls": 1, "ps": 1, "battery_cap": self.battery.capacity,
+                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy}
+            )
             return args_no_df
         else:
             # since data is already scaled by ls and ps, both of these values are set to 1, so
             # they don't get applied twice
             args_df = args
-            args_df.update({"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1, "strategy": self.strategy})
+            args_df.update(
+                {"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1, "battery_cap": self.battery.capacity,
+                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy}
+            )
             return args_df
 
     def save_csv(self, dirpath):
