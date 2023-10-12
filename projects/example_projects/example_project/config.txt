@@ -12,7 +12,7 @@ data_format = csv
 # start timestep
 start = 1
 # number of timesteps in simulation
-nb_ts = 5 
+nb_ts = 3 
 # interval between simulation timesteps
 step_size = 1
 
