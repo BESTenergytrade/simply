@@ -4,23 +4,27 @@ import pandas as pd
 import numpy as np
 
 from simply.actor import Actor
+from simply.battery import Battery
+# from simply.market import Market
 from simply.market_2pac import TwoSidedPayAsClear
+# from simply.market_fair import BestMarket
 from simply.scenario import Scenario
 from simply import config as cfg
+from simply.config import Config
 
 
 class TestMultipleActors:
     np.random.seed(42)
     num_actors = 0
-    NUM_STEPS = 24
-    df = pd.DataFrame(np.random.rand(NUM_STEPS+24, 2), columns=["load", "pv"])
-    cfg.Config("", "")
-    df = df - df % cfg.config.energy_unit
     SELL_MULT = 1/0.8
     # Sell prices of are higher than buy_prices. This way the MarketMaker makes a profit
 
     @pytest.fixture()
-    def scenario(self):
+    def scenario(self, tmp_path):
+        cfg = Config("", tmp_path)
+        self.NUM_STEPS = 24
+        df = pd.DataFrame(np.random.rand(self.NUM_STEPS + 24, 2), columns=["load", "pv"])
+        self.df = df - df % cfg.energy_unit
         test_prices = [0.082, 0.083, 0.087, 0.102, 0.112, 0.122, 0.107, 0.103, 0.1, 0.1, 0.09,
                        0.082,
                        0.083, 0.083, 0.094, 0.1, 0.11, 0.109, 0.106, 0.105, 0.1, 0.093, 0.084,
@@ -31,7 +35,9 @@ class TestMultipleActors:
                        0.08]
         scenario = Scenario(None, None, buy_prices=np.tile(test_prices, 10), steps_per_hour=4,
                             sell_prices=np.tile(test_prices, 10)*self.SELL_MULT)
-        scenario.add_market(TwoSidedPayAsClear(grid_fee_matrix=[[0, 1], [1, 0]]))
+        # PaC does only allow single cluster with a single grid fee
+        scenario.add_market(TwoSidedPayAsClear(grid_fee_matrix=0))
+        # scenario.add_market(Market(grid_fee_matrix=[[0, 1], [1, 0]]))
         return scenario
 
     def test_interaction(self, scenario):
@@ -61,11 +67,10 @@ class TestMultipleActors:
         df = self.df.copy()
         df["load"] *= load_factor
         df["pv"] *= pv_factor
+        df["schedule"] = df["pv"] - df["load"]
         actor = Actor(self.num_actors, df, cluster=cluster)
         if capacity is not None:
-            actor.battery.capacity = capacity
-            actor.battery.soc = soc
-            actor.battery.soc_initial = soc
+            actor.battery = Battery(capacity=capacity, soc_initial=soc)
         return actor
 
     def get_banks_no_interaction(self, scenario, actors):
