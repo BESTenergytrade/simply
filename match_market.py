@@ -55,17 +55,14 @@ def main(cfg: Config):
                 f'scenario directory in your project or if you want to generate a random scenario, '
                 f'set load_scenario = False in config.txt.')
     else:
-        # Todo: is secnario_path the right path here?
-        # if cfg.scenario_path.exists():
-        if cfg.path.exists():
+        if cfg.scenario_path.exists():
 
             raise Exception(
                 f'The path: {cfg.scenario_path} already exists with another file structure. '
                 'Please remove or rename folder to avoid confusion and restart '
                 'simulation.')
         else:
-            # create path if it does not exist yet
-            # Todo: is secnario_path the right path here?
+            # create scenario path if it does not exist yet
             cfg.scenario_path.mkdir(parents=True, exist_ok=True)
         sc = create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.scenario_path, cfg.data_format)
