@@ -1,16 +1,12 @@
 from time import time
-
-import networkx as nx
 import pytest
+import pandas as pd
+import numpy as np
 
 from simply.actor import Actor
 from simply.market_2pac import TwoSidedPayAsClear
-from simply.market_fair import BestMarket
-from simply.power_network import PowerNetwork
 from simply.scenario import Scenario
 from simply import config as cfg
-import pandas as pd
-import numpy as np
 
 
 class TestMultipleActors:
@@ -22,6 +18,7 @@ class TestMultipleActors:
     df = df - df % cfg.config.energy_unit
     SELL_MULT = 1/0.8
     # Sell prices of are higher than buy_prices. This way the MarketMaker makes a profit
+
     @pytest.fixture()
     def scenario(self):
         test_prices = [0.082, 0.083, 0.087, 0.102, 0.112, 0.122, 0.107, 0.103, 0.1, 0.1, 0.09,

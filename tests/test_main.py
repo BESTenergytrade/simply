@@ -8,7 +8,6 @@ class TestMain:
     def test_main(self, tmp_path):
         cfg = Config("", "")
         cfg.path = Path((tmp_path / "output"))
-        current_path = Path.cwd()
         main(cfg)
 
     def test_load_scenario_csv(self, tmp_path):

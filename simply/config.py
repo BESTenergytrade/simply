@@ -1,5 +1,5 @@
 import warnings
-from configparser import ConfigParser, MissingSectionHeaderError, NoOptionError, NoSectionError
+from configparser import ConfigParser, MissingSectionHeaderError
 from numpy import linspace
 from pathlib import Path
 

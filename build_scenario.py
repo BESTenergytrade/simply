@@ -8,8 +8,6 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import argparse
-import sys
-from argparse import ArgumentParser
 from pandas.api.types import is_numeric_dtype
 from simply.actor import Actor
 from simply.scenario import Scenario

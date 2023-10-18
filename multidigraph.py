@@ -1,22 +1,31 @@
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
-from simply import config as cfg
-from netgraph import Graph
+from pathlib import Path
+from argparse import ArgumentParser
+import numpy as np
 
 
 def main(project_dir, data_dir):
     print(f'project_dir: {project_dir}')
     # File path for the matches csv
     project_dir = Path(project_dir)
-    matches_fp = project_dir + 'market_results/matches.csv'  # 'results_inputs/matches_dummy_2.csv'
+    matches_fp = project_dir / 'market_results/matches.csv'  # 'results_inputs/matches_dummy_2.csv'
 
     # Saves matches csv as a dataframe
     matches_df = pd.read_csv(matches_fp)
 
-    # matches_df['time'] = pd.to_datetime(matches_df['time'])
+    # TODO Temporary
+    start_date = "2021-01-01 00:00:00"
+    ts_hour = 4  # quarterhourly
+    dates = pd.DataFrame(pd.date_range(start_date, freq="{}min".format(int(60 / ts_hour)),
+                                       periods=matches_df['time'].max()))
+    dates.index = np.arange(1, len(dates) + 1)
+    matches_df['time'] = matches_df['time'].map(dates[0].to_dict())
 
-    # matches_df_slice = matches_df.query('"2021-01-01 00:00:00" <= time <= "2021-01-01 14:00:00"')
+    matches_df['time'] = pd.to_datetime(matches_df['time'])
+    matches_df['ask_cluster'] = matches_df['ask_cluster'].fillna(1000)  # "MarketMaker"
+    matches_df_slice = matches_df.query('"2021-01-01 00:00:00" <= time <= "2021-01-01 14:00:00"')
 
     cluster_energy_df = matches_df_slice.groupby(['bid_cluster', 'ask_cluster'])[
         'energy'].sum().reset_index()
@@ -158,3 +167,16 @@ def main(project_dir, data_dir):
 
     print('done')
     return
+
+
+if __name__ == "__main__":
+    parser = ArgumentParser(description='Entry point for market visualization')
+    parser.add_argument('project_dir', nargs='?', default=None, help='project directory path')
+    args = parser.parse_args()
+    # Raise error if project directory not specified
+    if args.project_dir is None:
+        raise (
+            FileNotFoundError(
+                "Project directory path must be specified. Please provide the path as a "
+                "command-line argument."))
+    main(args.project_dir, None)
