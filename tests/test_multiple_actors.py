@@ -9,7 +9,6 @@ from simply.battery import Battery
 from simply.market_2pac import TwoSidedPayAsClear
 # from simply.market_fair import BestMarket
 from simply.scenario import Scenario
-from simply import config as cfg
 from simply.config import Config
 
 
