@@ -68,7 +68,10 @@
     "csv": "actor_residential_1.csv",
     "ls": 1,
     "ps": 1,
-    "pm": {}
+    "pm": {},
+    "battery_cap": 0.02,
+    "battery_initial_soc": 0.5,
+    "strategy": 0
   },
   "residential_2": {
     "id": "residential_2",
@@ -76,7 +79,10 @@
     "csv": "actor_residential_2.csv",
     "ls": 1,
     "ps": 1,
-    "pm": {}
+    "pm": {},
+    "battery_cap": 0.02,
+    "battery_initial_soc": 0.5,
+    "strategy": 0
   },
   "residential_3": {
     "id": "residential_3",
@@ -84,6 +90,9 @@
     "csv": "actor_residential_3.csv",
     "ls": 1,
     "ps": 1,
-    "pm": {}
+    "pm": {},
+    "battery_cap": 4,
+    "battery_initial_soc": 0.5,
+    "strategy": 0
   }
 }

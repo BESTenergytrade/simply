@@ -18,7 +18,7 @@ class Config:
         - nb_ts - number of timesteps to simulate [3]\n
         - nb_actors - number of actors in network [5]\n
         - nb_nodes - number of nodes in network [4]\n
-        - step_size - length of timestep in hours [1]\n
+        - ts_per_hour - number of timesteps within one hour [4]\n
         - list_ts - list of timesteps in simulation [generated, can't be overridden]\n
         - show_plots - show various plots [False]\n
         - show_prints - show debug info in terminal [False]\n
@@ -55,13 +55,6 @@ class Config:
             warnings.warn(f"{cfg_file} was provided as Configuration file, but this file does not "
                           "exist. Default values will be used.")
 
-        # if not project_dir:warnings.warn("No project_dir was provided. Default project_dir ./"
-        #                                 "projects/example_projects/example_project is used")
-        #    project_dir = "../projects/example_projects/example_project"
-        # elif not Path(project_dir):
-        #    warnings.warn(f"{project_dir} was provided as directory, but this directory does not "
-        #                  "exist. Default project_dir ./projects/example_project will be used.")
-        #    project_dir = "projects/example_projects/example_project"
         if not project_dir:
             warnings.warn("No project_dir was provided. Default project_dir ./projects/"
                           "example_projects/example_project is used")
@@ -122,8 +115,8 @@ class Config:
         self.start = parser.getint("default", "start", fallback=0)
         # number of timesteps in simulation
         self.nb_ts = parser.getint("default", "nb_ts", fallback=5)
-        # interval between simulation timesteps
-        self.step_size = parser.getint("default", "step_size", fallback=1)
+        # number of timesteps within one hour
+        self.ts_per_hour = parser.getint("default", "ts_per_hour", fallback=4)
         # list of timesteps in simulation
         # not read from file but created from above information
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)

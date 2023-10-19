@@ -12,9 +12,9 @@ data_format = csv
 # start timestep
 start = 1
 # number of timesteps in simulation
-nb_ts = 3 
+nb_ts = 3
 # interval between simulation timesteps
-step_size = 1
+ts_per_hour = 4
 
 # which market type to use? fair, pac
 market_type = fair
