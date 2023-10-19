@@ -33,4 +33,4 @@ jobs:
         pytest tests/
     - name: Run match_market.py
       run: |
-        python match_market.py
+        python match_market.py projects/example_projects/example_project
