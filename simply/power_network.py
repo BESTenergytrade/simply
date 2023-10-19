@@ -112,6 +112,7 @@ class PowerNetwork:
     def to_image(self, dirpath=Path("./")):
         fig = self.plot(False)
         fig.savefig(dirpath / f"{self.name}.png")
+        plt.close(fig)
 
     def plot(self, show=True):
         fig = plt.figure()
