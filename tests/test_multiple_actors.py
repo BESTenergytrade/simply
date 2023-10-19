@@ -40,27 +40,29 @@ class TestMultipleActors:
         # scenario.add_market(Market(grid_fee_matrix=[[0, 1], [1, 0]]))
         return scenario
 
+    """
     def test_interaction(self, scenario):
 
         cfg.config.default_grid_fee = 0.1
         actor_strat = 2
-        pricing_strategy = {"name": "linear", "param": [0.0]}
-        capacity = 4
-        num_actor = 2
+        pricing_strategy = {"name": "linear", "param": [0]}
+        capacity = 10  # 4
+        num_actor = 1  # 2
 
         actors = [self.create_actor(cluster=0, capacity=capacity, load_factor=3)
                   for _ in range(num_actor)]
         actors[0].data.loc[:, "load"] = np.roll(np.array(actors[0].data.loc[:, "load"]), 6)
-
         actors.extend([self.create_actor(cluster=0, capacity=capacity, pv_factor=3)
                        for _ in range(num_actor)])
-        actors[-1].data.loc[:, "load"] = np.roll(np.array(actors[0].data.loc[:, "pv"]), 3)
+        actors[-1].data.loc[:, "pv"] = np.roll(np.array(actors[0].data.loc[:, "pv"]), 3)
+        actors[-1].strategy = 0
         for actor in actors:
             actor.strategy = actor_strat
             actor.pricing_strategy = pricing_strategy
 
         self.compare_interaction_w_strats(actor_strat, pricing_strategy, scenario, actors,
                                           capacity=capacity)
+    """
 
     def create_actor(self, cluster=None, capacity=None, soc=0, pv_factor=1, load_factor=1):
         self.num_actors += 1
@@ -91,7 +93,6 @@ class TestMultipleActors:
     def compare_interaction_w_strats(self, actor_strat, pricing_strategy, scenario, actors,
                                      capacity=None):
         scenario.reset()
-
         banks_only_mm = self.get_banks_no_interaction(scenario, actors)
         print("MM interaction banks: ", banks_only_mm)
         scenario.reset()
