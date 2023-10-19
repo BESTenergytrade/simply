@@ -140,11 +140,17 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
     # Read csv files for each asset
     csv_peak = {}
-    for col, csv_dict in asset_dict.items():
-        # if csv_dict is empty
-        if not csv_dict:
+    battery_cap = 0
+    init_soc = 0.5
+    for col, info_dict in asset_dict.items():
+        # if info_dict is empty
+        if not info_dict:
             continue
-        csv_df = pd.read_csv(csv_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=True,
+        if col == "battery":
+            battery_cap = info_dict["capacityKwh"]
+            init_soc = info_dict["initialSOC"]
+            continue
+        csv_df = pd.read_csv(info_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=True,
                              index_col=['Time'])
         df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, 0]
         # Save peak value and normalize time series
@@ -153,7 +159,8 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
     df = basic_strategy(df, csv_peak, ps, ls)
 
-    return Actor(actor_id, df, environment, ls=1, ps=1)
+    return Actor(actor_id, df, environment, ls=1, ps=1, battery_cap=battery_cap,
+                 battery_initial_soc=init_soc)
 
 
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
@@ -216,7 +223,11 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         else:
             for device in actor_row['devices']:
                 # save the csv file name
-                file_dict[device['deviceType']] = device['deviceID']
+                if device['deviceType'] == 'battery':
+                    device.pop('deviceType')
+                    asset_dict['battery'] = device
+                else:
+                    file_dict[device['deviceType']] = device['deviceID']
 
         # Load
         if 'load' in file_dict:
