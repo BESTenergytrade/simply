@@ -136,8 +136,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     :return: Actor object
     """
     df = pd.DataFrame([], columns=cols)
-    start_date, end_date = dates_to_datetime(start_date, nb_ts, horizon, ts_hour)
-
+    start_date, end_date = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
     # Read csv files for each asset
     csv_peak = {}
     battery_cap = 0
@@ -206,7 +205,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     if plot_network is True:
         pn.plot()
 
-    start_date, end_date = dates_to_datetime(start_date, nb_ts, horizon, ts_hour)
+    start_date, end_date = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
     buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date)
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
@@ -243,8 +242,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         _ = create_actor_from_config(actor_row['prosumerName'], scenario.environment,
                                      asset_dict=asset_dict, start_date=start_date,
                                      nb_ts=nb_ts, horizon=horizon, ts_hour=ts_hour, ps=ps, ls=ls)
-        print(f'{i} actor added')
-        print(f'{file_dict["load"]}')
+        print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{file_dict["load"]}"')
 
     actor_map = map_actors(config_df)
     actor_map = pn.add_actors_map(actor_map)
@@ -294,6 +292,7 @@ def main(project_dir, data_dir):
         data_dirpath=data_dirpath,
         nb_ts=cfg.nb_ts,
         horizon=cfg.horizon,
+        ts_hour=cfg.ts_per_hour,
         loads_dir_path=loads_dir_path,
         ps=1,
         ls=None
