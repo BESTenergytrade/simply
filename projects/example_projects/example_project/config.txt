@@ -22,6 +22,10 @@ market_type = fair
 reset_market = True
 # size of energy units to be traded individually
 energy_unit = 0.01
+# factor describing the relation of grid fee to cumulative power network edge weights
+weight_factor = 0.03
+# default grid_fee to be used by market maker
+default_grid_fee = 0.09
 
 #--------------------------
 # output

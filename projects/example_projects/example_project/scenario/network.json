@@ -22,7 +22,7 @@
     ],
     "links": [
       {
-        "weight": 0,
+        "weight": 1,
         "source": "N01",
         "target": "N02"
       },
