@@ -1,4 +1,5 @@
-[{
+[
+    {
         "comment": "An example of a residential prosumer with load and pv data specified by their 'deviceID'",
         "prosumerName": "residential_1",
         "prosumerType": "residential",
@@ -14,7 +15,7 @@
             }
         ]
     },
-  {
+    {
         "comment": "An example of a residential prosumer with load data specified by their 'deviceID' but without pv",
         "prosumerName": "residential_2",
         "prosumerType": "residential",
@@ -42,10 +43,11 @@
             },
             {
                 "deviceType": "battery",
-                "capacityKwh": 4,
+                "capacityKwh": 3,
                 "initialSOC": 0.5
             }
-        ]
+        ],
+        "strategy": 3,
+        "pricing_strategy": {"name": "linear", "param": [0.01]}
     }
-
 ]

@@ -71,7 +71,8 @@
     "pm": {},
     "battery_cap": 0.02,
     "battery_initial_soc": 0.5,
-    "strategy": 0
+    "strategy": 0,
+    "pricing_strategy": NaN
   },
   "residential_2": {
     "id": "residential_2",
@@ -82,7 +83,8 @@
     "pm": {},
     "battery_cap": 0.02,
     "battery_initial_soc": 0.5,
-    "strategy": 0
+    "strategy": 0,
+    "pricing_strategy": NaN
   },
   "residential_3": {
     "id": "residential_3",
@@ -91,8 +93,14 @@
     "ls": 1,
     "ps": 1,
     "pm": {},
-    "battery_cap": 4,
+    "battery_cap": 3,
     "battery_initial_soc": 0.5,
-    "strategy": 0
+    "strategy": 3.0,
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.01
+      ]
+    }
   }
 }

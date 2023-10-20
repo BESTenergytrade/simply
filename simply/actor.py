@@ -140,7 +140,10 @@ class Actor:
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
-        self.strategy = strategy
+        if np.isnan(strategy):
+            self.strategy: int = 0
+        else:
+            self.strategy = strategy
         self.pricing_strategy = pricing_strategy
         if csv is not None:
             self.csv_file = csv
@@ -799,7 +802,8 @@ class Actor:
             args_no_df.update({"df": {}, "pm": {}, "ls": 1, "ps": 1})
             args_no_df.update(
                 {"df": {}, "pm": {}, "ls": 1, "ps": 1, "battery_cap": self.battery.capacity,
-                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy}
+                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy,
+                 "pricing_strategy": self.pricing_strategy}
             )
             return args_no_df
         else:
@@ -809,7 +813,8 @@ class Actor:
             args_df.update(
                 {"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1,
                  "battery_cap": self.battery.capacity,
-                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy}
+                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy,
+                 "pricing_strategy": self.pricing_strategy}
             )
             return args_df
 

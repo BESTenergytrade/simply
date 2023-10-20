@@ -117,7 +117,8 @@ def read_config_json(config_json):
 
 def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2016-01-01",
                              nb_ts=None, horizon=24, ts_hour=1,
-                             cols=["load", "pv", "schedule", "price"], ps=None, ls=None):
+                             cols=["load", "pv", "schedule", "price"], ps=None, ls=None,
+                             strategy=0, pricing_strategy=None):
     """
     Create Actor with an ID and given asset time series shifted to a specified start time and
     resolution (and scaled by factors ps/ls if given).
@@ -159,7 +160,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     df = basic_strategy(df, csv_peak, ps, ls)
 
     return Actor(actor_id, df, environment, ls=1, ps=1, battery_cap=battery_cap,
-                 battery_initial_soc=init_soc)
+                 battery_initial_soc=init_soc, strategy=strategy, pricing_strategy=pricing_strategy)
 
 
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
@@ -209,7 +210,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date)
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
-    scenario = Scenario(None, None, buy_prices=buy_prices)
+    scenario = Scenario(None, None, buy_prices=buy_prices, market_maker_cluster=0)
     for i, actor_row in config_df.iterrows():
         file_dict = {}
         asset_dict = {}
@@ -241,7 +242,9 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         # actors are automatically added to the scenario environment
         _ = create_actor_from_config(actor_row['prosumerName'], scenario.environment,
                                      asset_dict=asset_dict, start_date=start_date,
-                                     nb_ts=nb_ts, horizon=horizon, ts_hour=ts_hour, ps=ps, ls=ls)
+                                     nb_ts=nb_ts, horizon=horizon, ts_hour=ts_hour, ps=ps, ls=ls,
+                                     strategy=actor_row['strategy'],
+                                     pricing_strategy=actor_row["pricing_strategy"])
         print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{file_dict["load"]}"')
 
     actor_map = map_actors(config_df)
