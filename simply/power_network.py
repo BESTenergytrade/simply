@@ -38,11 +38,6 @@ class PowerNetwork:
         # matrix with (scaled) weights between clusters
         self.grid_fee_matrix = []
 
-        # clusters: leaves with their parents (no weight between them)
-        for leaf in self.leaf_nodes:
-            for u, v, d in network.edges(leaf, data=True):
-                d["weight"] = 0
-
         if weight_factor is None:
             weight_factor = cfg.parser.getfloat("network", "weight_factor", fallback=1)
 
@@ -229,3 +224,11 @@ def create_power_network_from_config(network_path, weight_factor=1):
                                          directed=network_json.get("directed", False),
                                          multigraph=network_json.get("multigraph", False))
     return PowerNetwork(network_name, network, weight_factor)
+
+
+def remove_weights_from_leef_nodes(network):
+    leaf_nodes = [n for n, d in network.degree() if d == 1]
+    # leaves with their parents (no weight between them)
+    for leaf in leaf_nodes:
+        for u, v, d in network.edges(leaf, data=True):
+            d["weight"] = 0

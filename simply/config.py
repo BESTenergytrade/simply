@@ -92,8 +92,6 @@ class Config:
         self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
         # number of nodes in simulation
         self.nb_nodes = parser.getint('default', 'nb_nodes', fallback=4)
-        # weight factor: network charges to power network weight
-        self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
 
         # Tolerance value for assertions, comparison and so on
         self.EPS = parser.getfloat("default", "EPS", fallback=1e-6)
@@ -107,6 +105,8 @@ class Config:
         self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
         # size of energy units to be traded individually
         self.energy_unit = parser.getfloat("default", "energy_unit", fallback=0.01)
+        # factor describing the relation of grid fee to cumulative power network edge weights
+        self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.03)
         # default grid_fee to be used by market maker
         self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
 
