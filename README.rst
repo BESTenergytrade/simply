@@ -61,7 +61,6 @@ location in the network.
 The matching algorithms can also be used individually via a wrapper using a json format for order
 definition.
 
-# ToDo: maybe adapt description a bit
 
 Using Simply
 ============
@@ -260,3 +259,5 @@ Here you can see the results for the matches and orders in the network.
 
 License
 =======
+
+Simply is licensed under the MIT License as described in the file `LICENSE <https://github.com/BESTenergytrade/simply/blob/main/LICENSE>`_.
