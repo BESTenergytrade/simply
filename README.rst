@@ -2,8 +2,27 @@
 Getting started
 ~~~~~~~~~~~~~~~
 
-Simply is an open-source tool to simulate electricity markets using different matching algorithms.
-# ToDo: expand on the description of simply
+**Simply is an open-source tool to simulate electricity markets using different matching algorithms.**
+
+.. contents::
+    :depth: 2
+    :local:
+    :backlinks: top
+
+Introduction
+===============
+Simply is an electricity market simulation frame work consisting of scripts for
+
+* scenario generation,
+* market simulation and
+* results visualisation and analysis.
+
+Simply is an agent-based market simulation tool with market actors sending bids and asks to a
+market, that can be cleared using different periodic :ref:`matching_algorithms`.
+The algorithms take grid fees into account, which can be based on clusters defined by the agent's
+location in the network.
+The matching algorithms can also be used individually via a wrapper using a json format for order
+definition.
 
 Documentation
 =============
@@ -44,22 +63,6 @@ Then there are two options to use simply:
 
 The tool uses Python (>= 3.8) standard libraries as well as specific, but well known libraries
 such as `matplotlib <https://matplotlib.org/>`_, `pandas <https://pandas.pydata.org/>`_ and `networkx <https://networkx.org/>`_.
-
-
-General concept
-===============
-Simply is an electricity market simulation frame work consisting of scripts for 
-
-* scenario generation, 
-* market simulation and 
-* results visualisation and analysis.
-
-Simply is an agent-based market simulation tool with market actors sending bids and asks to a
-market, that can be cleared using different periodic :ref:`matching_algorithms`.
-The algorithms take grid fees into account, which can be based on clusters defined by the agent's
-location in the network.
-The matching algorithms can also be used individually via a wrapper using a json format for order
-definition.
 
 
 Using Simply
