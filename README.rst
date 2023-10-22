@@ -18,7 +18,7 @@ Simply is an electricity market simulation frame work consisting of scripts for
 * results visualisation and analysis.
 
 Simply is an agent-based market simulation tool with market actors sending bids and asks to a
-market, that can be cleared using different periodic :ref:`matching_algorithms`.
+market, that can be cleared using different periodic `Matching Algorithms <https://simply.readthedocs.io/en/latest/matching_strategies.html>`_.
 The algorithms take grid fees into account, which can be based on clusters defined by the agent's
 location in the network.
 The matching algorithms can also be used individually via a wrapper using a json format for order
@@ -229,7 +229,7 @@ with the option of specifying a path for your scenario inputs if you want to sto
 The scenario is then created and automatically saved to `path/to/your/project/dir/scenario`. The scenario contains a
 time series for each actor with power generation, power consumption, and market demand or supply (including bid price).
 
-An example of how to build a scenario can be found here. #PROVIDE LINK LATER
+An example of a scenario can be found in `projects/example_projects/example_project`.
 
 Generating a random scenario
 ----------------------------
@@ -243,7 +243,7 @@ input required before running the main simply function is the `config.txt` file:
         |-- your_project_name
             |-- config.txt
 
-An example of how to generate a random scenario can be found here. #PROVIDE LINK LATER
+An example of a generated random scenario can be found in `projects/example_projects/random_scenario`.
 
 Running the match market function
 ---------------------------------
