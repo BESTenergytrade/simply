@@ -79,17 +79,17 @@ this will be chosen. The file is split into the sections `scenario`, `market` an
 the parameters for each section are outlined as follows:
 
 .. csv-table:: Scenario
-   :file: ../files_to_be_displayed/scenario_params.csv
+   :file: doc/files_to_be_displayed/scenario_params.csv
    :widths: 30, 70, 30, 30
    :header-rows: 1
 
 .. csv-table:: Market
-   :file: ../files_to_be_displayed/market_params.csv
+   :file: doc/files_to_be_displayed/market_params.csv
    :widths: 30, 70, 30, 30
    :header-rows: 1
 
 .. csv-table:: Output
-   :file: ../files_to_be_displayed/output_params.csv
+   :file: doc/files_to_be_displayed/output_params.csv
    :widths: 30, 70, 30, 30
    :header-rows: 1
 
