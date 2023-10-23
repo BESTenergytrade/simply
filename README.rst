@@ -73,8 +73,8 @@ by simply.
 
 **Configuration file**
 
-In all cases for using simply, a configuration file (`config.txt`) is required to specify the correct parameters
-of the scenario and simulation. If a parameter is not specified in `config.txt` and there is a default option,
+In all cases for using simply, a configuration file (`config.cfg`) is required to specify the correct parameters
+of the scenario and simulation. If a parameter is not specified in `config.cfg` and there is a default option,
 this will be chosen. The file is split into the sections `scenario`, `market` and `outputs`, and
 the parameters for each section are outlined as follows:
 
@@ -115,15 +115,15 @@ directory:
                     |-- your production timeseries
                 |-- loads_dir.csv
             |-- actors_config.json
-            |-- config.txt
+            |-- config.cfg
             |-- network_config.json
 
 **Scenario inputs**
 
 The input timeseries data can be in either csv or json format. Below shows the generic format of the input timeseries.
 The `Time` column contains entries for each interval in the format `YYYY-MM-DD hh:mm:ss`, where the interval time is
-specified in `config.txt`. The number of entries must be equal to the number of timesteps
-(also specified in `config.txt`). The second column contains the values for each interval for either load, production or
+specified in `config.cfg`. The number of entries must be equal to the number of timesteps
+(also specified in `config.cfg`). The second column contains the values for each interval for either load, production or
 pricing, and `col_name` will change based on which data is represented.
 
 ::
@@ -233,17 +233,18 @@ An example of a scenario can be found in `projects/example_projects/example_proj
 
 Generating a random scenario
 ----------------------------
-There is also the option of generating a random scenario to be used in `match_market.py`. In this case, the parameters `nb_actors`,
-`nb_nodes` and `weight_factor` should be specified in `config.txt`, otherwise the default parameters are used. The only
-input required before running the main simply function is the `config.txt` file:
+There is also the option of generating a random scenario right before matching using `match_market.py`
+(as explained in the section below). In this case, the parameters `nb_actors`,
+`nb_nodes` and `weight_factor` should be specified in `config.cfg`, otherwise the default parameters are used. The only
+input required before running the main simply function is the `config.cfg` file with attribute `load_scenario = False`:
 
 ::
 
     |-- projects
         |-- your_project_name
-            |-- config.txt
+            |-- config.cfg
 
-An example of a generated random scenario can be found in `projects/example_projects/random_scenario`.
+An example of config file and a generated random scenario can be found in `projects/example_projects/random_scenario`.
 
 Running the match market function
 ---------------------------------

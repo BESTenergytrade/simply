@@ -128,7 +128,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     :param start_date: Start date of the actor, defaults to "2016-01-01"
     :param nb_ts: Number of time slots to be generated, defaults to None
     :param horizon: number of time slots to look into future to make the prediction for actor
-    strategy
+        strategy
     :param ts_hour: Number of time slot of equal length within one hour, defaults to 4
     :param cols: List of columns to be included, defaults to ["load", "pv", "schedule", "price"]
     :param ps: PV scalar, defaults to None
@@ -267,9 +267,13 @@ def main(project_dir, data_dir):
     # Set the paths based on the scenario directory
     config_json_path = project_dir / "actors_config.json"
     network_path = project_dir / "network_config.json"
-    config_path = project_dir / "config.txt"
+    config_path = project_dir / "config.cfg"
     data_dirpath = Path(data_dir) if data_dir else project_dir / "scenario_inputs"
     loads_dir_path = data_dirpath / "loads_dir.csv"
+
+    if not config_path.exists():
+        # backwards compatibility to allow config.txt
+        config_path = config_path.parent / (config_path.stem + '.txt')
 
     missing_paths = [path for path in (config_json_path, network_path, config_path, loads_dir_path,
                                        data_dirpath) if not path.exists()]

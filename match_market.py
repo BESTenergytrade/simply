@@ -20,8 +20,6 @@ Usage: python match_market.py [config file]
 
 
 def main(cfg: Config):
-    print(cfg)
-
     # Checks if actor files with the correct format exist in the cfg.scenario_path
     # --------------------------------
     def list_files_in_path(current_path, pattern='*'):
@@ -29,13 +27,10 @@ def main(cfg: Config):
         return file_list
 
     current_path = Path.cwd()
-    print("Hier bin ich, jetzt:", current_path)
-    print("Das ist data_format: ", cfg.data_format)
-    print(f'Scenario path: {cfg.scenario_path}')
+    print("Current directory:", current_path)
     files_in_path = list_files_in_path(cfg.scenario_path)
-    # print(f"${cfg.scenario_path}/*")
-    # names = [os.path.basename(x) for x in glob.glob(f"${cfg.scenario_path}/*")]
-    print("Das sind die Files in: ", cfg.scenario_path, ":  ", files_in_path)
+    print(f"Files in {cfg.scenario_path}:  {files_in_path}")
+    print("data_format: ", cfg.data_format)
     # --------------------------------
 
     scenario_exists = len(
@@ -46,15 +41,16 @@ def main(cfg: Config):
     sc: Scenario
 
     if cfg.load_scenario:
-        print("cfg.scenario_path: ", cfg.scenario_path)
+        print(f"Load scenario from cfg.scenario_path: {cfg.scenario_path}")
         if scenario_exists:
             sc = load(cfg.scenario_path, cfg.data_format)
         else:
             raise Exception(
                 f'Could not find scenario path: {cfg.scenario_path}. Make sure to include the '
                 f'scenario directory in your project or if you want to generate a random scenario, '
-                f'set load_scenario = False in config.txt.')
+                f'set load_scenario = False in config.cfg.')
     else:
+        print(f"Create scenario at cfg.scenario_path: {cfg.scenario_path}")
         if cfg.scenario_path.exists():
 
             raise Exception(
@@ -120,10 +116,12 @@ if __name__ == "__main__":
                 "Project directory path must be specified. Please provide the path as a "
                 "command-line argument."))
     # This means that the config file must always be in the project directory
-    config_file = os.path.join(args.project_dir, "config.txt")
-    # Raise error if config.txt file not found in project directory
+    config_file = os.path.join(args.project_dir, "config.cfg")
+    # Raise error if config.(cfg|txt) file not found in project directory
     if not os.path.isfile(config_file):
-        raise (
-            FileNotFoundError(f"Config file not found in project directory: {args.project_dir}"))
+        config_file = os.path.join(args.project_dir, "config.txt")
+        if not os.path.isfile(config_file):
+            raise (FileNotFoundError(
+                f"Config file not found in project directory: {args.project_dir}"))
     cfg = Config(config_file, args.project_dir)
     main(cfg)

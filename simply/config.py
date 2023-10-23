@@ -34,7 +34,7 @@ class Config:
             pac/2pac (two-sided pay-as-clear)\n
             fair (custom BEST market)\n
         - energy_unit: size of energy units to be traded individually [0.01]\n
-        - weight_factor: conversion factor from grid fees to power network node weight [0.1]\n
+        - weight_factor: conversion factor from grid fees to power network node weight [0.03]\n
     [actor]
         - horizon - number of time steps to look ahead for prediction [24]
 
