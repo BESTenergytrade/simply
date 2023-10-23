@@ -224,6 +224,9 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
             for device in actor_row['devices']:
                 # save the csv file name
                 if device['deviceType'] == 'battery':
+                    if 'battery' in asset_dict.keys():
+                        warnings.warn(
+                            f"Actor{actor_row['prosumerName']} has multiple battery devices.")
                     device.pop('deviceType')
                     asset_dict['battery'] = device
                 else:
@@ -231,10 +234,14 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
 
         # Load
         if 'load' in file_dict:
+            if 'load' in asset_dict.keys():
+                warnings.warn(f"Actor{actor_row['prosumerName']} has multiple load devices.")
             asset_dict['load'] = {"csv": loads_path.joinpath(file_dict['load']), "col_index": 1}
 
         # PV
         if 'solar' in file_dict:
+            if 'pv' in asset_dict.keys():
+                warnings.warn(f"Actor{actor_row['prosumerName']} has multiple solar devices.")
             asset_dict['pv'] = {"csv": pv_path.joinpath(file_dict['solar']), "col_index": 1}
 
         # Prices
