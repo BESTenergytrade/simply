@@ -193,12 +193,18 @@ class Scenario:
         self.market = market
         market.t_step = self.environment.time_step
 
-    def add_rl_env(self, market, algorithm, best_timestep):
+    def add_rl_env(self, market, algorithm, cfg):
+        """
+        Adds RL environments and RL model to actors with RL strategy.
+        @param market: simply energy market
+        @param algorithm: algorithm of the Rl model that is to be added.
+        @param cfg: configuration file for the simulation run.
+        """
         for participant in self.market_participants:
             if isinstance(participant, Actor):
                 if participant.strategy == 4:
-                    participant.set_rl_env(market)
-                    participant.set_rl_model(algorithm, best_timestep)
+                    participant.set_rl_env(market, cfg)
+                    participant.set_rl_model(algorithm, cfg)
 
     def market_step(self):
         for participant in self.market_participants:
@@ -206,6 +212,10 @@ class Scenario:
             for order in orders:
                 self.market.accept_order(order, callback=participant.receive_market_results)
         self.market.clear(reset=cfg.config.reset_market)
+        for participant in self.market_participants:
+            if isinstance(participant, Actor):
+                if participant.strategy == 4:
+                    participant.update_rl_agent()
 
     def next_time_step(self):
         for participant in self.market_participants:

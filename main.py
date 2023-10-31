@@ -63,8 +63,7 @@ def main(cfg: Config):
 
     # add rl environments to actors that have rl strategy incl. loading the rl model for each rl agent
     algorithm = "new_start/24/1.4/norm_bank_reward_04-03-21-4"
-    best_timestep = 1600000
-    sc.add_rl_env(m, algorithm, best_timestep)
+    sc.add_rl_env(m, algorithm, cfg)
 
     for _ in range(cfg.nb_ts):
         # actors calculate strategy based market interaction with the market maker

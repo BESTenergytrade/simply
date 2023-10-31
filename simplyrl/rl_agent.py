@@ -1,69 +1,78 @@
-from stable_baselines3 import PPO
-import os
-import datetime
 import numpy as np
+from stable_baselines3 import PPO
+# import torch
+# import tensorboard
+# try:
+#     import torch
+# except ImportError:
+#     raise ModuleNotFoundError(
+#         f"Optional dependency 'torch' not found. To run training of reinforcement learning agent"
+#         f"please install dependency via 'pip install torch'."
+#     )
 
 
-def train_agent(actor: object,
-                algorithm_name: str,
-                pretrained_model: str = None,
-                restart: bool = False,
-                version: int = 0,
-                cfg=None) -> tuple[str, PPO]:
+def train_agent(actor=None, training_steps=2048, clear_memory=True):
+    """
+    Trains and updates RL model by calling PPO internal function `learn()` of the RL model.
+    Model is trained for one batch training interval of length training_steps.
+    @param actor: RL agent object
+    @param training_steps: number of training steps of the batch training after which model is updated and saved
+    @param clear_memory: optionally the instances of training attributes in rl_environment can be reset
+    """
 
-    # Set up training variables
-    time_now = datetime.datetime.now()
-    time_now = time_now.strftime("%m-%d-%H-%M")
+    # model directory to save updated model in
+    algorithm = "new_start/24/1.4/norm_bank_reward_04-03-21-4"
+    models_dir = f"rl-models/{algorithm}"
 
-    algorithm_name = f'{algorithm_name}_{time_now}'
-    TIMESTEPS = 10000
-    models_dir = f"rl_models/{algorithm_name}"
-    logdir = "rl-models/logs"
+    # train the rl model
+    actor.rl_model.learn(
+        total_timesteps=training_steps,
+        reset_num_timesteps=False,
+        tb_log_name=f'{actor.id}_{algorithm}',
+        progress_bar=True,
+    )
 
-    env = actor.rl_environment
+    # save model
+    actor.rl_model.save(f"{models_dir}/{actor.rl_model.num_timesteps}")
 
-    if not os.path.exists(models_dir):
-        os.makedirs(models_dir)
+    # reset environment variables to clear memory (optional)
+    if clear_memory:
+        actor.rl_environment.reset_train_env()
 
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
-
-    # Restart training from a previous model
-    if pretrained_model:
-        models_dir = f"rl-models/{algorithm_name}"
-        pretrained_model_path = f"rl-models/{pretrained_model}/{str(version)}"
-        # algorithm_name = pretrained_model
-        model = PPO.load(pretrained_model_path, reset_num_timesteps=restart, tensorboard_log=logdir, verbose=1, env=env)
-    else:
-        #         model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=logdir, device='cpu')
-        model = PPO("MlpPolicy", env, verbose=1, device='cpu')
-
-    # Train the agent
-    for i in range(1, 100000):
-        print(i)
-        model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=restart, tb_log_name=f'{algorithm_name}')
-        if i % 2 == 0:
-            model.save(f"{models_dir}/{TIMESTEPS * i + version}")
-
-    return algorithm_name, model
 
 
 def predict_agent(actor=None):
+    """
+    Determines a predicted action and corresponding schedule value for a given RL agent.
+    @param actor: RL agent
+    @return: schedule prediction value
+    """
 
     env = actor.rl_environment
     model = actor.rl_model
 
-    observation = env.reset()
+    observation, _ = env.reset()
 
-    action = model.predict(observation)
-    next_action = np.round(env.action_energy_values[action[0]], 3)
+    actor.action = model.predict(observation)[0]
+    next_action = np.round(env.action_energy_values[actor.action], 3)
 
     return next_action
 
 
-def load_model(actor=None, model_path=None):
+def load_model(actor=None, model_path=None, pretrained=True):
+    """
+    Imports a RL model for a given RL agent.
+    @param actor: RL agent
+    @param model_path: path where the model is stored in
+    @param pretrained: name of the pretrained model. if none is given a new model is created
+    @return: RL model
+    """
+
     # import model
     # TODO: make import of model variable to each actor and its identifier
     env = actor.rl_environment
-    model = PPO.load(model_path, env=env)
+    if pretrained:
+        model = PPO.load(model_path, env=env)
+    else:
+        model = PPO("MlpPolicy", env=env, verbose=1, device='cpu')
     return model

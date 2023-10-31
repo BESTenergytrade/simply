@@ -6,7 +6,7 @@ import gymnasium as gym
 class EnergyEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, actor=None, market=None, horizon=24, training=False, energy_unit=0.001):
+    def __init__(self, actor=None, market=None, horizon=24, interval=72, training=False, energy_unit=0.001):
         super(EnergyEnv, self).__init__()
 
         # set actor and market in environment
@@ -17,10 +17,9 @@ class EnergyEnv(gym.Env):
         self.energy_unit = energy_unit
 
         # How many timesteps to observe when training
-        self.horizon = horizon
+        self.horizon_train = horizon
+        self.training_interval = interval
         self.training = training
-
-        self._setup(self.market)
 
         # Create action space
         self.action_energy_values = np.arange(-13.5, 13.5, self.energy_unit * 5)
@@ -28,95 +27,106 @@ class EnergyEnv(gym.Env):
 
         # Create observation space
         self.observation_values = np.arange(-1.4, 1.4, self.energy_unit)
-        self.observation_bins = [len(self.observation_values) for _ in range(self.horizon * 2 + 1)]
+        # observation is set to be of length 49 with 24 t_steps schedule, buy prices and one soc value
+        self.observation_bins = [len(self.observation_values) for _ in range(24 * 2 + 1)]
         self.observation_space = gym.spaces.MultiDiscrete(self.observation_bins)
 
-        # initialize action, reward and observation attributes
-        self.action = None
-        self.reward = None
-        self.observation = None
+        # for training initialize action, reward, bank, battery soc and observation attributes
+        if training:
+            self.reset_train_env()
 
-    def _setup(self, market=None):
-        # Training related elements. Either training data is given or created for rl agent
-        # Create market, battery and actor df
-        self.m = market
-        self.battery = self.actor.battery
-        self.actor_df = self.actor.data
+    def _setup(self):
+        """
+        Set up training related elements. Current timestep of outer simply simulation and
+        rl model observation attributes are initialized
+        """
 
-    def _step(self, action):
+        # setup observation for prediction
+        observation = pd.concat([self.actor.pred["schedule"], self.actor.mm_buy_prices], axis=1).values
+        soc = self.actor.battery.soc
+        self.observation = self._handle_observation(observation, soc)
 
-        # assign action from action space
-        self.action = round(self.action_energy_values[action[0]], 3)
+        if self.training:
+            self.t_step_simply = self.actor.t_step
+            # choose random t_step to start training episode
+            self.t_step_rl = self.random_t_step()
+            self.episode_end = self.t_step_rl + self.horizon_train - 1
+            self.observation_range[self.t_step_simply] = self.observation
+        else:
+            self.t_step_rl = self.actor.t_step
+            self.action = None
+            self.reward = None
+            self.bank = None
 
-        # calculate reward
-        self.reward = self._get_reward(self.action)
+    def step(self, action):
+
+        # # assign action from action space
+        # self.action = round(self.action_energy_values[action[0]], 3)
+
+        # assign action according to timestep of outer simulation
+        self.action = self.actions_simply[self.t_step_rl]
+        print(action, self.action)
+        self.reward = self.rewards_simply[self.t_step_rl]
+        self.bank = self.banks_simply[self.t_step_rl]
+        self.soc = self.socs_simply[self.t_step_rl]
 
         # Generate the observation for the next timestep
-        self.observation = self._next_observation()
+        self.observation = self.observation_range[self.t_step_rl]
 
-        return self.observation, self.reward
+        if self.t_step_rl >= self.episode_end:
+            terminated = True
+        else:
+            terminated = False
+        truncated = False
 
-    def _next_observation(self):
-        """Return observation"""
-        self.actor.create_prediction()
-        # Add predicted schedule and prices to observation
-        observation = self.actor.pred[['schedule', 'prices']].values
-        observation = self._handle_observation(observation)
-        return observation
+        info = {
+            "time_step": self.t_step_rl,
+            "action": self.action,
+            "current_reward": self.reward,
+            "bank": self.bank,
+        }
 
-    def _handle_observation(self, observation):
+        self.t_step_rl += 1
+
+        return self.observation, self.reward, terminated, truncated, info
+
+    def _handle_observation(self, observation, soc):
         # Flatten observation and add soc to it
-        observation = np.append(observation.flatten(), self.actor.battery.soc)
+        observation = np.append(observation.flatten(), soc)
         # Convert observation to discrete values
+        # TODO: make conversion variable to settings/input
         observation = np.asarray(np.round((observation + 1.4) * 1000), dtype=np.int64)
         return observation
 
-    def _get_reward(self, action):
-        # TODO: Give reward for beating the rule based agent
+    def random_t_step(self):
+        t_step_min = self.t_step_simply - self.training_interval + 1
+        t_step_max = self.t_step_simply - self.horizon_train + 1
+        return np.random.choice(list(range(t_step_min, t_step_max + 1)))
 
-        # Punish for not operating within limitations:
-        battery_energy = self.actor.battery.energy()
-        available_energy = battery_energy + action + self.actor.pred['pv'][0]
-        needed_energy = self.actor.pred['load'][0]
-
-        if available_energy < needed_energy:
-            return self._normalize_reward(-5, 10, -5)
-        if available_energy > self.actor.battery.capacity:
-            return self._normalize_reward(-5, 10, -5)
-
-        current_reward = self._process_matches()
-        if current_reward != self._normalize_reward(-5, 10, -5):
-            return self._normalize_reward(self.actor.bank, 10, -5)
-        return current_reward
-
-    def _process_matches(self):
-        if len(self.market.matches[-1]) > 0:
-            for match in self.market.matches[-1]:
-                if 'bid_actor' in match and match['bid_actor'] == self.actor.id:
-                    # if agent buys energy and reduces reward
-                    amount_spent = match['price'] * match['energy']
-                    return self._normalize_reward(-amount_spent, 0.868, -13)
-
-                if 'ask_actor' in match and match['ask_actor'] == self.actor.id:
-                    # agent sells energy and gains reward
-                    amount_gained = match['price'] * match['energy']
-                    return self._normalize_reward(amount_gained, max_reward=0.868, min_reward=-3)
-
-    def _normalize_reward(self, raw_reward, max_reward, min_reward):
-        # Calculate the range of raw reward values
-        reward_range = max_reward - min_reward
-
-        # Normalize the raw reward value using min-max scaling
-        normalized_reward = (raw_reward - min_reward) / reward_range
-
-        return normalized_reward
+    def reset_train_env(self):
+        self.action = None
+        self.reward = None
+        self.bank = None
+        self.soc = None
+        self.observation = None
+        self.actions_simply = {}
+        self.rewards_simply = {}
+        self.banks_simply = {}
+        self.socs_simply = {}
+        self.observation_range = {}
+        self._setup()
 
     def render(self, mode='human'):
         pass
 
     def reset(self, seed=None, options=None):
-        self._setup(self.actor_df)
+        self._setup()
         # observation consists of schedule and market maker buy prices
-        observation = pd.concat([self.actor.pred["schedule"], self.actor.mm_buy_prices], axis=1).values
-        observation = self._handle_observation(observation)
-        return observation
+        observation = self.observation
+        info = {
+            "time_step": self.t_step_rl,
+            "action": self.action,
+            "current_reward": self.reward,
+            "bank": self.bank,
+        }
+        return observation, info

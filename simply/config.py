@@ -115,6 +115,18 @@ class Config:
         self.actor_strategy = parser.getint("default", "actor_strategy", fallback=0)
 
         # --------------------------
+        # rl agent
+        # --------------------------
+        # whether or not rl agent should be trained during simulation
+        self.train_rl = parser.getboolean("default", "train_rl", fallback=False)
+        # number of timesteps for training episodes of rl agent
+        self.horizon_train = parser.getint("default", "horizon_train", fallback=24)
+        # interval of training the rl agent
+        self.training_interval = parser.getint("default", "training_interval", fallback=72)
+        # whether pre-trained model exists for rl agent
+        self.pretrained_model = parser.get("default", "pretrained_model", fallback="")
+
+        # --------------------------
         # output
         # --------------------------
         # show various plots

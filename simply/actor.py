@@ -167,8 +167,8 @@ class Actor:
         if self.strategy == 4:
             self.rl_environment = None
             self.rl_bank = 0
+            self.reward = 0
             self.rl_model = None
-
 
         self.orders = []
         self.traded = {}
@@ -178,15 +178,26 @@ class Actor:
     def get_environment(self):
         return self._environment
 
-    def set_rl_env(self, market):
+    def set_rl_env(self, market, cfg):
+        """
+        Adds RL environment to actor with RL strategy.
+        @param market: simply energy market
+        @param cfg: configuration file for the simulation run
+        """
         if self.strategy == 4:
-            self.rl_environment = energy_env.EnergyEnv(self, market, horizon=24, training=False, energy_unit=0.001)
+            training_interval = (cfg.training_interval if cfg.training_interval < cfg.nb_ts else cfg.nb_ts)
+            self.rl_environment = energy_env.EnergyEnv(self, market, horizon=cfg.horizon_train, interval=training_interval, training=cfg.train_rl, energy_unit=0.001)
 
-    def set_rl_model(self, algorithm=None, best_timestep=None):
+    def set_rl_model(self, algorithm=None, cfg=None):
+        """
+        Adds RL model to actor.
+        @param algorithm: algorithm of the Rl model that is to be added.
+        @param cfg: configuration file for the simulation run.
+        """
         # load RL model to create market schedule prediction
         models_dir = f"rl-models/{algorithm}"
-        model_path = f"{models_dir}/{best_timestep}"
-        self.rl_model = rl_agent.load_model(self, model_path)
+        model_path = f"{models_dir}/{cfg.pretrained_model}"
+        self.rl_model = rl_agent.load_model(self, model_path, cfg.pretrained_model)
 
     def set_environment(self, environment):
         self._environment = environment
@@ -819,9 +830,11 @@ class Actor:
         # Buying energy therefore decreases the bank
         self.bank += energy*(-sign)*price
 
-        # handle reward and train rl_agent every x timesteps
+        # handle reward
         if self.strategy == 4:
             reward = self.get_reward(energy*sign, price)
+            # sum up rewards of current timestep
+            self.reward += reward
             self.rl_bank += energy*(-sign)*price + reward
 
         # if there is no market planning, e.g. market_schedule, no adjustment has to take place
@@ -853,7 +866,34 @@ class Actor:
             self.market_schedule[i] -= sign*min(abs(delta_energy), abs(planned_energy))
             delta_energy -= planned_energy
 
+    def update_rl_agent(self):
+        """
+        updates RL agents attributes for current interval and trains RL agent every training interval
+        """
+        time = self.t_step
+        # for training runs store timestep attributes in rl environment
+        if self.rl_environment.training:
+            # store soc before action
+            self.rl_environment.socs_simply[time] = self.battery.soc
+            # store action as rl model prediction value (int that represents index of action energy values)
+            self.rl_environment.actions_simply[time] = self.action
+            # store reward and corresponding rl bank and reset reward attribute for next time step
+            self.rl_environment.rewards_simply[time] = self.reward
+            self.rl_environment.banks_simply[time] = self.rl_bank
+            self.reward = 0
+
+        # train agent every 24 time steps
+        if time % self.rl_environment.training_interval == 0:
+            # Train the agent
+            rl_agent.train_agent(self, training_steps=2048, clear_memory=True)
+
     def get_reward(self, action, price):
+        """
+        calculates normalized reward for current RL agent action subject to performed schedule and price
+        @param action: performed schedule in timestep
+        @param price: market price
+        @return: normalized reward
+        """
         # TODO: Give reward for beating the rule based agent
 
         # Punish for not operating within limitations:
@@ -878,6 +918,13 @@ class Actor:
             return self._normalize_reward(transaction, max_reward=10, min_reward=-5)
 
     def _normalize_reward(self, raw_reward, max_reward, min_reward):
+        """
+        Normalizes reward for a given maximum and minimum reward.
+        @param raw_reward: reward input
+        @param max_reward: maximum reward
+        @param min_reward: minimum reward
+        @return: normalized reward
+        """
         # Calculate the range of raw reward values
         reward_range = max_reward - min_reward
 

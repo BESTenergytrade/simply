@@ -1,3 +1,7 @@
 stable_baselines3
 seaborn
 gymnasium
+torch
+tensorboard
+tqdm
+rich
