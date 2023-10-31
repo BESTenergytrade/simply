@@ -9,24 +9,31 @@ import pandas as pd
 
 # INPUT DATA
 #read input data from csv nad write to df
-df_input_data = pd.read_csv('../examples/example_scenario/actor_H0.csv') # H0 just as one example
+df_input_data_actor = pd.read_csv('../projects/example_projects/example_project/scenario/actor_residential_1.csv') # just as one example
+df_input_data_prices = pd.read_csv('../projects/example_projects/example_project/scenario/MarketMaker.csv')
 
 # generate single time series vectors
-load = [0] * len(df_input_data)
-pv = [0] * len(df_input_data)
-price = [0] * len(df_input_data)
+load = [0] * len(df_input_data_actor)
+pv = [0] * len(df_input_data_actor)
+buy_prices = [0] * len(df_input_data_prices)
+sell_prices = [0] * len(df_input_data_prices)
 
 # fill time series vectors with data from df
-for i in range (len(df_input_data)):
-    load[i] = df_input_data.iat[i, 1]
-    pv[i] = df_input_data.iat[i, 2]
-    price[i] = df_input_data.iat[i, 4]
+for i in range (len(df_input_data_actor)):
+    load[i] = df_input_data_actor.iat[i, 1]
+    pv[i] = df_input_data_actor.iat[i, 2]
+    buy_prices[i] = df_input_data_prices.iat[i, 1]
+    sell_prices[i] = df_input_data_prices.iat[i, 2]
 
-#print(df_input_data)
-#print(load)
-#print(pv)
-#print(price)
+print(df_input_data_actor)
+print(load)
+print(pv)
 
+print(df_input_data_prices)
+print(buy_prices)
+print(sell_prices)
+
+"""
 # parametrisation of battery specified in battery.py
 capacity= 10 # in kWh
 max_c_rate=1
@@ -34,7 +41,7 @@ soc_initial=0.5
 
 
 # other parameters
-time_interval=60 # minutes per time step
+time_interval=15 # minutes per time step
 
 
 # PYOMO OPTIMISATION MODEL
@@ -70,3 +77,5 @@ for i in t:
                 model.obj = Objective(expr = sum(model.cash_flow[i] for i in t), sense=maximize)
 
                 opt = SolverFactory('glpk')
+    
+"""
