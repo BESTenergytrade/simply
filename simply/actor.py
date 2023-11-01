@@ -882,10 +882,10 @@ class Actor:
             self.rl_environment.banks_simply[time] = self.rl_bank
             self.reward = 0
 
-        # train agent every 24 time steps
-        if time % self.rl_environment.training_interval == 0:
-            # Train the agent
-            rl_agent.train_agent(self, training_steps=2048, clear_memory=True)
+            # train agent every 24 time steps
+            if time % self.rl_environment.training_interval == 0:
+                # Train the agent
+                rl_agent.train_agent(self, training_steps=2048, clear_memory=True)
 
     def get_reward(self, action, price):
         """

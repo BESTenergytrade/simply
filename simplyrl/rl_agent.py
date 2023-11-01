@@ -40,7 +40,6 @@ def train_agent(actor=None, training_steps=2048, clear_memory=True):
         actor.rl_environment.reset_train_env()
 
 
-
 def predict_agent(actor=None):
     """
     Determines a predicted action and corresponding schedule value for a given RL agent.
