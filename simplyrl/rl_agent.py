@@ -50,7 +50,7 @@ def predict_agent(actor=None):
     env = actor.rl_environment
     model = actor.rl_model
 
-    observation, _ = env.reset()
+    observation, _ = env.reset(options="prediction")
 
     actor.action = model.predict(observation)[0]
     next_action = np.round(env.action_energy_values[actor.action], 3)

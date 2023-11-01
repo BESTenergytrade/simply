@@ -44,14 +44,16 @@ class EnergyEnv(gym.Env):
         # setup observation for prediction
         observation = pd.concat([self.actor.pred["schedule"], self.actor.mm_buy_prices], axis=1).values
         soc = self.actor.battery.soc
-        self.observation = self._handle_observation(observation, soc)
+        self.observation_pred = self._handle_observation(observation, soc)
 
         if self.training:
             self.t_step_simply = self.actor.t_step
             # choose random t_step to start training episode
             self.t_step_rl = self.random_t_step()
             self.episode_end = self.t_step_rl + self.horizon_train - 1
-            self.observation_range[self.t_step_simply] = self.observation
+            self.observation_range[self.t_step_simply] = self.observation_pred
+            if self.t_step_rl in self.observation_range.keys():
+                self.observation = self.observation_range[self.t_step_rl]
         else:
             self.t_step_rl = self.actor.t_step
             self.action = None
@@ -71,7 +73,7 @@ class EnergyEnv(gym.Env):
         self.soc = self.socs_simply[self.t_step_rl]
 
         # Generate the observation for the next timestep
-        self.observation = self.observation_range[self.t_step_rl]
+        self.observation = self.observation_range[self.t_step_rl + 1]
 
         if self.t_step_rl >= self.episode_end:
             terminated = True
@@ -101,7 +103,7 @@ class EnergyEnv(gym.Env):
     def random_t_step(self):
         t_step_min = self.t_step_simply - self.training_interval + 1
         t_step_max = self.t_step_simply - self.horizon_train + 1
-        return np.random.choice(list(range(t_step_min, t_step_max + 1)))
+        return np.random.choice(list(range(t_step_min, t_step_max)))
 
     def reset_train_env(self):
         self.action = None
@@ -122,7 +124,11 @@ class EnergyEnv(gym.Env):
     def reset(self, seed=None, options=None):
         self._setup()
         # observation consists of schedule and market maker buy prices
-        observation = self.observation
+        # if prediction return observation of current time step else return observation of training step
+        if options == "prediction":
+            observation = self.observation_pred
+        else:
+            observation = self.observation
         info = {
             "time_step": self.t_step_rl,
             "action": self.action,
