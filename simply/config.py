@@ -1,5 +1,5 @@
 import warnings
-from configparser import ConfigParser, MissingSectionHeaderError, NoOptionError, NoSectionError
+from configparser import ConfigParser, MissingSectionHeaderError
 from numpy import linspace
 from pathlib import Path
 
@@ -18,7 +18,7 @@ class Config:
         - nb_ts - number of timesteps to simulate [3]\n
         - nb_actors - number of actors in network [5]\n
         - nb_nodes - number of nodes in network [4]\n
-        - step_size - length of timestep in hours [1]\n
+        - ts_per_hour - number of timesteps within one hour [4]\n
         - list_ts - list of timesteps in simulation [generated, can't be overridden]\n
         - show_plots - show various plots [False]\n
         - show_prints - show debug info in terminal [False]\n
@@ -34,7 +34,7 @@ class Config:
             pac/2pac (two-sided pay-as-clear)\n
             fair (custom BEST market)\n
         - energy_unit: size of energy units to be traded individually [0.01]\n
-        - weight_factor: conversion factor from grid fees to power network node weight [0.1]\n
+        - weight_factor: conversion factor from grid fees to power network node weight [0.03]\n
     [actor]
         - horizon - number of time steps to look ahead for prediction [24]
 
@@ -55,20 +55,14 @@ class Config:
             warnings.warn(f"{cfg_file} was provided as Configuration file, but this file does not "
                           "exist. Default values will be used.")
 
-        #if not project_dir:
-        #    warnings.warn("No project_dir was provided. Default project_dir ./projects/example_projects/example_project is used")
-        #    project_dir = "../projects/example_projects/example_project"
-        #elif not Path(project_dir):
-        #    warnings.warn(f"{project_dir} was provided as directory, but this directory does not "
-        #                  "exist. Default project_dir ./projects/example_project will be used.")
-        #    project_dir = "projects/example_projects/example_project"
         if not project_dir:
-           warnings.warn("No project_dir was provided. Default project_dir ./projects/example_projects/example_project is used")
-           project_dir = "projects/example_projects/example_project"
+            warnings.warn("No project_dir was provided. Default project_dir ./projects/"
+                          "example_projects/example_project is used")
+            project_dir = "projects/example_projects/example_project"
         elif not Path(project_dir):
-           warnings.warn(f"{project_dir} was provided as directory, but this directory does not "
-                        "exist. Default project_dir ./projects/example_project will be used.")
-           project_dir = "projects/example_projects/example_project"
+            warnings.warn(f"{project_dir} was provided as directory, but this directory does not "
+                          f"exist. Default project_dir ./projects/example_project will be used.")
+            project_dir = "projects/example_projects/example_project"
 
         try:
             parser.read(cfg_file)
@@ -83,9 +77,11 @@ class Config:
         # scenario
         # --------------------------
         self.project_path = Path(project_dir)
-        self.results_path = parser.get("default", "results_path", fallback=str(self.project_path / "market_results"))
+        self.results_path = parser.get("default", "results_path", fallback=str(self.project_path /
+                                                                               "market_results"))
         self.results_path = Path(self.results_path)
-        self.scenario_path = parser.get("default", "scenario_path", fallback=str(self.project_path / "scenario"))
+        self.scenario_path = parser.get("default", "scenario_path", fallback=str(self.project_path /
+                                                                                 "scenario"))
         self.scenario_path = Path(self.scenario_path)
         self.data_format = parser.get("default", "data_format", fallback="json")
         # load existing scenario
@@ -96,8 +92,6 @@ class Config:
         self.nb_actors = parser.getint('default', 'nb_actors', fallback=5)
         # number of nodes in simulation
         self.nb_nodes = parser.getint('default', 'nb_nodes', fallback=4)
-        # weight factor: network charges to power network weight
-        self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.1)
 
         # Tolerance value for assertions, comparison and so on
         self.EPS = parser.getfloat("default", "EPS", fallback=1e-6)
@@ -111,6 +105,8 @@ class Config:
         self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
         # size of energy units to be traded individually
         self.energy_unit = parser.getfloat("default", "energy_unit", fallback=0.01)
+        # factor describing the relation of grid fee to cumulative power network edge weights
+        self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.03)
         # default grid_fee to be used by market maker
         self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
 
@@ -119,8 +115,8 @@ class Config:
         self.start = parser.getint("default", "start", fallback=0)
         # number of timesteps in simulation
         self.nb_ts = parser.getint("default", "nb_ts", fallback=5)
-        # interval between simulation timesteps
-        self.step_size = parser.getint("default", "step_size", fallback=1)
+        # number of timesteps within one hour
+        self.ts_per_hour = parser.getint("default", "ts_per_hour", fallback=4)
         # list of timesteps in simulation
         # not read from file but created from above information
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)

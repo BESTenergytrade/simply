@@ -9,7 +9,7 @@ from simply.actor import create_random
 
 
 class TestMarketMaker:
-    cfg.Config("","")
+    cfg.Config("", "")
     buy_prices = np.arange(1, 100, 1)
     scenario = Scenario(None, None, None)
     env = scenario.environment

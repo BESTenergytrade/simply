@@ -10,7 +10,7 @@ Welcome to simply's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   getting_started
+   readme
    matching_strategies
    pricing_strategies
    modules

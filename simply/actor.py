@@ -44,6 +44,7 @@ class Actor:
 
     :param int id: unique identifier of the actor
     :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "price" are processed
+    :param .scenario.Environment() environment: Environment reference for the actor
     :param .battery.Battery() battery: Battery used by the actor
     :param str csv: Filename in which this actor's data should be stored
     :param float ls: (optional) Scaling factor for load time series
@@ -52,7 +53,10 @@ class Actor:
         on the data time series
     :param int cluster: cluster in which actor is located
     :param int strategy: Number for strategy [0-3]
-    :param .scenario.Environment() environment: Environment reference for the actor
+    :param float battery_cap: Battery capacity used to create battery object.
+        Only applied, if battery parameter is None (default: 0)
+    :param float battery_initial_soc: Initial state of charge of newly created battery object,
+        Only applied, if battery parameter is None (default: 0.5)
 
     Members:
 
@@ -111,7 +115,8 @@ class Actor:
     """
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
-                 cluster=None, strategy: int = 0, pricing_strategy=None, battery_cap=None, battery_initial_soc=None):
+                 cluster=None, strategy: int = 0, pricing_strategy=None, battery_cap=0,
+                 battery_initial_soc=0.5):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -132,15 +137,15 @@ class Actor:
         self.error_scale = 0
         self.battery = battery
         if self.battery is None:
-            self.battery = Battery(capacity=2*cfg.config.energy_unit)
-        if battery_cap is not None:
-            self.battery.capacity = battery_cap
-        if battery_initial_soc is not None:
-            self.battery.soc = battery_initial_soc
+            self.battery = Battery(capacity=max(battery_cap, 2 * cfg.config.energy_unit),
+                                   soc_initial=battery_initial_soc)
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
-        self.strategy = strategy
+        if np.isnan(strategy):
+            self.strategy: int = 0
+        else:
+            self.strategy = strategy
         self.pricing_strategy = pricing_strategy
         if csv is not None:
             self.csv_file = csv
@@ -260,7 +265,7 @@ class Actor:
                     f"Strategy choice: {self.strategy} was found but can not be used since "
                     f"the battery capacity is 0 or no battery exists. Using default strategy "
                     f"without planning instead.")
-                strategy = 0
+                strategy = self.strategy
 
         if strategy == 0:
             self.market_schedule = self.get_default_market_schedule()
@@ -946,9 +951,11 @@ class Actor:
         args["csv"] = self.csv_file
         if external_data:
             args_no_df = args
+            args_no_df.update({"df": {}, "pm": {}, "ls": 1, "ps": 1})
             args_no_df.update(
                 {"df": {}, "pm": {}, "ls": 1, "ps": 1, "battery_cap": self.battery.capacity,
-                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy}
+                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy,
+                 "pricing_strategy": self.pricing_strategy}
             )
             return args_no_df
         else:
@@ -956,8 +963,10 @@ class Actor:
             # they don't get applied twice
             args_df = args
             args_df.update(
-                {"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1, "battery_cap": self.battery.capacity,
-                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy}
+                {"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1,
+                 "battery_cap": self.battery.capacity,
+                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy,
+                 "pricing_strategy": self.pricing_strategy}
             )
             return args_df
 
@@ -984,7 +993,8 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_ho
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated
-    :param horizon: number of time slots to look into future to make the prediction for actor strategy
+    :param horizon: number of time slots to look into future to make the prediction for actor
+        strategy
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :return: generated Actor object
     :rtype: Actor
@@ -1024,8 +1034,8 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_ho
     return Actor(actor_id, df, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
 
 
-def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, horizon=24, ts_hour=1,
-                    override_scaling=False):
+def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, horizon=24,
+                    ts_hour=1, override_scaling=False, capacity=0):
     """
     Create actor instance with random asset time series and random scaling factors. Replace
 
@@ -1035,7 +1045,8 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated, derived from csv if None
-    :param horizon: number of time slots to look into future to make the prediction for actor strategy
+    :param horizon: number of time slots to look into future to make the prediction for actor
+        strategy
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :param override_scaling: if True the predefined scaling factors are overridden by the peak value
         of each csv file
@@ -1090,7 +1101,9 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
         for day in daily(df, 24 * ts_hour):
             day["pv"] *= gaussian_pv(ts_hour, 3)
 
-    return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
+    bat_capacity = max(capacity, 2 * cfg.config.energy_unit)
+    return Actor(actor_id, df, battery=Battery(capacity=bat_capacity), ls=peak["load"],
+                 ps=peak["pv"])
 
 
 def clip_soc(soc_prediction, upper_clipping):

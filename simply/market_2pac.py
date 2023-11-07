@@ -99,13 +99,28 @@ class TwoSidedPayAsClear(Market):
         self.append_to_csv(matches, 'matches.csv')
         return matches
 
-    def get_grid_fee(self, match):
+    def get_grid_fee(self, match=None, ask_cluster=None, bid_cluster=None):
         """
         Returns the grid fee associated with the bid and ask clusters of a given match.
 
         :param match: a dictionary representing a match, with keys 'bid_cluster' and 'ask_cluster'
+        :param bid_cluster: cluster id of ask
+        :param ask_cluster: cluster id of bid
         :return: the grid fee associated with the given bid and ask clusters
         """
+        if match or match is not None:
+            if bid_cluster or ask_cluster:
+                warnings.warn('Either pass match OR ("bid_cluster" and "ask_cluster"),'
+                              'otherwise only match information is considered')
+            # if match is given, data from the match is used. In other cases bid
+            bid_cluster = match['bid_cluster']
+            ask_cluster = match['ask_cluster']
+
+        if bid_cluster != ask_cluster:
+            warnings.warn('"bid_cluster" and "ask_cluster" are not equal.\n'
+                          'Pay-as-Clear Market ignores clusters. '
+                          f'Single, fixed grid fee will be used: {self.grid_fee_matrix}')
+
         return self.grid_fee_matrix
 
 

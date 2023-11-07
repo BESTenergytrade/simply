@@ -24,7 +24,7 @@ class StubClass:
 
 class TestActor:
     df = pd.DataFrame(np.random.rand(24, 4), columns=["load", "pv", "price", "schedule"])
-    cfg.Config("","")
+    cfg.Config("", "")
 
     # Sell prices are higher than buy_prices. This way the MarketMaker makes a profit
 
