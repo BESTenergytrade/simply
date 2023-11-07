@@ -1,5 +1,6 @@
 stable_baselines3
 seaborn
+matplotlib
 gymnasium
 torch
 tensorboard
