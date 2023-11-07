@@ -1,5 +1,5 @@
 import warnings
-from configparser import ConfigParser, MissingSectionHeaderError
+from configparser import ConfigParser, MissingSectionHeaderError, NoOptionError, NoSectionError
 from numpy import linspace
 from pathlib import Path
 
@@ -32,7 +32,7 @@ class Config:
         - market_type: selects matching strategy. Supported values\n
             [pab]/basic (pay-as-bid)\n
             pac/2pac (two-sided pay-as-clear)\n
-            fair/merit (custom BEST market)\n
+            fair (custom BEST market)\n
         - energy_unit: size of energy units to be traded individually [0.01]\n
         - weight_factor: conversion factor from grid fees to power network node weight [0.1]\n
     [actor]
@@ -43,16 +43,33 @@ class Config:
     :keyword cfg_file: start
     """
 
-    def __init__(self, cfg_file):
+    def __init__(self, cfg_file, project_dir):
         global config
         config = self
         global parser
         parser = ConfigParser()
+        # ToDo: probably change this to an error, because default values will not be used
         if not cfg_file:
             warnings.warn("No Configuration file path was provided. Default values will be used.")
         elif not Path(cfg_file).is_file():
             warnings.warn(f"{cfg_file} was provided as Configuration file, but this file does not "
                           "exist. Default values will be used.")
+
+        #if not project_dir:
+        #    warnings.warn("No project_dir was provided. Default project_dir ./projects/example_projects/example_project is used")
+        #    project_dir = "../projects/example_projects/example_project"
+        #elif not Path(project_dir):
+        #    warnings.warn(f"{project_dir} was provided as directory, but this directory does not "
+        #                  "exist. Default project_dir ./projects/example_project will be used.")
+        #    project_dir = "projects/example_projects/example_project"
+        if not project_dir:
+           warnings.warn("No project_dir was provided. Default project_dir ./projects/example_projects/example_project is used")
+           project_dir = "projects/example_projects/example_project"
+        elif not Path(project_dir):
+           warnings.warn(f"{project_dir} was provided as directory, but this directory does not "
+                        "exist. Default project_dir ./projects/example_project will be used.")
+           project_dir = "projects/example_projects/example_project"
+
         try:
             parser.read(cfg_file)
         except MissingSectionHeaderError:
@@ -65,9 +82,11 @@ class Config:
         # --------------------------
         # scenario
         # --------------------------
-        # path of scenario file to load and/or store
-        self.path = parser.get("default", "path", fallback="./scenarios/default")
-        self.path = Path(self.path)
+        self.project_path = Path(project_dir)
+        self.results_path = parser.get("default", "results_path", fallback=str(self.project_path / "market_results"))
+        self.results_path = Path(self.results_path)
+        self.scenario_path = parser.get("default", "scenario_path", fallback=str(self.project_path / "scenario"))
+        self.scenario_path = Path(self.scenario_path)
         self.data_format = parser.get("default", "data_format", fallback="json")
         # load existing scenario
         self.load_scenario = parser.getboolean("default", "load_scenario", fallback=False)
@@ -99,7 +118,7 @@ class Config:
         # start time step
         self.start = parser.getint("default", "start", fallback=0)
         # number of timesteps in simulation
-        self.nb_ts = parser.getint("default", "nb_ts", fallback=3)
+        self.nb_ts = parser.getint("default", "nb_ts", fallback=5)
         # interval between simulation timesteps
         self.step_size = parser.getint("default", "step_size", fallback=1)
         # list of timesteps in simulation

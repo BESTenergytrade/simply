@@ -1,0 +1,35 @@
+{
+  "MarketMaker": {
+    "id": "MarketMaker",
+    "sell_prices": [
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05
+    ],
+    "buy_prices": [
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05
+    ]
+  },
+  "residential_1": {
+    "id": "residential_1",
+    "df": {},
+    "csv": "actor_residential_1.csv",
+    "ls": 1,
+    "ps": 1,
+    "pm": {}
+  },
+  "residential_2": {
+    "id": "residential_2",
+    "df": {},
+    "csv": "actor_residential_2.csv",
+    "ls": 1,
+    "ps": 1,
+    "pm": {}
+  }
+}

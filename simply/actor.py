@@ -22,7 +22,7 @@ Struct to hold order
 :param actor_id: ID of ordering actor
 :param energy: amount of energy the actor wants to trade. Will be rounded down(asks)/up(bids)
     according to the market's energy unit
-:param price: bidding/asking price for 1 kWh
+:param price: bidding/asking price for one unit of energy
 """
 
 
@@ -253,7 +253,7 @@ class Actor:
                 f"Strategy choice: {strategy} was not found in the list of possible "
                 f"strategies: {possible_choices}. Using default strategy 0 without "
                 "planning instead.")
-            strategy = 0
+            strategy = self.strategy
         elif strategy != 0:
             if self.battery is None or self.battery.capacity == 0:
                 warnings.warn(
@@ -592,7 +592,7 @@ class Actor:
     def update_battery(self, _cache=dict()):
         """Update the battery state with the current schedule and the matched energy in this step.
 
-        This function needs to be called once per time step to track the energy inside of the
+        This function needs to be called once per time step to track the energy inside the
         battery. It takes the planned, i.e. predicted, schedule and changes the battery's SOC
         accordingly.
 
@@ -609,6 +609,7 @@ class Actor:
 
         # assumes schedule is positive when pv is produced, Assertion error useful during
         # development to be certain
+
         assert self.pred.schedule[0] == approx(self.pred.pv[0] - self.pred.load[0])
         # ToDo Make sure that the balance of schedule and bought energy does not charge
         # or discharge more power than the max c rate
@@ -975,7 +976,7 @@ class Actor:
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
-def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
+def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_hour=1):
     """
     Create actor instance with random asset time series and random scaling factors
 
@@ -983,6 +984,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated
+    :param horizon: number of time slots to look into future to make the prediction for actor strategy
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :return: generated Actor object
     :rtype: Actor
@@ -1022,7 +1024,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     return Actor(actor_id, df, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
 
 
-def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
+def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, horizon=24, ts_hour=1,
                     override_scaling=False):
     """
     Create actor instance with random asset time series and random scaling factors. Replace
@@ -1033,6 +1035,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated, derived from csv if None
+    :param horizon: number of time slots to look into future to make the prediction for actor strategy
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :param override_scaling: if True the predefined scaling factors are overridden by the peak value
         of each csv file
@@ -1064,7 +1067,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
             dayfirst=True
         )
         # Rename column and insert data based on dictionary
-        df.loc[:, col] = csv_df.iloc[:nb_ts, csv_dict["col_index"]]
+        df.loc[:, col] = csv_df.iloc[:nb_ts+horizon, csv_dict["col_index"]]
         # Override scaling factor by peak value (if True)
         if override_scaling:
             peak[col] = df[col].max()
@@ -1075,14 +1078,14 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
         df["index"] = pd.date_range(
             start_date,
             freq="{}min".format(int(60 / ts_hour)),
-            periods=nb_ts
+            periods=nb_ts+horizon
         )
     df = df.set_index("index")
 
     # If pv asset key is present but dictionary does not contain a filename
     if "pv" in asset_dict.keys() and not asset_dict["pv"].get("filename"):
         # Initialize PV with random noise
-        df["pv"] = np.random.rand(nb_ts, 1)
+        df["pv"] = np.random.rand(nb_ts+horizon, 1)
         # Multiply random generation signal with gaussian/PV-like characteristic per day
         for day in daily(df, 24 * ts_hour):
             day["pv"] *= gaussian_pv(ts_hour, 3)

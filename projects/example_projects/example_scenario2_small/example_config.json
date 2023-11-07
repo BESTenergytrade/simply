@@ -1,0 +1,52 @@
+[{
+        "comment": "Below is an example of market maker actor.",
+        "prosumerName": "market_maker",
+        "prosumerType": "market_maker"
+            },
+  {
+        "comment": "An example of a residential prosumer with load and pv data specifed by their 'deviceID'",
+        "prosumerName": "residential_1",
+        "prosumerType": "residential",
+        "gridLocation": "N01",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "CHH10_sample.csv"
+            },
+            {
+                "deviceType": "solar",
+                "deviceID": "generated_pv.csv"
+            }
+        ]
+    },
+  {
+        "comment": "An example of a residential prosumer with load data specified by their 'deviceID' but without pv",
+        "prosumerName": "residential_2",
+        "prosumerType": "residential",
+        "gridLocation": "N02",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "CHH9_sample.csv"
+            }
+        ]
+    },
+    {
+        "comment": "An example of a residential prosumer with load and pv data specified by their 'deviceID'",
+        "prosumerName": "residential_3",
+        "prosumerType": "residential",
+        "gridLocation": "N02",
+        "devices": [
+            {
+                "deviceType": "load",
+                "deviceID": "CHH16_sample.csv"
+            },
+	    {
+                "deviceType": "solar",
+                "deviceID": "generated_pv.csv"
+            }
+
+        ]
+    }
+
+]

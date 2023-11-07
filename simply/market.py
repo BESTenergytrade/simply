@@ -32,7 +32,10 @@ class Market:
         self.actor_callback = {}
         self.network = network
         self.save_csv = cfg.config.save_csv
-        self.csv_path = Path(cfg.config.path)
+        self.csv_path = Path(cfg.config.results_path)
+        # if the market_results directory does not already exist, create it
+        if not self.csv_path.exists():
+            self.csv_path.mkdir()
         self.grid_fee_matrix = grid_fee_matrix
         if network is not None and grid_fee_matrix is None:
             self.grid_fee_matrix = network.grid_fee_matrix
@@ -230,6 +233,7 @@ class Market:
         :return: None
         """
         with open(self.csv_path / filename, 'w') as f:
+            print(self.csv_path)
             writer = csv.writer(f)
             writer.writerow(headers)
 

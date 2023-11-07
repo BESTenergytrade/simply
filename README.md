@@ -22,7 +22,7 @@ python -m pytest
 
 **run**
 ```sh
-python main.py config.txt
+python match_market.py config.txt
 ```
 
 To run the example scenario, use the config file, `examples/config_example.txt`. Results can be 
