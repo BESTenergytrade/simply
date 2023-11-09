@@ -31,18 +31,19 @@ for i in range (len(df_input_data_actor)):
 capacity= 10
 max_c_rate=1
 soc_initial=0.5
+# efficiency ?
 
 # other parameters
 time_interval=15 # minutes per time step, can be obtained using datetime functions from input csv-files
 grid_fee = 0.0 #0.09 # grid fee for buying electricity, see config.cfg
-grid_connection_capacity = 20
+grid_connection_capacity = 20 # if no upper bound is provided the problem turns out to be unbounded
 
 # PYOMO OPTIMISATION MODEL
 model = ConcreteModel()
 model.charging_power = Var(t, bounds=(0, capacity * max_c_rate))
 model.discharging_power = Var(t, bounds=(0, capacity * max_c_rate))
 model.stored_energy = Var(t, bounds=(0, capacity))
-model.bi_charge = Var(t, within = Binary)
+model.bi_charge = Var(t, within = Binary)   # 0/ 1 for distinguishing between charging / discharging
 model.power_from_grid = Var(t, bounds=(0, grid_connection_capacity))
 model.power_to_grid = Var(t, bounds=(0, grid_connection_capacity))
 model.cash_flow = Var(t)
@@ -74,7 +75,7 @@ for i in t:
 # costs to be used in objective function
 model.cash_flow_equation = ConstraintList() #
 for i in t:
-    model.cash_flow_equation.add(model.cash_flow[i] == sell_prices[i] * model.power_to_grid[i] - (buy_prices[i] + grid_fee) * model.power_from_grid[i])
+    model.cash_flow_equation.add(model.cash_flow[i] == sell_prices[i] * model.power_to_grid[i] * time_interval/60 - (buy_prices[i] + grid_fee) * model.power_from_grid[i] * time_interval/60)
 
 model.obj = Objective(expr = sum(model.cash_flow[i] for i in t), sense=maximize)
 
