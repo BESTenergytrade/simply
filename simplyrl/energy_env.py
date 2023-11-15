@@ -62,12 +62,8 @@ class EnergyEnv(gym.Env):
 
     def step(self, action):
 
-        # # assign action from action space
-        # self.action = round(self.action_energy_values[action[0]], 3)
-
         # assign action according to timestep of outer simulation
         self.action = self.actions_simply[self.t_step_rl]
-        print(action, self.action)
         self.reward = self.rewards_simply[self.t_step_rl]
         self.bank = self.banks_simply[self.t_step_rl]
         self.soc = self.socs_simply[self.t_step_rl]
@@ -91,6 +87,9 @@ class EnergyEnv(gym.Env):
         self.t_step_rl += 1
 
         return self.observation, self.reward, terminated, truncated, info
+
+    def get_action(self):
+        return self.actions_simply[self.t_step_rl]
 
     def _handle_observation(self, observation, soc):
         # Flatten observation and add soc to it

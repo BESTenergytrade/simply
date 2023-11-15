@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from stable_baselines3 import PPO
+from simplyrl.rl_model import SimplyPPO
+
 import os
 # import torch
 # import tensorboard
@@ -86,9 +87,9 @@ def load_model(actor=None, model_path=None, pretrained=True):
     # TODO: make import of model variable to each actor and its identifier
     env = actor.rl_environment
     if pretrained:
-        model = PPO.load(model_path, env=env)
+        model = SimplyPPO.load(model_path, env=env)
     else:
-        model = PPO("MlpPolicy", env=env, verbose=1, device='cpu')
+        model = SimplyPPO("MlpPolicy", env=env, verbose=1, device='cpu')
     return model
 
 
