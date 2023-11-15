@@ -7,6 +7,7 @@ from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading
 import os
+import time
 import glob
 """
 Entry point for standalone functionality.
@@ -107,6 +108,7 @@ def main(cfg: Config):
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     parser = ArgumentParser(description='Entry point for market simulation')
     # parser.add_argument('config', nargs='?', default="", help='configuration file')
     # Replaced the above line to take in the project directory (which will contain the config file)
@@ -130,3 +132,9 @@ if __name__ == "__main__":
                 f"Config file not found in project directory: {args.project_dir}"))
     cfg = Config(config_file, args.project_dir)
     main(cfg)
+    sim_time = (time.time() - start_time)
+    if sim_time > 120:
+        mins, secs = divmod(sim_time, 60)
+        print(f'It took {int(mins)} minutes and {int(secs)} seconds to execute simulation.')
+    else:
+        print(f'It took {sim_time:.3f} seconds to execute simulation.')
