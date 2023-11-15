@@ -174,6 +174,7 @@ class Actor:
             self.rl_bank = 0
             self.reward = 0
             self.rl_model = None
+            self.action = 0
 
         self.orders = []
         self.traded = {}
@@ -618,7 +619,16 @@ class Actor:
         assert self.pred.schedule[0] == approx(self.pred.pv[0] - self.pred.load[0])
         # ToDo Make sure that the balance of schedule and bought energy does not charge
         # or discharge more power than the max c rate
-        self.battery.charge(self.pred.schedule[0] + self.matched_energy_current_step)
+        # add workaround to not leave system boundaries
+        energy_charge = self.pred.schedule[0] + self.matched_energy_current_step
+        soc_after_charge = self.battery.soc + energy_charge / self.battery.capacity
+        if soc_after_charge < 0-cfg.config.EPS:
+            energy_charge = -self.battery.soc * self.battery.capacity
+        elif soc_after_charge > 1+cfg.config.EPS:
+            energy_charge = (1-self.battery.soc) * self.battery.capacity
+            # TODO: add post settlement to adjust for matched energy
+
+        self.battery.charge(energy_charge)
 
     def generate_orders(self):
         """
@@ -652,14 +662,14 @@ class Actor:
         else:
             final_price = self.mm_buy_prices[next_order_index]
 
-        # for rl actor: check that order is within bounds of battery
-        if self.strategy == 4:
-            energy = self.check_battery_and_adjust_energy(energy)
-
         # Make sure not to over charge the battery since market schedule calculated the amount
         # for a later time slot
         energy = self.get_limited_energy(energy, index=next_order_index)
         energy = self.adjust_energy(energy, index=next_order_index)
+
+        # for rl actor: check that order is within bounds of battery
+        if self.strategy == 4:
+            energy = self.check_battery_and_adjust_energy(energy)
 
         # get the price by using the pricing strategy
         price = self.get_price(next_order_index, final_price, energy)
