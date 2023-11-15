@@ -140,7 +140,7 @@ class Actor:
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
-        if np.isnan(strategy):
+        if strategy is None or np.isnan(strategy):
             self.strategy: int = 0
         else:
             self.strategy = strategy

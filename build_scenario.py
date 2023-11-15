@@ -250,8 +250,8 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         _ = create_actor_from_config(actor_row['prosumerName'], scenario.environment,
                                      asset_dict=asset_dict, start_date=start_date,
                                      nb_ts=nb_ts, horizon=horizon, ts_hour=ts_hour, ps=ps, ls=ls,
-                                     strategy=actor_row['strategy'],
-                                     pricing_strategy=actor_row["pricing_strategy"])
+                                     strategy=actor_row.get('strategy'),
+                                     pricing_strategy=actor_row.get("pricing_strategy"))
         print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{file_dict["load"]}"')
 
     actor_map = map_actors(config_df)
