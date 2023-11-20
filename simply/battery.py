@@ -12,6 +12,10 @@ class Battery:
         # maximum charge rate per time step
         self.max_c_rate = max_c_rate
         self.check_boundaries = check_boundaries
+        self.soc_initial = soc_initial
+
+    def reset(self):
+        self.soc = self.soc_initial
 
     def energy(self):
         """Returns the value of energy inside the battery"""

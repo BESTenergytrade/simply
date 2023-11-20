@@ -20,7 +20,7 @@ Struct to hold order
 :param actor_id: ID of ordering actor
 :param energy: amount of energy the actor wants to trade. Will be rounded down(asks)/up(bids)
     according to the market's energy unit
-:param price: bidding/asking price for 1 kWh
+:param price: bidding/asking price for one unit of energy
 """
 
 
@@ -37,11 +37,12 @@ class Actor:
     a market maker price time series as input.
     After matching took place, the (monetary) bank and resulting soc is calculated taking into
     consideration the schedule and the acquired energy of this time step, i.e. bank and soc at the
-    end of the time step. Afterwards the time step is increased and a new prediction for the
+    end of the time step. Afterward the time step is increased and a new prediction for the
     schedule and price is generated.
 
     :param int id: unique identifier of the actor
     :param pandas.DataFrame() df: DataFrame, column names "load", "pv" and "price" are processed
+    :param .scenario.Environment() environment: Environment reference for the actor
     :param .battery.Battery() battery: Battery used by the actor
     :param str csv: Filename in which this actor's data should be stored
     :param float ls: (optional) Scaling factor for load time series
@@ -50,7 +51,10 @@ class Actor:
         on the data time series
     :param int cluster: cluster in which actor is located
     :param int strategy: Number for strategy [0-3]
-    :param .scenario.Environment() environment: Environment reference for the actor
+    :param float battery_cap: Battery capacity used to create battery object.
+        Only applied, if battery parameter is None (default: 0)
+    :param float battery_initial_soc: Initial state of charge of newly created battery object,
+        Only applied, if battery parameter is None (default: 0.5)
 
     Members:
 
@@ -109,7 +113,8 @@ class Actor:
     """
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
-                 cluster=None, strategy: int = 0, pricing_strategy=None):
+                 cluster=None, strategy: int = 0, pricing_strategy=None, battery_cap=0,
+                 battery_initial_soc=0.5):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -130,11 +135,15 @@ class Actor:
         self.error_scale = 0
         self.battery = battery
         if self.battery is None:
-            self.battery = Battery(capacity=2*cfg.config.energy_unit)
+            self.battery = Battery(capacity=max(battery_cap, 2 * cfg.config.energy_unit),
+                                   soc_initial=battery_initial_soc)
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
-        self.strategy = strategy
+        if strategy is None or np.isnan(strategy):
+            self.strategy: int = 0
+        else:
+            self.strategy = strategy
         self.pricing_strategy = pricing_strategy
         if csv is not None:
             self.csv_file = csv
@@ -218,14 +227,14 @@ class Actor:
                 f"Strategy choice: {strategy} was not found in the list of possible "
                 f"strategies: {possible_choices}. Using default strategy 0 without "
                 "planning instead.")
-            strategy = 0
+            strategy = self.strategy
         elif strategy != 0:
             if self.battery is None or self.battery.capacity == 0:
                 warnings.warn(
                     f"Strategy choice: {self.strategy} was found but can not be used since "
                     f"the battery capacity is 0 or no battery exists. Using default strategy "
                     f"without planning instead.")
-                strategy = 0
+                strategy = self.strategy
 
         if strategy == 0:
             self.market_schedule = self.get_default_market_schedule()
@@ -425,7 +434,7 @@ class Actor:
                 # found at the highest_price_index. At this index only as much energy can be sold as
                 # the min predicted soc, in between this index and the time of overcharge, provides.
                 soc_to_zero = np.min(soc_prediction[highest_price_index:i + 1])
-                assert soc_to_zero <= 1
+                assert soc_to_zero <= 1 + cfg.config.EPS
                 energy_to_zero = soc_to_zero * self.battery.capacity
                 sellable_energy = min(energy_to_zero, overcharge)
                 self.market_schedule[highest_price_index] -= sellable_energy
@@ -552,7 +561,7 @@ class Actor:
     def update_battery(self, _cache=dict()):
         """Update the battery state with the current schedule and the matched energy in this step.
 
-        This function needs to be called once per time step to track the energy inside of the
+        This function needs to be called once per time step to track the energy inside the
         battery. It takes the planned, i.e. predicted, schedule and changes the battery's SOC
         accordingly.
 
@@ -569,6 +578,7 @@ class Actor:
 
         # assumes schedule is positive when pv is produced, Assertion error useful during
         # development to be certain
+
         assert self.pred.schedule[0] == approx(self.pred.pv[0] - self.pred.load[0])
         # ToDo Make sure that the balance of schedule and bought energy does not charge
         # or discharge more power than the max c rate
@@ -584,14 +594,15 @@ class Actor:
         """
 
         energy = self.market_schedule[0]
-
+        assert not np.isnan(energy), "Market schedule is not a number. Is the simulation time " \
+                                     "longer than the provided data?"
         if energy == 0 and self.pricing_strategy is None or all(self.market_schedule == 0):
             return []
 
         # the market schedule does not demand to buy or sell energy at the current time slot, but
         # a pricing strategy is provided which allows to generate orders for future demands, with
         # better than guaranteed prices
-        if energy == 0:
+        if cfg.config.energy_unit > energy > -cfg.config.energy_unit:
             next_order_index = None
             for i, energy in enumerate(self.market_schedule):
                 if energy != 0:
@@ -668,11 +679,16 @@ class Actor:
 
         # buying energy
         if energy > 0:
+            # The energy to be bought is bound by the remaining energy until fully charged battery
+            # within the predicted horizon
             delta_soc = 1-socs.max()
             return max(min(energy, delta_soc*self.battery.capacity), 0)
         # selling energy
         else:
-            delta_soc = -socs.max()
+            # the energy to be sold is bound by the minimal energy level
+            # within the predicted horizon
+            delta_soc = -socs.min()
+            # energy and delta_soc are negative valued
             return min(max(energy, delta_soc*self.battery.capacity), 0)
 
     def adjust_energy(self, energy, index=0):
@@ -685,12 +701,13 @@ class Actor:
         :return: energy amount for order generation the current time step
         :rtype: float
         """
+        index = max(1, index)
         # buying energy
         if energy > 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
-            if (self.battery.energy() + self.pred.schedule[0:index+1].sum() +
-                    ((energy+cfg.config.EPS) // cfg.config.energy_unit *
+            if (self.battery.energy() + self.pred.schedule[0:index].sum() +
+                    ((energy + cfg.config.EPS) // cfg.config.energy_unit *
                      cfg.config.energy_unit) < 0):
                 energy += cfg.config.energy_unit
 
@@ -698,7 +715,7 @@ class Actor:
         elif energy < 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or over 1 socs.
             # In these cases decrease the order by one energy unit, i.e. sell more energy
-            if self.battery.energy() + self.pred.schedule[0:index+1].sum() + (
+            if self.battery.energy() + self.pred.schedule[0:index].sum() + (
                     ((energy+cfg.config.EPS) // cfg.config.energy_unit+1) *
                     cfg.config.energy_unit) > self.battery.capacity:
                 energy -= cfg.config.energy_unit
@@ -783,12 +800,22 @@ class Actor:
         if external_data:
             args_no_df = args
             args_no_df.update({"df": {}, "pm": {}, "ls": 1, "ps": 1})
+            args_no_df.update(
+                {"df": {}, "pm": {}, "ls": 1, "ps": 1, "battery_cap": self.battery.capacity,
+                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy,
+                 "pricing_strategy": self.pricing_strategy}
+            )
             return args_no_df
         else:
             # since data is already scaled by ls and ps, both of these values are set to 1, so
             # they don't get applied twice
             args_df = args
-            args_df.update({"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1})
+            args_df.update(
+                {"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1,
+                 "battery_cap": self.battery.capacity,
+                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy,
+                 "pricing_strategy": self.pricing_strategy}
+            )
             return args_df
 
     def save_csv(self, dirpath):
@@ -806,7 +833,7 @@ class Actor:
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
 
-def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
+def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_hour=1):
     """
     Create actor instance with random asset time series and random scaling factors
 
@@ -814,6 +841,8 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated
+    :param horizon: number of time slots to look into future to make the prediction for actor
+        strategy
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :return: generated Actor object
     :rtype: Actor
@@ -853,8 +882,8 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, ts_hour=1):
     return Actor(actor_id, df, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
 
 
-def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, ts_hour=1,
-                    override_scaling=False):
+def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, horizon=24,
+                    ts_hour=1, override_scaling=False, capacity=0):
     """
     Create actor instance with random asset time series and random scaling factors. Replace
 
@@ -864,6 +893,8 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
     :param str start_date: Start date "YYYY-MM-DD" of the DataFrameIndex for the generated actor's
         asset time series
     :param int nb_ts: number of time slots that should be generated, derived from csv if None
+    :param horizon: number of time slots to look into future to make the prediction for actor
+        strategy
     :param ts_hour: number of time slots per hour, e.g. 4 results in 15min time slots
     :param override_scaling: if True the predefined scaling factors are overridden by the peak value
         of each csv file
@@ -895,7 +926,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
             dayfirst=True
         )
         # Rename column and insert data based on dictionary
-        df.loc[:, col] = csv_df.iloc[:nb_ts, csv_dict["col_index"]]
+        df.loc[:, col] = csv_df.iloc[:nb_ts+horizon, csv_dict["col_index"]]
         # Override scaling factor by peak value (if True)
         if override_scaling:
             peak[col] = df[col].max()
@@ -906,19 +937,21 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
         df["index"] = pd.date_range(
             start_date,
             freq="{}min".format(int(60 / ts_hour)),
-            periods=nb_ts
+            periods=nb_ts+horizon
         )
     df = df.set_index("index")
 
     # If pv asset key is present but dictionary does not contain a filename
     if "pv" in asset_dict.keys() and not asset_dict["pv"].get("filename"):
         # Initialize PV with random noise
-        df["pv"] = np.random.rand(nb_ts, 1)
+        df["pv"] = np.random.rand(nb_ts+horizon, 1)
         # Multiply random generation signal with gaussian/PV-like characteristic per day
         for day in daily(df, 24 * ts_hour):
             day["pv"] *= gaussian_pv(ts_hour, 3)
 
-    return Actor(actor_id, df, ls=peak["load"], ps=peak["pv"])
+    bat_capacity = max(capacity, 2 * cfg.config.energy_unit)
+    return Actor(actor_id, df, battery=Battery(capacity=bat_capacity), ls=peak["load"],
+                 ps=peak["pv"])
 
 
 def clip_soc(soc_prediction, upper_clipping):

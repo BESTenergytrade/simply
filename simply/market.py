@@ -32,7 +32,10 @@ class Market:
         self.actor_callback = {}
         self.network = network
         self.save_csv = cfg.config.save_csv
-        self.csv_path = Path(cfg.config.path)
+        self.csv_path = Path(cfg.config.results_path)
+        # if the market_results directory does not already exist, create it
+        if not self.csv_path.exists():
+            self.csv_path.mkdir()
         self.grid_fee_matrix = grid_fee_matrix
         if network is not None and grid_fee_matrix is None:
             self.grid_fee_matrix = network.grid_fee_matrix
@@ -143,7 +146,7 @@ class Market:
             if bid_actor_callback is not None:
                 bid_actor_callback(self.t_step, 1, energy, price)
             if ask_actor_callback is not None:
-                ask_actor_callback(self.t_step, -1, energy, price)
+                ask_actor_callback(self.t_step, -1, energy, price-match["included_grid_fee"])
         if reset:
             # don't retain orders for next cycle
             self.orders = pd.DataFrame(columns=Order._fields)
@@ -153,7 +156,7 @@ class Market:
 
     def match(self, show=False):
         """
-        Example matching algorithm: pay as bid, first come first served.
+        Example matching algorithm: pay as bid, first come, first served.
 
         Return structure: each match is a dict and has the following items:
             time: current market time
@@ -230,6 +233,7 @@ class Market:
         :return: None
         """
         with open(self.csv_path / filename, 'w') as f:
+            print(self.csv_path)
             writer = csv.writer(f)
             writer.writerow(headers)
 
@@ -255,7 +259,6 @@ class Market:
         else:
             if bid_cluster is None or ask_cluster is None:
                 warnings.warn("At least one cluster is 'None', returning default grid fee.")
-
                 # default grid fee
                 return cfg.config.default_grid_fee
             else:

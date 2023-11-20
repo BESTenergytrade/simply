@@ -9,7 +9,7 @@ from simply.actor import create_random
 
 
 class TestMarketMaker:
-    cfg.Config("")
+    cfg.Config("", "")
     buy_prices = np.arange(1, 100, 1)
     scenario = Scenario(None, None, None)
     env = scenario.environment
@@ -30,7 +30,7 @@ class TestMarketMaker:
         # and buys
         # Reset the market_maker to be sure there is no data present
         self.scenario.reset()
-        market_maker = self.env.market_maker
+        market_maker = MarketMaker(buy_prices=self.buy_prices, environment=self.env)
         self.scenario.add_market(Market())
         assert len(market_maker.traded) == 0
         assert sum(market_maker.energy_sold) == 0
@@ -46,6 +46,7 @@ class TestMarketMaker:
         # and buys
         # Reset the market_maker to be sure there is no data present
         self.scenario.reset()
+        MarketMaker(buy_prices=self.buy_prices, environment=self.env)
         market_maker = self.env.market_maker
         self.scenario.add_market(Market())
         assert len(market_maker.traded) == 0
@@ -77,6 +78,7 @@ class TestMarketMaker:
         # Adds actor to scenario, sets the environment and creates a prediction based on the
         # environment timestamp
         self.scenario.add_participant(actor)
+        actor.create_prediction()
 
     def test_order_generation(self):
         self.scenario.reset()
