@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 import numpy as np
 
 
-def main(project_dir, data_dir):
+def plot_agg_flows(project_dir, data_dir, start=None, end=None):
     print(f'project_dir: {project_dir}')
     # File path for the matches csv
     project_dir = Path(project_dir)
@@ -15,7 +15,7 @@ def main(project_dir, data_dir):
     # Saves matches csv as a dataframe
     matches_df = pd.read_csv(matches_fp)
 
-    # TODO Temporary
+    # TODO Temporary (time slots not yet saved as datetime in output file)
     start_date = "2021-01-01 00:00:00"
     ts_hour = 4  # quarterhourly
     dates = pd.DataFrame(pd.date_range(start_date, freq="{}min".format(int(60 / ts_hour)),
@@ -25,7 +25,13 @@ def main(project_dir, data_dir):
 
     matches_df['time'] = pd.to_datetime(matches_df['time'])
     matches_df['ask_cluster'] = matches_df['ask_cluster'].fillna(1000)  # "MarketMaker"
-    matches_df_slice = matches_df.query('"2021-01-01 00:00:00" <= time <= "2021-01-01 14:00:00"')
+    if start is not None and end is not None:
+        # Plot aggregation of temporal sliced results, if both start and end are not none
+        # e.g. start = "2021-01-01 00:00:00" and end = "2021-01-01 14:00:00"
+        matches_df_slice = matches_df.query(f'"{start}" <= time <= "{end}"')
+    else:
+        # Plot aggregation of all results
+        matches_df_slice = matches_df
 
     cluster_energy_df = matches_df_slice.groupby(['bid_cluster', 'ask_cluster'])[
         'energy'].sum().reset_index()
@@ -179,4 +185,4 @@ if __name__ == "__main__":
             FileNotFoundError(
                 "Project directory path must be specified. Please provide the path as a "
                 "command-line argument."))
-    main(args.project_dir, None)
+    plot_agg_flows(args.project_dir, None)
