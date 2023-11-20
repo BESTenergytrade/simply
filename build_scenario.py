@@ -30,6 +30,8 @@ convert string dates to datetime dtype, and build a pandas dataframe from the co
 def get_mm_prices(dirpath, start_date, end_date):
     csv_df = pd.read_csv(dirpath, sep=',', parse_dates=['Time'], dayfirst=True,
                          index_col=['Time'])
+    # Make sure dates are parsed
+    csv_df.index = pd.to_datetime(csv_df.index)
     try:
         return list(csv_df.loc[start_date:end_date]["prices"])
     except KeyError:
@@ -150,8 +152,11 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
             battery_cap = info_dict["capacityKwh"]
             init_soc = info_dict["initialSOC"]
             continue
-        csv_df = pd.read_csv(info_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=True,
+        csv_df = pd.read_csv(info_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=False,
                              index_col=['Time'])
+        # Make sure dates are parsed
+        csv_df.index = pd.to_datetime(csv_df.index)
+
         df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, 0]
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
