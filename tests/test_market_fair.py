@@ -1,5 +1,5 @@
 from simply.actor import Order
-from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD, time_it
+from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD
 from simply.power_network import PowerNetwork
 import simply.config as cfg
 
@@ -502,7 +502,7 @@ class TestBestMarket:
         mutation_nr = 1
         for g, grid_fee in enumerate(grid_fees):
             for bid_clusters in [1, 3]:
-                for ask_clusters in [1,3]:
+                for ask_clusters in [1, 3]:
                     for i in range(1, 3):
                         for per_cluster in [1, 3]:
                             mutation_nr = ((mutation_nr + 1) % 4) + 1
@@ -631,7 +631,8 @@ class TestBestMarket:
                         [1, 0, 0],
                         [0, 0, 0]]
         grid_fee_matrix = [[v for v in fee] for fee in grid_fee]
-        m = BestMarket(self.pn, grid_fee_matrix=grid_fee_matrix, time_step=0, disputed_matching="grid_fee")
+        m = BestMarket(self.pn, grid_fee_matrix=grid_fee_matrix, time_step=0,
+                       disputed_matching="grid_fee")
         order_amount = order_amount
         bids_mutator = [0, 0, -1.3, +5.5]
         asks_mutator = [0, +0.5, 1.1, +5.6]

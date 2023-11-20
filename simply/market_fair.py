@@ -6,6 +6,7 @@ from simply.market import LARGE_ORDER_THRESHOLD
 from simply.market import MARKET_MAKER_THRESHOLD
 from time import time
 
+
 def time_it(function, timers={}):
     """Decorator function to time the duration and number of function calls.
 
@@ -40,6 +41,7 @@ def time_it(function, timers={}):
     sorted_timer = dict(sorted(timers.items(), key=lambda x: x[1]["time"] / x[1]["calls"]))
     return sorted_timer
 
+
 class BestCluster:
     """Class which keeps track of attributes resolving around a cluster and
     implements functionality to keep the best algorithm more readable.
@@ -63,8 +65,9 @@ class BestCluster:
         self._row: int
 
     def __repr__(self):
-        return f"BestCluster {self.idx} with matched units: {self.matched_energy_units}, clearing price: " \
-               f"{self.clearing_price}"
+        return f"BestCluster {self.idx} with matched units: {self.matched_energy_units}, " \
+               f"clearing price: {self.clearing_price}"
+
     @time_it
     def match_locally(self):
         clearing = get_clearing(self.bids, self.asks,
@@ -166,21 +169,22 @@ class BestMarket(Market):
         self.disputed_matching = disputed_matching
 
     @time_it
-    def resolve_dispute(self,ask, bid_cluster):
+    def resolve_dispute(self, ask, bid_cluster):
         if self.disputed_matching == "grid_fee":
             # for dispute values bigger is better, therefore negative price
             return -self.get_grid_fee(bid_cluster=bid_cluster.idx,
-                                                  ask_cluster=ask.cluster)
+                                      ask_cluster=ask.cluster)
         elif self.disputed_matching == "bid_price":
             try:
                 asks = bid_cluster.asks.copy()
                 ask = ask.copy()
-                ask.adjusted_price = self.get_grid_fee(bid_cluster=bid_cluster.idx, ask_cluster=ask.cluster)
+                ask.adjusted_price = self.get_grid_fee(bid_cluster=bid_cluster.idx,
+                                                       ask_cluster=ask.cluster)
                 asks[ask.name] = ask
                 asks = asks.sort_values(["adjusted_price", "price"], ascending=[True, False])
                 ask_row = asks.index.get_loc(ask.name)
                 val = bid_cluster.bids.iloc[bid_cluster.ask_iterator.index(ask_row)].price
-            except (KeyError, IndexError,ValueError):
+            except (KeyError, IndexError, ValueError):
                 val = -float("inf")
             return val
         raise ValueError
@@ -434,7 +438,6 @@ class BestMarket(Market):
         asks = self.get_asks()
         bids = self.get_bids()
 
-
         # filter out market makers (infinite bus) and really large orders
         asks, asks_mm, bids, bids_mm = self.filter_orders(asks, bids)
 
@@ -531,7 +534,6 @@ class BestMarket(Market):
             cluster.asks = cluster.asks.iloc[cluster.ask_iterator]
             cluster.ask_iterator = [*range(0, len(cluster.asks))]
 
-
         # All asks for each cluster should be unique now
         # since ask went to the best clusters at a moment when the total matched energy was not
         # decided, the following part runs through all asks, and checks if moving them is profitable
@@ -588,6 +590,7 @@ class BestMarket(Market):
         matches = self.group_matches(asks, bids, matches)
 
         return matches
+
     @time_it
     def remove_from_other_clusters(self, ask_id, best_match_cluster):
         for cluster in self.clusters:
@@ -622,6 +625,7 @@ class BestMarket(Market):
                 best_clearing = clearing
                 best_dispute_value = dispute_value
         return best_clearing, best_cluster, best_profit
+
     @time_it
     def get_bottom_asks(self):
         bottom_asks = []
@@ -634,6 +638,7 @@ class BestMarket(Market):
                     bottom_asks.append((asks_with_cluster.iloc[0], cluster))
         bottom_asks = sorted(bottom_asks, key=lambda x: x[0].price)
         return bottom_asks
+
     @time_it
     def find_best_profit_cluster(self, ask_id):
         best_profit = float("-inf")
@@ -657,6 +662,7 @@ class BestMarket(Market):
                 best_match_cluster = cluster
                 best_dispute_value = dispute_value
         return best_match_cluster
+
     @time_it
     def split_orders_to_energy_unit(self, orders):
         orders = pd.DataFrame(orders)
@@ -665,6 +671,7 @@ class BestMarket(Market):
             orders.energy * (1 / cfg.config.energy_unit), axis=0), columns=orders.columns)
         orders.energy = cfg.config.energy_unit
         return orders
+
     @time_it
     def filter_orders(self, asks, bids):
         large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
@@ -684,6 +691,7 @@ class BestMarket(Market):
         if len(large_bids) > len(bids_mm):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
         return asks, asks_mm, bids, bids_mm
+
 
 @time_it
 def get_clearing(bids, asks, prev_clearing_energy: int = None, ask_iterator=None):
