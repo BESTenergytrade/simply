@@ -370,7 +370,6 @@ class BestMarket(Market):
                 })
 
         if show:
-            print(f"Market cleared for {self.t_step}:")
             print(matches)
 
         output = self.add_grid_fee_info(matches)
@@ -413,6 +412,10 @@ class BestMarket(Market):
 
     @time_it
     def match(self, show=False):
+        return self.match_new(show)
+
+    @time_it
+    def match_new(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
 

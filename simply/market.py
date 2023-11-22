@@ -137,6 +137,7 @@ class Market:
         # TODO match bids
         matches = self.match(show=cfg.config.show_plots)
         self.matches.append(matches)
+        print(f"Market cleared for time {self.t_step}:")
 
         for match in matches:
             bid_actor_callback = self.actor_callback[match["bid_actor"]]
