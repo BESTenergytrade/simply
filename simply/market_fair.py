@@ -206,22 +206,7 @@ class BestMarket(Market):
         bids = self.get_bids()
 
         # filter out market makers (infinite bus) and really large orders
-        large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
-        large_asks = asks[large_asks_mask]
-        asks_mm = large_asks[large_asks.energy >= MARKET_MAKER_THRESHOLD]
-        if len(asks_mm) > 1:
-            print(f"WARNING! More than one ask market maker:{len(asks_mm)}")
-        asks = asks[~large_asks_mask]
-        if len(large_asks) > len(asks_mm):
-            print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
-        large_bids_mask = bids.energy >= LARGE_ORDER_THRESHOLD
-        large_bids = bids[large_bids_mask]
-        bids_mm = large_bids[large_bids.energy >= MARKET_MAKER_THRESHOLD]
-        if len(bids_mm) > 1:
-            print(f"WARNING! More than one bid market maker: {len(bids_mm)}")
-        bids = bids[~large_bids_mask]
-        if len(large_bids) > len(bids_mm):
-            print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
+        asks, asks_mm, bids, bids_mm = self.filter_orders(asks, bids)
 
         if (asks.empty and bids.empty) \
                 or (asks.empty and asks_mm.empty) \
@@ -233,17 +218,9 @@ class BestMarket(Market):
         asks = asks[~asks.cluster.isna()]
         bids = bids[~bids.cluster.isna()]
 
-        # split asks and bids into smallest energy unit, save original index, add cluster idx
-        asks = pd.DataFrame(asks)
-        asks["order_id"] = asks.index
-        asks = pd.DataFrame(asks.values.repeat(
-            asks.energy * (1 / cfg.config.energy_unit), axis=0), columns=asks.columns)
-        asks.energy = cfg.config.energy_unit
-        bids = pd.DataFrame(bids)
-        bids["order_id"] = bids.index
-        bids = pd.DataFrame(bids.values.repeat(
-            bids.energy * (1 / cfg.config.energy_unit), axis=0), columns=bids.columns)
-        bids.energy = cfg.config.energy_unit
+        # split asks and bids into the smallest energy unit, save original index, add cluster idx
+        asks = self.split_orders_to_energy_unit(asks)
+        bids = self.split_orders_to_energy_unit(bids)
 
         # keep track which clusters have to be (re)matched
         # start with all clusters
@@ -393,6 +370,7 @@ class BestMarket(Market):
                 })
 
         if show:
+            print(f"Market cleared for {self.t_step}:")
             print(matches)
 
         output = self.add_grid_fee_info(matches)
