@@ -581,8 +581,18 @@ class Actor:
 
         assert self.pred.schedule[0] == approx(self.pred.pv[0] - self.pred.load[0])
         # ToDo Make sure that the balance of schedule and bought energy does not charge
-        # or discharge more power than the max c rate
-        self.battery.charge(self.pred.schedule[0] + self.matched_energy_current_step)
+        #  or discharge more power than the max c rate
+        charge_energy = self.pred.schedule[0] + self.matched_energy_current_step
+        if cfg.config.debug:
+            print(
+                f"Actor {self.id} SoE: {self.battery.soc*self.battery.capacity}, "
+                f"charge: {charge_energy} "
+                f"(planned: {self.pred.schedule[0] + self.matched_energy_current_step}: "
+                f"scheduled: {self.pred.schedule[0]}, matched: {self.matched_energy_current_step})"
+            )
+
+        diff, _, _ = self.battery.charge(charge_energy, constrain=True)
+        # TODO: add post settlement to adjust for matched energy
 
     def generate_orders(self):
         """

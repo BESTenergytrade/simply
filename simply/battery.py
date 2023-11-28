@@ -21,16 +21,41 @@ class Battery:
         """Returns the value of energy inside the battery"""
         return self.soc * self.capacity
 
-    def charge(self, energy):
+    def charge(self, energy, constrain=False):
         """Charge the battery with an amount of energy.
 
         A negative energy value can be used for discharging. The SOC of the battery can not surpass
         0 or 1.
+
+        Returns the difference volume of energy that cannot be charged, the energy that is
+        possible to be charged and the SOC after the charging process.
+
         :param energy: Amount of energy
         :type energy: float
+        :param constrain: Constrain charging energy to SOC boundaries
+        :type constrain: bool
         """
         soc_after_charge = self.soc + energy/self.capacity
-        if self.check_boundaries:
+        diff = 0
+        energy_chargable = energy
+        if constrain:
+            if soc_after_charge < 0 - cfg.config.EPS:
+                # set charged energy to negative (i.e. discharging) stored energy volume
+                energy_chargable = -self.soc * self.capacity
+                diff = energy - energy_chargable
+                if cfg.config.debug:
+                    print(f"Cannot be discharged: {diff}")
+                soc_after_charge = 0
+            elif soc_after_charge > 1 + cfg.config.EPS:
+                # set charged energy to energy volume that fills battery
+                energy_chargable = (1 - self.soc) * self.capacity
+                diff = energy - energy_chargable
+                if cfg.config.debug:
+                    print(f"Cannot be charged: {diff}")
+                soc_after_charge = 1
+        elif self.check_boundaries:
             assert 1+cfg.config.EPS >= soc_after_charge >= 0-cfg.config.EPS, \
                 f"Battery is out of soc bounds with soc of: {soc_after_charge}."
         self.soc = soc_after_charge
+
+        return diff, energy_chargable, self.soc
