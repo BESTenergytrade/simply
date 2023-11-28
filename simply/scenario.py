@@ -16,7 +16,7 @@ from simply.market_maker import MarketMaker
 from simply.actor import Actor
 from simply.market import Market
 
-debug_actor = None  # 'residential_1'
+debug_actor = None  # 'residential_3'
 
 
 class Environment:
@@ -88,6 +88,8 @@ class Scenario:
         self.kwargs = kwargs
         self.environment = Environment(steps_per_hour, self.add_participant, **kwargs)
         self.add_market_maker(buy_prices, **kwargs)
+        if "market" in kwargs.keys():
+            self.set_market(kwargs["market"])
 
     def add_market_maker(self, buy_prices: Sized, **kwargs):
         if len(buy_prices) == 0:
@@ -305,6 +307,14 @@ class Scenario:
         pv_df.sum(axis=1).plot(ax=ax[2])
         load_df[~mask].sum(axis=1).plot(ax=ax[2])
         ax[2].legend(["pv", "load"])
+        plt.show()
+
+    def plot_prices(self):
+        fig, ax = plt.subplots(1, sharex=True)
+        ax = [ax]
+        if self.environment.market_maker is not None:
+            ax[0].plot([p + cfg.config.default_grid_fee for p in self.environment.market_maker._sell_prices])
+            ax[0].plot(self.environment.market_maker._buy_prices)
         plt.show()
 
     def reset(self):

@@ -66,6 +66,7 @@ def main(cfg: Config):
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_participant_data()
+        sc.plot_prices()
 
     # generate requested market
     if "pac" in cfg.market_type:
