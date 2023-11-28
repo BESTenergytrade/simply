@@ -173,8 +173,10 @@ class Actor:
             self.rl_environment = None
             self.rl_bank = 0
             self.reward = 0
+            self.rewards = np.zeros(cfg.config.nb_ts)
             self.rl_model = None
             self.action = 0
+            self.matched_energies = np.zeros(cfg.config.nb_ts)
 
         self.orders = []
         self.traded = {}
@@ -623,8 +625,10 @@ class Actor:
         energy_charge = self.pred.schedule[0] + self.matched_energy_current_step
         soc_after_charge = self.battery.soc + energy_charge / self.battery.capacity
         if soc_after_charge < 0-cfg.config.EPS:
+            print("Matched energy is not within boundaries of the actor's battery.")
             energy_charge = -self.battery.soc * self.battery.capacity
         elif soc_after_charge > 1+cfg.config.EPS:
+            print("Matched energy is not within boundaries of the actor's battery.")
             energy_charge = (1-self.battery.soc) * self.battery.capacity
             # TODO: add post settlement to adjust for matched energy
 
@@ -902,6 +906,10 @@ class Actor:
             if time % self.rl_environment.training_interval == 0:
                 # Train the agent
                 rl_agent.train_agent(self, training_steps=2048, clear_memory=True)
+
+        self.rewards[time-1] = self.reward
+        self.reward = 0
+        self.matched_energies[time-1] = self.matched_energy_current_step
 
     def get_reward(self, action, price):
         """

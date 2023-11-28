@@ -1,10 +1,11 @@
+import os
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 from simplyrl.rl_model import SimplyPPO
 
-import os
+
 # import torch
 # import tensorboard
 # try:
@@ -27,6 +28,7 @@ def train_agent(actor=None, training_steps=2048, clear_memory=True):
 
     # model directory to save updated model in
     algorithm = "new_start/24/1.4/norm_bank_reward_04-03-21-4"
+    # algorithm = "new_start/24/1.4/norm_bank_reward_new"
     models_dir = f"rl-models/{algorithm}"
 
     # train the rl model
@@ -40,16 +42,19 @@ def train_agent(actor=None, training_steps=2048, clear_memory=True):
     # save model
     actor.rl_model.save(f"{models_dir}/{actor.rl_model.num_timesteps}")
 
-    # save performance of current training interval, i.e rewards, banks and battery socs
+    # save performance of current training interval, i.e. rewards, banks and battery socs
     interval, _ = divmod(actor.rl_environment.t_step_simply, actor.rl_environment.training_interval)
-    REWARDS = pd.DataFrame.from_dict(actor.rl_environment.rewards_simply, orient="index", columns=[f"Reward Interval {interval}"])
-    BANKS = pd.DataFrame.from_dict(actor.rl_environment.banks_simply, orient="index", columns=[f"Bank Interval {interval}"])
-    SOCS = pd.DataFrame.from_dict(actor.rl_environment.socs_simply, orient="index", columns=[f"Battery SoC Interval {interval}"])
-    RESULTS = pd.concat([REWARDS, BANKS, SOCS], axis=1).reset_index()
-    RESULTS.rename(columns={"index": "t_step"}, inplace=True)
+    rewards = pd.DataFrame.from_dict(actor.rl_environment.rewards_simply, orient="index",
+                                     columns=[f"Reward Interval {interval}"])
+    banks = pd.DataFrame.from_dict(actor.rl_environment.banks_simply, orient="index",
+                                   columns=[f"Bank Interval {interval}"])
+    socs = pd.DataFrame.from_dict(actor.rl_environment.socs_simply, orient="index",
+                                  columns=[f"Battery SoC Interval {interval}"])
+    results = pd.concat([rewards, banks, socs], axis=1).reset_index()
+    results.rename(columns={"index": "t_step"}, inplace=True)
     if not os.path.exists(f"{models_dir}/benchmarks"):
         os.makedirs(f"{models_dir}/benchmarks")
-    RESULTS.to_csv(f"{models_dir}/benchmarks/Results_interval_{interval}.csv")
+    results.to_csv(f"{models_dir}/benchmarks/Results_interval_{interval}.csv")
 
     # reset environment variables to clear memory (optional)
     if clear_memory:
