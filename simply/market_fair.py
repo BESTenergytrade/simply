@@ -90,7 +90,8 @@ class BestCluster:
 
     @time_it
     def remove(self, ask):
-        print(f"removing {ask.name} from cluster {self.idx}")
+        if cfg.config.debug:
+            print(f"removing {ask.name} from cluster {self.idx}")
         old_matched_energy = self.matched_energy_units
         self.asks = self.asks.drop(ask.name)
         # removing ask can change clearing. if the amount of energy stays the
@@ -386,6 +387,11 @@ class BestMarket(Market):
             ask_id = match["ask_id"]
             ask_order_id = asks.loc[ask_id].order_id
             self.orders.loc[ask_order_id, "energy"] -= match["energy"]
+            if cfg.config.debug:
+                print(f'Order id {ask_order_id}: {self.orders.loc[ask_order_id, "energy"]}')
+            assert self.orders.loc[ask_order_id, "energy"] + cfg.config.EPS >= 0, \
+                f"Volume of Order ID {ask_order_id} exceeded, e.g. by matched energy unit ask_id " \
+                f"{ask_id}."
             bid_id = match["bid_id"]
             bid_order_id = bids.loc[bid_id].order_id
             self.orders.loc[bid_order_id, "energy"] -= match["energy"]
@@ -428,7 +434,7 @@ class BestMarket(Market):
             # no asks or bids at all: no matches
             return []
 
-        # filter out orders without cluster (can still be matched with market maker)
+        # filter out actor orders without cluster
         asks = asks[~asks.cluster.isna()]
         bids = bids[~bids.cluster.isna()]
 
@@ -436,11 +442,26 @@ class BestMarket(Market):
         asks = self.split_orders_to_energy_unit(asks)
         bids = self.split_orders_to_energy_unit(bids)
 
+        # Fill the orders up with MM bids/asks, so that MM could potentially match with totality
+        # of posted orders.
+        # Within each cluster only MarketMaker asks are copied into to be matched,
+        # except the MarketMaker Cluster, where those MarketMaker will be filtered out.
+        bids_mm.energy = cfg.config.energy_unit * len(asks)
+        bids_mm = self.split_orders_to_energy_unit(bids_mm)
+        asks_mm.energy = cfg.config.energy_unit * len(bids)
+        asks_mm = self.split_orders_to_energy_unit(asks_mm)
+        bids_mm.index = bids_mm.index + len(bids)
+        asks_mm.index = asks_mm.index + len(asks)
+        bids = pd.concat([bids, bids_mm])
+        asks = pd.concat([asks, asks_mm])
+        # if asks and bids are already equal in volume, there is no
+
         # keep track which clusters have to be (re)matched
         # start with all clusters
 
         self.clusters = [BestCluster(idx=idx, bestmarket=self) for idx in
-                         range(len(self.grid_fee_matrix))]
+                         list(range(len(self.grid_fee_matrix))) + [None]]
+
         # Work with copy to be able to remove empty bid clusters
         clusters_to_match = self.get_clusters_to_match()
         for cluster in clusters_to_match:
@@ -449,6 +470,14 @@ class BestMarket(Market):
             # get local bids
             cluster.bids = bids[bids.cluster == cluster.idx]
             cluster.asks = asks.copy()
+            if cluster.idx is None:
+                # This is the MM cluster with cluster None which does not match cluster.idx
+                assert cluster.bids.empty
+                # set this Cluster with MM bids
+                cluster.bids = bids[bids.cluster.isna()]
+                # filter out MM asks
+                cluster.asks = cluster.asks[~cluster.asks.cluster.isna()]
+
             cluster.ask_iterator = [*range(0, len(cluster.asks))]
 
             # annotate asking price by grid-fee:
@@ -570,6 +599,12 @@ class BestMarket(Market):
 
         matches = self.group_matches(asks, bids, matches)
 
+        if show:
+            print(matches)
+
+        output = self.add_grid_fee_info(matches)
+        self.append_to_csv(output, 'matches.csv')
+
         return matches
 
     @time_it
@@ -577,10 +612,17 @@ class BestMarket(Market):
         for cluster in self.clusters:
             if cluster == best_match_cluster:
                 continue
+            if cluster.idx is None:
+                if ask_id not in cluster.asks.index:
+                    # Market Maker asks do not exist, i.e. are not considered
+                    # in Market Maker cluster
+                    continue
 
             ask_row = cluster.asks.index.get_loc(ask_id)
             try:
-                # print(f"remove row {ask_row} from cluster {cluster.idx}")
+                if cfg.config.debug:
+                    print(f"remove row {ask_row} <-> ask_id {ask_id} from cluster {cluster.idx}: "
+                          f"{dict(cluster.asks.iloc[ask_row])}")
                 cluster.ask_iterator.remove(ask_row)
             except ValueError:
                 # ask_id not found. Already deleted
@@ -636,12 +678,27 @@ class BestMarket(Market):
             except KeyError:
                 continue
             profit = cluster.clearing_price - ask.adjusted_price
+            if cfg.config.debug:
+                print(f"? BEST cluster {cluster.idx} profit: {profit} "
+                      f"({cluster.clearing_price} - {ask.price})")
             dispute_value = self.resolve_dispute(ask, cluster)
             if ((profit > best_profit and profit >= 0) or
                     (profit == best_profit and dispute_value > best_dispute_value)):
                 best_profit = profit
                 best_match_cluster = cluster
                 best_dispute_value = dispute_value
+        if cfg.config.debug:
+            if best_match_cluster is not None:
+                if best_match_cluster.idx is not None and ask_id not in best_match_cluster.asks:
+                    print("Market Maker does not contain Market Maker asks")
+                print(f"Found BEST cluster {best_match_cluster.idx} profit: {best_profit} "
+                      f"({best_match_cluster.clearing_price} "
+                      f"- {best_match_cluster.asks.loc[ask_id].price})")
+                cols = ["actor_id", "order_id", "price", "cluster", "adjusted_price"]
+                bids = best_match_cluster.bids.reset_index(drop=True)
+                asks = best_match_cluster.asks.reset_index(drop=True)
+                print(pd.concat([bids[cols[:-2]], asks[cols]], axis=1))
+
         return best_match_cluster
 
     @time_it
