@@ -134,7 +134,11 @@ class Config:
         # --------------------------
         # show various plots
         self.show_plots = parser.getboolean("default", "show_plots", fallback=False)
+        # print warning info to console
+        self.verbose = parser.getboolean("default", "verbose", fallback=False)
         # print debug info to console
+        self.debug = parser.getboolean("default", "debug", fallback=False)
+        # print intermediate results info to console
         self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
         # save orders and matching results to csv files
         self.save_csv = parser.getboolean("default", "save_csv", fallback=False)

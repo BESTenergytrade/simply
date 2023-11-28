@@ -135,9 +135,9 @@ class Market:
         :return: None
         """
         # TODO match bids
-        matches = self.match(show=cfg.config.show_plots)
+        matches = self.match(show=cfg.config.show_prints)
         self.matches.append(matches)
-        print(f"Market cleared for time {self.t_step}:")
+        print(f"Market cleared for time {self.t_step}/{cfg.config.start + cfg.config.nb_ts - 1}:")
 
         for match in matches:
             bid_actor_callback = self.actor_callback[match["bid_actor"]]
@@ -259,7 +259,8 @@ class Market:
             return cfg.config.default_grid_fee
         else:
             if bid_cluster is None or ask_cluster is None:
-                warnings.warn("At least one cluster is 'None', returning default grid fee.")
+                if cfg.config.verbose:
+                    warnings.warn("At least one cluster is 'None', returning default grid fee.")
                 # default grid fee
                 return cfg.config.default_grid_fee
             else:

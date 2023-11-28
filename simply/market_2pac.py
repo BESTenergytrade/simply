@@ -37,7 +37,7 @@ class TwoSidedPayAsClear(Market):
         # order orders by price
         bids = self.get_bids().sort_values(["price", "energy"], ascending=False)
         asks = self.get_asks().sort_values(["price", "energy"], ascending=True)
-        if show:
+        if show and cfg.config.show_plots:
             plot_merit_order(bids, asks)
 
         if len(bids) == 0 or len(asks) == 0:
