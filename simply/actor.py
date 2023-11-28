@@ -129,6 +129,7 @@ class Actor:
         self.bank = 0
         self.matched_energy_current_step = 0
         self.socs = []
+        self.diffs = []
         self.predicted_soc = None
         self.load_scale = ls
         self.pv_scale = ps
@@ -592,7 +593,8 @@ class Actor:
             )
 
         diff, _, _ = self.battery.charge(charge_energy, constrain=True)
-        # TODO: add post settlement to adjust for matched energy
+        self.diffs.append(diff)
+        # TODO: add post settlement to adjust bank
 
     def generate_orders(self):
         """
