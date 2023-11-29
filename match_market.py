@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 from argparse import ArgumentParser
+from time import time
 
 from simply import market, market_2pac, market_fair
 from simply.scenario import load, create_random, Scenario
@@ -78,6 +79,7 @@ def main(cfg: Config):
         m = market.Market(network=sc.power_network)
 
     sc.add_market(m)
+    exec_start = time()
     for _ in range(cfg.nb_ts):
         # actors calculate strategy based market interaction with the market maker
         sc.create_strategies()
@@ -94,6 +96,7 @@ def main(cfg: Config):
             print(
                 "\nCheck individual traded energy blocks (splitted) and price at market level"
             )
+    print(f"Execution time was: {time()-exec_start} s")
 
     if cfg.show_prints:
         print("\nTraded energy volume and price at actor level")
