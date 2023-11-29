@@ -207,7 +207,7 @@ class BestMarket(Market):
         bids = self.get_bids()
 
         # filter out market makers (infinite bus) and really large orders
-        asks, asks_mm, bids, bids_mm = self.filter_orders(asks, bids)
+        asks, asks_mm, bids, bids_mm, large_asks, large_bids = self.filter_orders(asks, bids)
 
         if (asks.empty and bids.empty) \
                 or (asks.empty and asks_mm.empty) \
@@ -426,7 +426,7 @@ class BestMarket(Market):
         bids = self.get_bids()
 
         # filter out market makers (infinite bus) and really large orders
-        asks, asks_mm, bids, bids_mm = self.filter_orders(asks, bids)
+        asks, asks_mm, bids, bids_mm, _, _ = self.filter_orders(asks, bids)
 
         if (asks.empty and bids.empty) \
                 or (asks.empty and asks_mm.empty) \
@@ -728,7 +728,7 @@ class BestMarket(Market):
         bids = bids[~large_bids_mask]
         if len(large_bids) > len(bids_mm):
             print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
-        return asks, asks_mm, bids, bids_mm
+        return asks, asks_mm, bids, bids_mm, large_asks, large_bids
 
 
 @time_it

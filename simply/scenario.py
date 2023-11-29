@@ -313,7 +313,8 @@ class Scenario:
         fig, ax = plt.subplots(1, sharex=True)
         ax = [ax]
         if self.environment.market_maker is not None:
-            ax[0].plot([p + cfg.config.default_grid_fee for p in self.environment.market_maker._sell_prices])
+            ax[0].plot([p + cfg.config.default_grid_fee for p in
+                        self.environment.market_maker._sell_prices])
             ax[0].plot(self.environment.market_maker._buy_prices)
         plt.show()
 
