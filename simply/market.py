@@ -27,6 +27,7 @@ class Market:
         self.orders = pd.DataFrame(columns=Order._fields)
 
         self.trades = None
+        self.cleared_volume = {}
         self.matches = []
         self.t_step = time_step
         self.actor_callback = {}
@@ -137,6 +138,7 @@ class Market:
         # TODO match bids
         matches = self.match(show=cfg.config.show_prints)
         self.matches.append(matches)
+        self.cleared_volume[self.t_step] = sum([m["energy"] for m in matches])
         print(f"Market cleared for time {self.t_step}/{cfg.config.start + cfg.config.nb_ts - 1}:")
 
         for match in matches:

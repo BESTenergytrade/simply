@@ -2,6 +2,7 @@ import warnings
 from configparser import ConfigParser, MissingSectionHeaderError
 from numpy import linspace
 from pathlib import Path
+from math import log
 
 
 class Config:
@@ -95,6 +96,7 @@ class Config:
 
         # Tolerance value for assertions, comparison and so on
         self.EPS = parser.getfloat("default", "EPS", fallback=1e-6)
+        self.round_decimal = round(log(1 / self.EPS, 10))
 
         # --------------------------
         # market

@@ -80,7 +80,7 @@ def main(cfg: Config):
 
     sc.add_market(m)
     exec_start = time()
-    for _ in range(cfg.nb_ts):
+    for t in range(cfg.nb_ts):
         # actors calculate strategy based market interaction with the market maker
         sc.create_strategies()
 
@@ -92,13 +92,15 @@ def main(cfg: Config):
         sc.next_time_step()
 
         if cfg.show_prints:
-            print("Matches of bid/ask ids: {}".format(m.matches))
-            print(
-                "\nCheck individual traded energy blocks (splitted) and price at market level"
-            )
+            print(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)}")
+
     print(f"Execution time was: {time()-exec_start} s")
 
     if cfg.show_prints:
+        print("Matches of bid/ask ids: {}".format(m.matches))
+        print(
+            "\nCheck individual traded energy blocks (splitted) and price at market level"
+        )
         print("\nTraded energy volume and price at actor level")
         print(summerize_actor_trading(sc))
 

@@ -371,7 +371,7 @@ class BestMarket(Market):
                 })
 
         if show:
-            print(matches)
+            print(f"Matches: {matches}")
 
         output = self.add_grid_fee_info(matches)
         self.append_to_csv(output, 'matches.csv')
