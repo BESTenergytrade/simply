@@ -310,13 +310,13 @@ class Scenario:
         plt.show()
 
     def plot_prices(self):
-        fig, ax = plt.subplots(1, sharex=True)
-        ax = [ax]
         if self.environment.market_maker is not None:
+            fig, ax = plt.subplots(1, sharex=True)
+            ax = [ax]
             ax[0].plot([p + cfg.config.default_grid_fee for p in
-                        self.environment.market_maker._sell_prices])
-            ax[0].plot(self.environment.market_maker._buy_prices)
-        plt.show()
+                        self.environment.market_maker.all_sell_prices])
+            ax[0].plot(self.environment.market_maker.all_buy_prices)
+            plt.show()
 
     def reset(self):
         """ Reset the scenario after a simulation is run"""
