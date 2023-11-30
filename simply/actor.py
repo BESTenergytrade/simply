@@ -128,13 +128,6 @@ class Actor:
 
         # set config parameter
         self.horizon = cfg.config.horizon
-        self.train_rl = cfg.config.train_rl
-        self.initial_exploration_steps = cfg.config.initial_exploration_steps
-        self.pretrained_model = cfg.config.pretrained_model
-        if not self.pretrained_model:
-            self.initial_exploration = True
-        else:
-            self.initial_exploration = False
 
         self.bank = 0
         self.matched_energy_current_step = 0
@@ -185,6 +178,17 @@ class Actor:
             self.rl_model = None
             self.action = 0
             self.matched_energies = np.zeros(cfg.config.nb_ts)
+
+            # set config parameters for rl agent
+            self.train_rl = cfg.config.train_rl
+            self.initial_exploration_steps = cfg.config.initial_exploration_steps
+            self.pretrained_model = cfg.config.pretrained_model
+            if self.pretrained_model:
+                self.initial_exploration = False
+                self.pretrained = True
+            else:
+                self.initial_exploration = True
+                self.pretrained = False
 
         self.orders = []
         self.traded = {}
@@ -301,7 +305,7 @@ class Actor:
             # rl strategy
             if self.t_step > self.initial_exploration_steps:
                 self.initial_exploration = False
-            self.market_schedule[0] = rl_agent.predict_agent(self, self.train_rl, self.initial_exploration, self.pretrained_model)
+            self.market_schedule[0] = rl_agent.predict_agent(self, self.train_rl, self.initial_exploration, self.pretrained)
             return self.market_schedule
 
     def get_default_market_schedule(self):
