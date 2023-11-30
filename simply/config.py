@@ -140,6 +140,8 @@ class Config:
         self.training_interval = parser.getint("default", "training_interval", fallback=72)
         # whether pre-trained model exists for rl agent
         self.pretrained_model = parser.get("default", "pretrained_model", fallback="")
+        # number of steps a new model explores the action space
+        self.initial_exploration_steps = parser.getint("default", "initial_exploration_steps", fallback=72)
 
         # --------------------------
         # output

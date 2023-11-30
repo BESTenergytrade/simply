@@ -126,7 +126,15 @@ class Actor:
         self.grid_id = None
         self.cluster = cluster
 
+        # set config parameter
         self.horizon = cfg.config.horizon
+        self.train_rl = cfg.config.train_rl
+        self.initial_exploration_steps = cfg.config.initial_exploration_steps
+        self.pretrained_model = cfg.config.pretrained_model
+        if not self.pretrained_model:
+            self.initial_exploration = True
+        else:
+            self.initial_exploration = False
 
         self.bank = 0
         self.matched_energy_current_step = 0
@@ -291,7 +299,9 @@ class Actor:
             return self.market_schedule
         if strategy == 4:
             # rl strategy
-            self.market_schedule[0] = rl_agent.predict_agent(self)
+            if self.t_step > self.initial_exploration_steps:
+                self.initial_exploration = False
+            self.market_schedule[0] = rl_agent.predict_agent(self, self.train_rl, self.initial_exploration, self.pretrained_model)
             return self.market_schedule
 
     def get_default_market_schedule(self):

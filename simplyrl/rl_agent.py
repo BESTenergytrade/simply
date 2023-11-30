@@ -61,10 +61,13 @@ def train_agent(actor=None, training_steps=2048, clear_memory=True):
         actor.rl_environment.reset_train_env()
 
 
-def predict_agent(actor=None):
+def predict_agent(actor=None, train_rl=False, initial_exploration=False, pretrained=False):
     """
     Determines a predicted action and corresponding schedule value for a given RL agent.
     @param actor: RL agent
+    @param train_rl: whether the rl agent is being trained. If not prediction should be deterministic not stochastic.
+    @param initial_exploration: whether initially for the first x episodes entire action space should be explored
+    @param pretrained: path to pretrained model if exists
     @return: schedule prediction value
     """
 
@@ -73,7 +76,18 @@ def predict_agent(actor=None):
 
     observation, _ = env.reset(options="prediction")
 
-    actor.action = model.predict(observation)[0]
+    if train_rl:
+        # if agent is trained prediction is not deterministic,
+        # i.e. action is chosen by model as random sample of actions
+        # based on given policy distribution. This increases the exploration.
+        if initial_exploration & (~pretrained):
+            actor.action = model.explore_action_space(observation)
+        else:
+            actor.action = model.predict(observation, deterministic=False)[0]
+    else:
+        # if agent is not trained prediction should be deterministic,
+        # i.e. best action is always chosen (action with higher probability)
+        actor.action = model.predict(observation, deterministic=True)[0]
     next_action = np.round(env.action_energy_values[actor.action], 3)
 
     return next_action
