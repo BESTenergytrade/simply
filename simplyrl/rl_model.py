@@ -237,5 +237,5 @@ class SimplyPPO(PPO):
         @param actor:
         @return:
         """
-        return np.random.choice(list(range(np.array(actor.rl_environment.action_space.nvec[0]))))
+        return np.array(np.random.choice(list(range(np.array(actor.rl_environment.action_space.nvec[0])))))[None]
 

@@ -187,7 +187,7 @@ class Actor:
                 self.initial_exploration_mode = False
                 self.pretrained = True
             else:
-                self.initial_exploration = True
+                self.initial_exploration_mode = True
                 self.pretrained = False
 
         self.orders = []

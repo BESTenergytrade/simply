@@ -22,6 +22,8 @@ def run_testing(cfg, nb_ts=2688):
     """
     pretrained_model = cfg.pretrained_model
     intervals, _ = divmod(cfg.nb_ts, cfg.training_interval)
+    if pretrained_model == "":
+        pretrained_model = "2048"
 
     # if testing number of timesteps smaller than simulation timesteps
     if nb_ts < cfg.nb_ts:
