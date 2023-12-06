@@ -209,6 +209,18 @@ if __name__ == "__main__":
 
     # run testing and store results of test runs
     rewards_df, energy_df, market_prices_df, pvs_df, loads_df, socs_df, banks_df = run_testing(cfg)
+    # create directory for test run
+    dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M")  # dd/mm/YY H:M
+    if not os.path.exists(f'{results_dir}/testing_run_{dt_string}'):
+        os.mkdir(f'{results_dir}/testing_run_{dt_string}')
+    # save files
+    rewards_df.to_csv(f'{results_dir}/testing_run_{dt_string}/rewards_df.csv')
+    energy_df.to_csv(f'{results_dir}/testing_run_{dt_string}/energy_df.csv')
+    market_prices_df.to_csv(f'{results_dir}/testing_run_{dt_string}/market_prices_df.csv')
+    pvs_df.to_csv(f'{results_dir}/testing_run_{dt_string}/pvs_df.csv')
+    loads_df.to_csv(f'{results_dir}/testing_run_{dt_string}/loads_df.csv')
+    socs_df.to_csv(f'{results_dir}/testing_run_{dt_string}/socs_df.csv')
+    banks_df.to_csv(f'{results_dir}/testing_run_{dt_string}/banks_df.csv')
 
     # visualise the trading behaviour for randomly selected timeframe of length n_ts
     visualise_trading_behaviour(energy_df, market_prices_df, pvs_df, loads_df, socs_df, n_ts=24, seed=1234, interval=1, show_plot=True)
