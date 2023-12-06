@@ -135,6 +135,10 @@ if __name__ == "__main__":
     sim_time = (time.time() - start_time)
     if sim_time > 120:
         mins, secs = divmod(sim_time, 60)
-        print(f'It took {int(mins)} minutes and {int(secs)} seconds to execute simulation.')
+        if mins > 120:
+            hs, mins = divmod(mins, 60)
+            print(f'It took {int(hs)} hours, {int(mins)} minutes and {int(secs)} seconds to execute simulation.')
+        else:
+            print(f'It took {int(mins)} minutes and {int(secs)} seconds to execute simulation.')
     else:
         print(f'It took {sim_time:.3f} seconds to execute simulation.')

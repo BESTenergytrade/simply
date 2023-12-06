@@ -1,5 +1,7 @@
 import numpy as np
 from stable_baselines3 import PPO
+from sb3_contrib.ppo_mask import MaskablePPO
+from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 from typing import Any, Dict, Optional, Type, Union
 import torch as th
 from gymnasium import spaces
@@ -12,7 +14,7 @@ from stable_baselines3.common.vec_env import VecEnv
 from simplyrl.energy_env import EnergyEnv
 
 
-class SimplyPPO(PPO):
+class SimplyPPO(MaskablePPO):
     """
     Proximal Policy Optimization algorithm (PPO) as used in simply with customized batch buffer rollout collection.
 
@@ -69,7 +71,7 @@ class SimplyPPO(PPO):
 
     def __init__(
         self,
-        policy: Union[str, Type[ActorCriticPolicy]],
+        policy: Union[str, Type[MaskableActorCriticPolicy]],
         env: Union[EnergyEnv, str],
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
@@ -83,8 +85,6 @@ class SimplyPPO(PPO):
         ent_coef: float = 0.0,
         vf_coef: float = 0.5,
         max_grad_norm: float = 0.5,
-        use_sde: bool = False,
-        sde_sample_freq: int = -1,
         target_kl: Optional[float] = None,
         stats_window_size: int = 100,
         tensorboard_log: Optional[str] = None,
@@ -109,8 +109,6 @@ class SimplyPPO(PPO):
             ent_coef=ent_coef,
             vf_coef=vf_coef,
             max_grad_norm=max_grad_norm,
-            use_sde=use_sde,
-            sde_sample_freq=sde_sample_freq,
             target_kl=target_kl,
             stats_window_size=stats_window_size,
             tensorboard_log=tensorboard_log,
@@ -127,6 +125,7 @@ class SimplyPPO(PPO):
         callback: BaseCallback,
         rollout_buffer: RolloutBuffer,
         n_rollout_steps: int,
+        use_masking: bool = True,
     ) -> bool:
         """
         Collect experiences using the current policy and fill a ``RolloutBuffer``.
@@ -138,6 +137,7 @@ class SimplyPPO(PPO):
             (and at the beginning and end of the rollout)
         :param rollout_buffer: Buffer to fill with rollouts
         :param n_rollout_steps: Number of experiences to collect per environment
+        :param use_masking: Whether to use invalid action masks during training
         :return: True if function returned with at least `n_rollout_steps`
             collected, False if callback terminated rollout prematurely.
         """

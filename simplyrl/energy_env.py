@@ -1,6 +1,8 @@
+from typing import List
 import numpy as np
 import pandas as pd
 import gymnasium as gym
+from sb3_contrib.common.envs import InvalidActionEnvDiscrete
 
 
 class EnergyEnv(gym.Env):
@@ -22,10 +24,12 @@ class EnergyEnv(gym.Env):
         self.training = training
 
         # Create action space
-        self.action_energy_values = np.arange(-13.5, 13.5, self.energy_unit * 5)
+        battery_cap = actor.battery.capacity
+        self.action_energy_values = np.arange(-battery_cap, battery_cap, self.energy_unit * 5)
         self.action_space = gym.spaces.MultiDiscrete([len(self.action_energy_values)])
 
         # Create observation space
+        # TODO: adjust observation space to be variable to config input
         self.observation_values = np.arange(-1.4, 1.4, self.energy_unit)
         # observation is set to be of length 49 with 24 t_steps schedule, buy prices and one soc value
         self.observation_bins = [len(self.observation_values) for _ in range(24 * 2 + 1)]
@@ -103,6 +107,17 @@ class EnergyEnv(gym.Env):
         t_step_min = self.t_step_simply - self.training_interval + 1
         t_step_max = self.t_step_simply - self.horizon_train + 1
         return np.random.choice(list(range(t_step_min, t_step_max)))
+
+    def valid_action_mask(self) -> List[bool]:
+        self.possible_actions = np.arange(self.action_space.nvec[0])
+        actor_battery_cap = self.actor.battery.capacity
+        actor_battery_charge = self.actor.battery.soc * actor_battery_cap
+        current_schedule = self.actor.pred.schedule[0]
+        available_energy = actor_battery_charge + current_schedule
+        min_valid = -available_energy
+        max_valid = actor_battery_cap - available_energy
+        self.valid_actions = np.where((self.action_energy_values < max_valid) & (self.action_energy_values > min_valid))[0]
+        return [action in self.valid_actions for action in self.possible_actions]
 
     def reset_train_env(self):
         self.action = None

@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from simplyrl.rl_model import SimplyPPO
+from sb3_contrib.common.wrappers import ActionMasker
+from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 
 
 # import torch
@@ -76,6 +78,8 @@ def predict_agent(actor=None, train_rl=False, initial_exploration_mode=False, pr
 
     observation, _ = env.reset(options="prediction")
 
+    action_mask = env.valid_action_mask()
+
     if train_rl:
         # if agent is trained prediction is not deterministic,
         # i.e. action is chosen by model as random sample of actions
@@ -83,11 +87,11 @@ def predict_agent(actor=None, train_rl=False, initial_exploration_mode=False, pr
         if initial_exploration_mode & (~pretrained):
             actor.action = model.explore_action_space(actor)
         else:
-            actor.action = model.predict(observation, deterministic=False)[0]
+            actor.action = model.predict(observation, action_masks=action_mask, deterministic=False)[0]
     else:
         # if agent is not trained prediction should be deterministic,
         # i.e. best action is always chosen (action with higher probability)
-        actor.action = model.predict(observation, deterministic=True)[0]
+        actor.action = model.predict(observation, action_masks=action_mask, deterministic=True)[0]
     next_action = np.round(env.action_energy_values[actor.action], 3)
 
     return next_action
@@ -104,11 +108,18 @@ def load_model(actor=None, model_path=None, pretrained=True):
 
     # import model
     # TODO: make import of model variable to each actor and its identifier
+    def mask_fn(env) -> np.ndarray:
+        # Do whatever you'd like in this function to return the action mask
+        # for the current env. In this example, we assume the env has a
+        # helpful method we can rely on.
+        return env.valid_action_mask()
+
     env = actor.rl_environment
+    env = ActionMasker(env, mask_fn)
     if pretrained:
         model = SimplyPPO.load(model_path, env=env)
     else:
-        model = SimplyPPO("MlpPolicy", env=env, verbose=1, device='cpu')
+        model = SimplyPPO(MaskableActorCriticPolicy, env=env, verbose=1, device='cpu')
     return model
 
 

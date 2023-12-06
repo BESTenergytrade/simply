@@ -118,7 +118,7 @@ def visualise_performance(rewards_df, socs_df, banks_df, intervals, show_plot=Tr
 
 
 # %%
-def visualise_trading_behaviour(energy_df, market_prices_df, pvs_df, loads_df, socs_df, n_ts, seed, interval, show_plot=True):
+def visualise_trading_behaviour(energy_df, market_prices_df, pvs_df, loads_df, socs_df, n_ts, seed, interval, battery_cap=13.5, show_plot=True):
     # choose random interval of length n_ts for plotting behaviour
     np.random.seed(seed)
     t_start = np.random.choice(list(range(len(market_prices_df.iloc[:, 0]) - n_ts)))
@@ -126,7 +126,7 @@ def visualise_trading_behaviour(energy_df, market_prices_df, pvs_df, loads_df, s
     energy = energy_df.iloc[t_start:t_start + n_ts, interval - 1]
     market_prices = market_prices_df.iloc[t_start:t_start + n_ts, 0]
     pv = pvs_df.iloc[t_start:t_start + n_ts, interval - 1]
-    battery = socs_df.iloc[t_start:t_start + n_ts, interval - 1] * 13.5
+    battery = socs_df.iloc[t_start:t_start + n_ts, interval - 1] * battery_cap
     load = loads_df.iloc[t_start:t_start + n_ts, interval - 1]
 
     # Create a figure and axis object
@@ -232,6 +232,10 @@ if __name__ == "__main__":
     sim_time = (time.time() - start_time)
     if sim_time > 120:
         mins, secs = divmod(sim_time, 60)
-        print(f'It took {int(mins)} minutes and {int(secs)} seconds to execute simulation.')
+        if mins > 120:
+            hs, mins = divmod(mins, 60)
+            print(f'It took {int(hs)} hours, {int(mins)} minutes and {int(secs)} seconds to execute simulation.')
+        else:
+            print(f'It took {int(mins)} minutes and {int(secs)} seconds to execute simulation.')
     else:
         print(f'It took {sim_time:.3f} seconds to execute simulation.')
