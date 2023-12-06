@@ -116,7 +116,8 @@ class PowerNetwork:
         # plot_hierarchical(self.network)
         nx.draw(self.network, with_labels=True, font_weight="bold", node_size=50)
         if show:
-            plt.show()
+            plt.show(block=False)
+            plt.pause(0.001)
 
         return fig
 

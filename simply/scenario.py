@@ -322,7 +322,8 @@ class Scenario:
         pv_df.sum(axis=1).plot(ax=ax[2])
         load_df[~mask].sum(axis=1).plot(ax=ax[2])
         ax[2].legend(["pv", "load"])
-        plt.show()
+        plt.show(block=False)
+        plt.pause(0.001)
 
     def reset(self):
         """ Reset the scenario after a simulation is run"""
