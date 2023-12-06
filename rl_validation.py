@@ -9,11 +9,12 @@ from match_market import main
 from simply.config import Config
 from simply.actor import Actor
 from simply.market_maker import MarketMaker
+from tqdm import tqdm
 import os
 import time
 
 
-def run_testing(cfg):
+def run_testing(cfg, nb_ts=2688):
     """
     runs tests on common dataset to provide performance measure for RL training progress
     @param cfg: config file for
@@ -21,7 +22,10 @@ def run_testing(cfg):
     """
     pretrained_model = cfg.pretrained_model
     intervals, _ = divmod(cfg.nb_ts, cfg.training_interval)
-    # intervals = 1
+
+    # if testing number of timesteps smaller than simulation timesteps
+    if nb_ts < cfg.nb_ts:
+        cfg.nb_ts = nb_ts
 
     models = list(range(int(pretrained_model), int(pretrained_model) + 2048 * intervals, 2048))
     cfg.train_rl = False
@@ -31,7 +35,7 @@ def run_testing(cfg):
     LOADS = {}
     SOCS = {}
     BANKS = {}
-    for version in models:
+    for version in tqdm(models):
         cfg.pretrained_model = str(version)
         sc = main(cfg)
         print(f"-----------Test run model {version} is completed. Logging data.")
