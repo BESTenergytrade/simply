@@ -184,7 +184,7 @@ class Actor:
             self.initial_exploration_steps = cfg.config.initial_exploration_steps
             self.pretrained_model = cfg.config.pretrained_model
             if self.pretrained_model:
-                self.initial_exploration = False
+                self.initial_exploration_mode = False
                 self.pretrained = True
             else:
                 self.initial_exploration = True
@@ -304,8 +304,8 @@ class Actor:
         if strategy == 4:
             # rl strategy
             if self.t_step > self.initial_exploration_steps:
-                self.initial_exploration = False
-            self.market_schedule[0] = rl_agent.predict_agent(self, self.train_rl, self.initial_exploration, self.pretrained)
+                self.initial_exploration_mode = False
+            self.market_schedule[0] = rl_agent.predict_agent(self, self.train_rl, self.initial_exploration_mode, self.pretrained)
             return self.market_schedule
 
     def get_default_market_schedule(self):

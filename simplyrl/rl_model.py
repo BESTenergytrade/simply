@@ -1,3 +1,4 @@
+import numpy as np
 from stable_baselines3 import PPO
 from typing import Any, Dict, Optional, Type, Union
 import torch as th
@@ -230,5 +231,11 @@ class SimplyPPO(PPO):
 
         return True
 
-    def explore_action_space(self):
-        pass
+    def explore_action_space(self, actor):
+        """
+        returns random selection of exploration space value for a given actor
+        @param actor:
+        @return:
+        """
+        return np.random.choice(list(range(np.array(actor.rl_environment.action_space.nvec[0]))))
+
