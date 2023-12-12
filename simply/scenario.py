@@ -365,7 +365,8 @@ def load(dirpath, data_format):
     meta = json.loads(meta_text)
     rng_seed = meta.get("rng_seed", None)
 
-    pn = power_network.create_power_network_from_config(next(dirpath.glob('network.*')))
+    pn = power_network.create_power_network_from_config(
+        next(dirpath.glob('network.*')), weight_factor=cfg.config.weight_factor)
 
     # read actors
     participants = []
