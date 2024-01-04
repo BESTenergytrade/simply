@@ -92,7 +92,7 @@ def main(cfg: Config):
         sc.next_time_step()
 
         if cfg.show_prints:
-            print(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)}")
+            print(f"Cleared Volume: {round(m.cleared_volume[cfg.start + t], cfg.round_decimal)}")
 
     print(f"Execution time was: {time()-exec_start} s")
 
@@ -103,6 +103,8 @@ def main(cfg: Config):
         )
         print("\nTraded energy volume and price at actor level")
         print(summerize_actor_trading(sc))
+
+    print(f"Results saved to {sc.market.csv_path}")
 
     return sc
 
