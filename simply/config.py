@@ -103,6 +103,8 @@ class Config:
         # --------------------------
         # market type to be use
         self.market_type = parser.get("default", "market_type", fallback="default").lower()
+        self.disputed_matching = parser.get("default", "disputed_matching",
+                                            fallback="grid_fee").lower()
         # reset market after each interval (discard unmatched orders)
         self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
         # size of energy units to be traded individually
@@ -113,6 +115,8 @@ class Config:
         self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
 
         # time related
+        # start date of time series data
+        self.start_date = parser.get("default", "start_date", fallback="2016-01-01")
         # start time step
         self.start = parser.getint("default", "start", fallback=0)
         # number of timesteps in simulation

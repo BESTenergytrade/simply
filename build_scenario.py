@@ -156,6 +156,11 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
                              index_col=['Time'])
         # Make sure dates are parsed
         csv_df.index = pd.to_datetime(csv_df.index)
+        if csv_df.index[-1] < end_date:
+            raise IndexError(f"Provided input data ({csv_df.index[-1]} + {int(60 / ts_hour)} min) "
+                             f"ends before configured ending time {end_date} resulting of config"
+                             f"parameters:"
+                             f"start_date + (nb_ts + horizon + 1) * (60 / ts_hour) min.")
 
         df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, 0]
         # Save peak value and normalize time series
@@ -170,7 +175,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
                                 weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
-                                start_date="2016-01-01", plot_network=False,
+                                start_date=None, plot_network=False,
                                 price_filename="basic_prices.csv", ps=None, ls=None):
     """
     Create Scenario object while creating Actor objects from config_json referencing to time series
@@ -211,6 +216,9 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     if plot_network is True:
         pn.plot()
 
+    if start_date is None:
+        start_date = "2016-01-01"
+        warnings.warn(f"No start date was given, use default date {start_date}.")
     start_date, end_date = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
     buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date)
     # Empty scenario. Member Participants, map actors and power network will be added later
@@ -308,12 +316,14 @@ def main(project_dir, data_dir):
     sc = create_scenario_from_config(
         config_json_path,
         network_path,
+        weight_factor=cfg.weight_factor,
         data_dirpath=data_dirpath,
+        start_date=cfg.start_date,
         nb_ts=cfg.nb_ts,
         horizon=cfg.horizon,
         ts_hour=cfg.ts_per_hour,
         loads_dir_path=loads_dir_path,
-        ps=1,
+        ps=None,
         ls=None
     )
     sc.save(cfg.path, cfg.data_format)

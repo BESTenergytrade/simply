@@ -73,7 +73,8 @@ def main(cfg: Config):
     if "pac" in cfg.market_type:
         m = market_2pac.TwoSidedPayAsClear(network=sc.power_network)
     elif "fair" in cfg.market_type:
-        m = market_fair.BestMarket(network=sc.power_network)
+        m = market_fair.BestMarket(network=sc.power_network,
+                                   disputed_matching=cfg.disputed_matching)
     else:
         # default
         m = market.Market(network=sc.power_network)

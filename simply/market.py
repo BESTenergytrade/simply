@@ -236,7 +236,6 @@ class Market:
         :return: None
         """
         with open(self.csv_path / filename, 'w') as f:
-            print(self.csv_path)
             writer = csv.writer(f)
             writer.writerow(headers)
 
