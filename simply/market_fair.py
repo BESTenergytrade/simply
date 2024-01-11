@@ -77,16 +77,21 @@ class BestCluster:
         self.clearing_price = clearing["clearing_price"]
         self.bid_clearing_price = clearing["bid_clearing_price"]
 
-    @time_it
-    def get_insertion_profit(self, ask):
-        ask = ask.copy()
-        ask.adjusted_price = ask.price + self.market.get_grid_fee(bid_cluster=self.idx,
-                                                                  ask_cluster=ask.cluster)
+
+    def get_insertion_profit(self, ask) -> (float, dict):
+        """Returns the profit for the ask if it were inserted, as well as the clearing dict"""
+        ask_copy = ask.copy()
+        ask_copy.adjusted_price = ask_copy.price + self.market.get_grid_fee(bid_cluster=self.idx,
+                                                                            ask_cluster=ask_copy.cluster)
         asks = self.asks.copy()
-        asks.loc[ask.name] = ask
+        asks.loc[ask_copy.name] = ask_copy
         asks = asks.sort_values(["adjusted_price", "price"], ascending=[True, False])
         clearing = get_clearing(self.bids, asks)
-        return clearing["clearing_price"] - ask.adjusted_price, clearing
+        # The location / row number must be lower than the resulting clearing matched_energy.
+        # If its higher it means it would not be matched.
+        if asks.index.get_loc(ask_copy.name) +1 > clearing["matched_energy_units"]:
+            return -float("inf"), clearing
+        return clearing["clearing_price"] - ask_copy.adjusted_price, clearing
 
     @time_it
     def remove(self, ask):
@@ -108,7 +113,6 @@ class BestCluster:
                 except KeyError:
                     pass
 
-    @time_it
     def insert(self, ask, clearing):
 
         old_matched_energy = self.matched_energy_units
@@ -567,12 +571,12 @@ class BestMarket(Market):
             bottom_asks = self.get_bottom_asks()
 
             for bottom_ask, bid_cluster in bottom_asks:
-                best_profit = bid_cluster.clearing_price - bottom_ask.adjusted_price
-                if best_profit < 0:
+                current_profit = bid_cluster.clearing_price - bottom_ask.adjusted_price
+                if current_profit < 0:
                     continue
                 dispute_value = self.resolve_dispute(bottom_ask, bid_cluster)
                 clusters = [cluster for cluster in self.clusters if cluster != bid_cluster]
-                best_clearing, best_cluster, _ = self.get_best_cluster(dispute_value, best_profit,
+                best_clearing, best_cluster, _ = self.get_best_cluster(dispute_value, current_profit,
                                                                        bottom_ask, clusters)
                 if best_cluster is None:
                     # no better cluster found than the current one
@@ -684,11 +688,9 @@ class BestMarket(Market):
                 ask = cluster.asks.iloc[cluster.ask_iterator].loc[ask_id]
             except KeyError:
                 continue
-            # if it is not deleted yet check if the position of this ask is inside of the matched
-            # amount
-            energy_unit_amount_for_ask = cluster.ask_iterator.index(ask_id) + 1
-            if energy_unit_amount_for_ask > cluster.matched_energy_units:
-                continue
+            # Checking if the ask is inside of the matching is not necessary here. Matches
+            # are just placed in the most likely "good" position". Since all asks are checked
+            # for better positioning in the end suboptimal placing here will be negated.
 
             profit = cluster.clearing_price - ask.adjusted_price
             if cfg.config.debug:
