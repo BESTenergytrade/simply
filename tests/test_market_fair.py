@@ -415,6 +415,138 @@ class TestBestMarket:
         assert any([match["ask_actor"] == "seller_c1_5" and match["bid_cluster"] == 1
                     and match["price"] == 6 for match in matches])
 
+    def test_update_clearing_cluster_issue220(self):
+        """Test the update of a cluster clearing price is correctly done when a better match with
+        another cluster is found."""
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
+        # buyer_c1_1:
+        # - after match with seller_c1_2 (0.2)
+        # - the rest can be matched with seller_MM (0.17)
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.05))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.01, 0.05))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
+        # should be matched in
+        # - own cluster 1 (with buyer_c1_3) 0.01
+        #   (even if profit is temporarily higher in cluster 0, as "best Cluster"
+        # - other cluster 0 (with buyer_c1_1) 0.2, i.e. rest
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.21, 0.03))
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        for match in matches:
+            print(match)
+
+        expected = [
+            {
+            'time': 0,
+            'bid_id': 2, 'ask_id': 4,
+            'bid_actor': 'buyer_c1_3', 'ask_actor': 'seller_c1_2',
+            'bid_cluster': 1, 'ask_cluster': 1,
+            'energy': 0.01,
+            'price': 0.03, 'included_grid_fee': 0.0
+            },
+            {
+            'time': 0,
+            'bid_id': 1, 'ask_id': 4,
+            'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_c1_2',
+            'bid_cluster': 0, 'ask_cluster': 1,
+            'energy': 0.2,
+            'price': 0.05, 'included_grid_fee': 0.003
+            },
+            {
+            'time': 0,
+            'bid_id': 1, 'ask_id': 3,
+            'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_MM',
+            'bid_cluster': 0, 'ask_cluster': None,
+            'energy': 0.17,
+            'price': 0.05, 'included_grid_fee': 0.01
+            }
+        ]
+        found_match = [False] * len(expected)
+        for m in matches:
+            for i, m1 in enumerate(expected):
+                if m["bid_actor"] == m1["bid_actor"] and m["ask_actor"] == m1["ask_actor"]:
+                    assert m["energy"] == m1["energy"], m
+                    found_match[i] = True
+        assert all(found_match)
+
+    def test_update_clearing_cluster_issue220_b(self):
+        """Test the update of a cluster clearing price is correctly done when a better match with
+        another cluster is found."""
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
+        # buyer_c1_1:
+        # - after match with seller_c1_2 (0.2)
+        # - the rest can be matched with seller_MM (0.17)
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.05))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.05))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
+        # should be matched in
+        # - own cluster 1 (with buyer_c1_3) 0.07
+        #   (even if profit is temporarily higher in cluster 0, as "best Cluster"
+        # - other cluster 0 (with buyer_c1_1) 0.20, i.e. rest
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.27, 0.03))
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        for match in matches:
+            print(match)
+
+        expected = [
+            {
+                'time': 0,
+                'bid_id': 2, 'ask_id': 4,
+                'bid_actor': 'buyer_c1_3', 'ask_actor': 'seller_c1_2',
+                'bid_cluster': 1, 'ask_cluster': 1,
+                'energy': 0.07,
+                'price': 0.03, 'included_grid_fee': 0.0
+            },
+            {
+                'time': 0,
+                'bid_id': 1, 'ask_id': 4,
+                'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_c1_2',
+                'bid_cluster': 0, 'ask_cluster': 1,
+                'energy': 0.2,
+                'price': 0.05, 'included_grid_fee': 0.003
+            },
+            {
+                'time': 0,
+                'bid_id': 1, 'ask_id': 3,
+                'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_MM',
+                'bid_cluster': 0, 'ask_cluster': None,
+                'energy': 0.17,
+                'price': 0.05, 'included_grid_fee': 0.01
+            }
+        ]
+        found_match = [False] * len(expected)
+        for m in matches:
+            for i, m1 in enumerate(expected):
+                if m["bid_actor"] == m1["bid_actor"] and m["ask_actor"] == m1["ask_actor"]:
+                    assert m["energy"] == m1["energy"], m
+                    found_match[i] = True
+        assert all(found_match)
+
     def test_disputed_matching_approaches(self):
         # Highest price match is selected
         # ToDo not implemented
