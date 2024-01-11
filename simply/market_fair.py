@@ -131,11 +131,15 @@ class BestCluster:
             best_profit = -float("inf")
             best_clearing, best_cluster, best_profit = \
                 self.market.get_best_cluster(dispute_value, best_profit, ask, clusters)
-            if (best_profit > 0 or
-                    best_profit == 0 and
-                    best_clearing["matched_energy_units"] > best_cluster.matched_energy_units):
-                # insert the ask if it generates profit or if it at least increases the amount of
-                # matched energy at 0 profit
+            if best_profit > 0:
+                # TODO:
+                #  - disabled, as condition does not check if it decreases is already matched
+                #    volume in other clusters:
+                #  or best_profit == 0 and
+                #  best_clearing["matched_energy_units"] > best_cluster.matched_energy_units):
+                # insert the ask if it generates profit
+                # TODO: (disabled -> reevaluate): or if it at least increases the amount of
+                #  matched energy at 0 profit
                 best_cluster.insert(ask, best_clearing)
             else:
                 # best_profit is negative. therefore it will not be matched at this state. all other
