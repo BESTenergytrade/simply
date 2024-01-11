@@ -173,6 +173,8 @@ class BestMarket(Market):
         # ToDo: enum-type would be nicer than string
         self.disputed_matching = disputed_matching
 
+    def total_matched_energy_units(self):
+        return sum([cluster.matched_energy_units for cluster in self.clusters])
     @time_it
     def resolve_dispute(self, ask, bid_cluster):
         if self.disputed_matching == "grid_fee":
@@ -534,6 +536,7 @@ class BestMarket(Market):
 
             # best cluster to match found. Remove matches from other clusters and adjust their
             # clearing price
+            print(f"removing {ask_id} from {[cluster.idx for cluster in self.clusters if cluster!=best_match_cluster]}")
             self.remove_from_other_clusters(ask_id, best_match_cluster)
 
             if best_match_cluster == bid_cluster:
@@ -666,7 +669,7 @@ class BestMarket(Market):
         bottom_asks = sorted(bottom_asks, key=lambda x: x[0].price)
         return bottom_asks
 
-    @time_it
+
     def find_best_profit_cluster(self, ask_id):
         best_profit = float("-inf")
         best_dispute_value = -float("inf")
@@ -678,9 +681,15 @@ class BestMarket(Market):
             # the same for all clusters. The all_asks is still used to confirm the ask is
             # not deleted yet
             try:
-                ask = cluster.asks.loc[ask_id]
+                ask = cluster.asks.iloc[cluster.ask_iterator].loc[ask_id]
             except KeyError:
                 continue
+            # if it is not deleted yet check if the position of this ask is inside of the matched
+            # amount
+            energy_unit_amount_for_ask = cluster.ask_iterator.index(ask_id) + 1
+            if energy_unit_amount_for_ask > cluster.matched_energy_units:
+                continue
+
             profit = cluster.clearing_price - ask.adjusted_price
             if cfg.config.debug:
                 print(f"? BEST cluster {cluster.idx} profit: {profit} "
