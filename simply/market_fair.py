@@ -680,7 +680,7 @@ class BestMarket(Market):
             profit = cluster.clearing_price - ask.adjusted_price
             if cfg.config.debug:
                 print(f"? BEST cluster {cluster.idx} profit: {profit} "
-                      f"({cluster.clearing_price} - {ask.price})")
+                      f"({cluster.clearing_price} - {ask.adjusted_price})")
             dispute_value = self.resolve_dispute(ask, cluster)
             if ((profit > best_profit and profit >= 0) or
                     (profit == best_profit and dispute_value > best_dispute_value)):
@@ -693,11 +693,12 @@ class BestMarket(Market):
                     print("Market Maker does not contain Market Maker asks")
                 print(f"Found BEST cluster {best_match_cluster.idx} profit: {best_profit} "
                       f"({best_match_cluster.clearing_price} "
-                      f"- {best_match_cluster.asks.loc[ask_id].price})")
+                      f"- {best_match_cluster.asks.loc[ask_id].adjusted_price})")
                 cols = ["actor_id", "order_id", "price", "cluster", "adjusted_price"]
                 bids = best_match_cluster.bids.reset_index(drop=True)
                 asks = best_match_cluster.asks.reset_index(drop=True)
-                print(pd.concat([bids[cols[:-2]], asks[cols]], axis=1))
+                test_df = pd.concat([bids[cols[:-2]], asks[cols]], axis=1)
+                print(test_df.to_string())
 
         return best_match_cluster
 
