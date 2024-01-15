@@ -362,7 +362,7 @@ class TestBestMarket:
         another cluster is found."""
         cfg.config.default_grid_fee = 0
         cfg.config.energy_unit = 0.1
-        m = BestMarket(time_step=0, network=self.pn)
+        m = BestMarket(time_step=0, network=self.pn, disputed_matching="grid_fee")
 
         # Case "seller_c1_5" matched within cluster
         # add bids
@@ -391,7 +391,7 @@ class TestBestMarket:
         another cluster is found."""
         cfg.config.default_grid_fee = 0
         cfg.config.energy_unit = 0.1
-        m = BestMarket(time_step=0, network=self.pn)
+        m = BestMarket(time_step=0, network=self.pn, disputed_matching="grid_fee")
 
         # Case "seller_c1_5" matched within cluster
         # add bids
