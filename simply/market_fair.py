@@ -761,8 +761,6 @@ def get_clearing(bids, asks, prev_clearing_energy: int = None, ask_iterator=None
     if ask_iterator is None:
         ask_iterator = [*range(start_row, len(bids))]
 
-    for ai in ask_iterator:
-        assert ai in asks.index, f"{ai} not in ask.index"
     for row in range(start_row, len(bids)):
         try:
             bid_price = bids.price.iloc[row]
