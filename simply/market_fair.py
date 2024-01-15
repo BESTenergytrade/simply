@@ -61,6 +61,7 @@ class BestCluster:
         self.bid_clearing_price: float = None
         self.clearing_price_reached: bool = False
         self.matched_energy_units: int = 0
+        self.partitioned_grid_fee: float = 0
         self.ask_iterator = []
         self._row: int
 
@@ -76,6 +77,7 @@ class BestCluster:
         self.matched_energy_units = clearing["matched_energy_units"]
         self.clearing_price = clearing["clearing_price"]
         self.bid_clearing_price = clearing["bid_clearing_price"]
+        self.partitioned_grid_fee = clearing["partitioned_grid_fee"]
 
     def get_insertion_profit(self, ask) -> (float, dict):
         """Returns the profit for the ask if it were inserted, as well as the clearing dict"""
@@ -91,7 +93,7 @@ class BestCluster:
         # If its higher it means it would not be matched.
         if asks.index.get_loc(ask_copy.name) + 1 > clearing["matched_energy_units"]:
             return -float("inf"), clearing
-        return clearing["clearing_price"] - ask_copy.adjusted_price, clearing
+        return clearing["clearing_price"] - ask_copy.price - clearing["partitioned_grid_fee"], clearing
 
     @time_it
     def remove(self, ask):
@@ -494,6 +496,8 @@ class BestMarket(Market):
             # annotate asking price by grid-fee:
             cluster.asks["adjusted_price"] = cluster.asks["price"] + cluster.asks["cluster"].apply(
                 lambda x: self.get_grid_fee(bid_cluster=cluster.idx, ask_cluster=x))
+            cluster.asks["grid_fee"] = cluster.asks["cluster"].apply(
+                lambda x: self.get_grid_fee(bid_cluster=cluster.idx, ask_cluster=x))
 
             if len(cluster.bids) == 0:
                 # no bids within this cluster: can't match here
@@ -693,10 +697,10 @@ class BestMarket(Market):
             # are just placed in the most likely "good" position". Since all asks are checked
             # for better positioning in the end suboptimal placing here will be negated.
 
-            profit = cluster.clearing_price - ask.adjusted_price
+            profit = cluster.clearing_price - ask.price - cluster.partitioned_grid_fee
             if cfg.config.debug:
                 print(f"? BEST cluster {cluster.idx} profit: {profit} "
-                      f"({cluster.clearing_price} - {ask.adjusted_price})")
+                      f"({cluster.clearing_price} - {ask.price} - {ask.partitioned_grid_fee})")
             dispute_value = self.resolve_dispute(ask, cluster)
             if ((profit > best_profit and profit >= 0) or
                     (profit == best_profit and dispute_value > best_dispute_value)):
@@ -709,8 +713,9 @@ class BestMarket(Market):
                     print("Market Maker does not contain Market Maker asks")
                 print(f"Found BEST cluster {best_match_cluster.idx} profit: {best_profit} "
                       f"({best_match_cluster.clearing_price} "
-                      f"- {best_match_cluster.asks.loc[ask_id].adjusted_price})")
-                cols = ["actor_id", "order_id", "price", "cluster", "adjusted_price"]
+                      f"- {best_match_cluster.asks.loc[ask_id].price}"
+                      f"- {ask.partitioned_grid_fee})")
+                cols = ["actor_id", "order_id", "price", "cluster", "adjusted_price", "grid_fee"]
                 bids = best_match_cluster.bids.reset_index(drop=True)
                 asks = best_match_cluster.asks.reset_index(drop=True)
                 test_df = pd.concat([bids[cols[:-2]], asks[cols]], axis=1)
@@ -750,8 +755,13 @@ class BestMarket(Market):
 
 @time_it
 def get_clearing(bids, asks, prev_clearing_energy: int = None, ask_iterator=None):
+    """
+    Assumed pre-sorted list are matched by row on until `ask_price <= bid_price`.
+    """
     clearing = dict()
     clearing["matched_energy_units"] = 0
+    clearing["partitioned_grid_fee"] = 0
+    clearing["clearing_price_without_fees"] = -float("inf")
     clearing["clearing_price"] = -float("inf")
     clearing["bid_clearing_price"] = None
     start_row = 0
@@ -760,16 +770,36 @@ def get_clearing(bids, asks, prev_clearing_energy: int = None, ask_iterator=None
 
     if ask_iterator is None:
         ask_iterator = [*range(start_row, len(bids))]
+    test=[clearing.copy()]
+    # precalculate cumulative sum of grid fees of possible matches
+    try:
+        grid_fee_cumsum = asks.grid_fee.iloc[ask_iterator[:len(asks)]].cumsum()
+        # print(grid_fee_cumsum)
+        # for ai in ask_iterator[:len(asks)]:
+        #     print(ai)
+        #     assert ai <= len(asks)-1, f"{ai} not in ask.index: {grid_fee_cumsum}"
+    except IndexError:
+        return clearing
     for row in range(start_row, len(bids)):
         try:
             bid_price = bids.price.iloc[row]
-            ask_price = asks.adjusted_price.iloc[ask_iterator[row]]
+            ask_price = asks.price.iloc[ask_iterator[row]]
+            # effective grid fee as a result of cumulated grid fees partitioned among matched volume
+            eff_grid_fee_sum = grid_fee_cumsum.iloc[row] / (row + 1)
         except IndexError:
             return clearing
-        if ask_price <= bid_price:
+        if ask_price + eff_grid_fee_sum <= bid_price:
             clearing["matched_energy_units"] = row + 1
-            clearing["clearing_price"] = ask_price
+            clearing["partitioned_grid_fee"] = eff_grid_fee_sum
+            clearing["clearing_price_without_fees"] = ask_price
+            clearing["clearing_price"] = ask_price + eff_grid_fee_sum
             clearing["bid_clearing_price"] = bid_price
+            test.append(clearing.copy())
         else:
             return clearing
+
+    # import matplotlib.pyplot as plt
+    # y1 = [c["clearing_price"] for c in test]
+    # y2 = [c["clearing_price_without_fees"] for c in test]
+    # plt.fill_between(range(len(y1)), y1, y2)
     return clearing
