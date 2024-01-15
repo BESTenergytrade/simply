@@ -418,6 +418,7 @@ class BestMarket(Market):
                 # bid has already been matched with this ask: price has to be identical
                 assert m["price"] == match["price"]
                 m["energy"] += match["energy"]
+                m["grid_fee_to_be_payed"] += match["grid_fee_to_be_payed"]
             except KeyError:
                 # new bid was matched
                 m = match
@@ -611,7 +612,8 @@ class BestMarket(Market):
                     "ask_cluster": ask.cluster,
                     "energy": cfg.config.energy_unit,
                     "price": cluster.clearing_price,
-                    "included_grid_fee": ask.adjusted_price - ask.price
+                    "included_grid_fee": ask.adjusted_price - ask.price,  # missleading name
+                    "grid_fee_to_be_payed": cluster.partitioned_grid_fee * cfg.config.energy_unit
                 })
 
         matches = self.group_matches(asks, bids, matches)
@@ -801,5 +803,10 @@ def get_clearing(bids, asks, prev_clearing_energy: int = None, ask_iterator=None
     # import matplotlib.pyplot as plt
     # y1 = [c["clearing_price"] for c in test]
     # y2 = [c["clearing_price_without_fees"] for c in test]
+    # y3 = [c["bid_clearing_price"] for c in test]
+    # plt.plot([-float("inf")] + y3[1:])
     # plt.fill_between(range(len(y1)), y1, y2)
+    # plt.xlabel("energy_units")
+    # plt.ylabel("price")
+    # plt.show()
     return clearing
