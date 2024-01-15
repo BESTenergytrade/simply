@@ -449,35 +449,35 @@ class TestBestMarket:
 
         expected = [
             {
-            'time': 0,
-            'bid_id': 2, 'ask_id': 4,
-            'bid_actor': 'buyer_c1_3', 'ask_actor': 'seller_c1_2',
-            'bid_cluster': 1, 'ask_cluster': 1,
-            'energy': 0.01,
-            'price': 0.03, 'included_grid_fee': 0.0
+                'time': 0,
+                'bid_id': 2, 'ask_id': 4,
+                'bid_actor': 'buyer_c1_3', 'ask_actor': 'seller_c1_2',
+                'bid_cluster': 1, 'ask_cluster': 1,
+                'energy': 0.01,
+                'price': 0.03, 'included_grid_fee': 0.0
             },
             {
-            'time': 0,
-            'bid_id': 1, 'ask_id': 4,
-            'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_c1_2',
-            'bid_cluster': 0, 'ask_cluster': 1,
-            'energy': 0.2,
-            'price': 0.05, 'included_grid_fee': 0.003
+                'time': 0,
+                'bid_id': 1, 'ask_id': 4,
+                'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_c1_2',
+                'bid_cluster': 0, 'ask_cluster': 1,
+                'energy': 0.2,
+                'price': 0.05, 'included_grid_fee': 0.003
             },
             {
-            'time': 0,
-            'bid_id': 1, 'ask_id': 3,
-            'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_MM',
-            'bid_cluster': 0, 'ask_cluster': None,
-            'energy': 0.17,
-            'price': 0.05, 'included_grid_fee': 0.01
+                'time': 0,
+                'bid_id': 1, 'ask_id': 3,
+                'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_MM',
+                'bid_cluster': 0, 'ask_cluster': None,
+                'energy': 0.17,
+                'price': 0.05, 'included_grid_fee': 0.01
             }
         ]
         found_match = [False] * len(expected)
         for m in matches:
             for i, m1 in enumerate(expected):
                 if m["bid_actor"] == m1["bid_actor"] and m["ask_actor"] == m1["ask_actor"]:
-                    assert m["energy"] == m1["energy"], m
+                    assert m["energy"] == pytest.approx(m1["energy"]), m
                     found_match[i] = True
         assert all(found_match)
 
@@ -543,7 +543,7 @@ class TestBestMarket:
         for m in matches:
             for i, m1 in enumerate(expected):
                 if m["bid_actor"] == m1["bid_actor"] and m["ask_actor"] == m1["ask_actor"]:
-                    assert m["energy"] == m1["energy"], m
+                    assert m["energy"] == pytest.approx(m1["energy"]), m
                     found_match[i] = True
         assert all(found_match)
 

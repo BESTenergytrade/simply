@@ -77,19 +77,19 @@ class BestCluster:
         self.clearing_price = clearing["clearing_price"]
         self.bid_clearing_price = clearing["bid_clearing_price"]
 
-
     def get_insertion_profit(self, ask) -> (float, dict):
         """Returns the profit for the ask if it were inserted, as well as the clearing dict"""
+        # Get clearing using copies of the cluster's ask list and the inserted, modified ask
         ask_copy = ask.copy()
-        ask_copy.adjusted_price = ask_copy.price + self.market.get_grid_fee(bid_cluster=self.idx,
-                                                                            ask_cluster=ask_copy.cluster)
+        ask_copy.adjusted_price = ask_copy.price + self.market.get_grid_fee(
+            bid_cluster=self.idx, ask_cluster=ask_copy.cluster)
         asks = self.asks.copy()
         asks.loc[ask_copy.name] = ask_copy
         asks = asks.sort_values(["adjusted_price", "price"], ascending=[True, False])
         clearing = get_clearing(self.bids, asks)
         # The location / row number must be lower than the resulting clearing matched_energy.
         # If its higher it means it would not be matched.
-        if asks.index.get_loc(ask_copy.name) +1 > clearing["matched_energy_units"]:
+        if asks.index.get_loc(ask_copy.name) + 1 > clearing["matched_energy_units"]:
             return -float("inf"), clearing
         return clearing["clearing_price"] - ask_copy.adjusted_price, clearing
 
@@ -179,6 +179,7 @@ class BestMarket(Market):
 
     def total_matched_energy_units(self):
         return sum([cluster.matched_energy_units for cluster in self.clusters])
+
     @time_it
     def resolve_dispute(self, ask, bid_cluster):
         if self.disputed_matching == "grid_fee":
@@ -540,7 +541,8 @@ class BestMarket(Market):
 
             # best cluster to match found. Remove matches from other clusters and adjust their
             # clearing price
-            print(f"removing {ask_id} from {[cluster.idx for cluster in self.clusters if cluster!=best_match_cluster]}")
+            print(f"removing {ask_id} from "
+                  f"{[cluster.idx for cluster in self.clusters if cluster != best_match_cluster]}")
             self.remove_from_other_clusters(ask_id, best_match_cluster)
 
             if best_match_cluster == bid_cluster:
@@ -576,8 +578,8 @@ class BestMarket(Market):
                     continue
                 dispute_value = self.resolve_dispute(bottom_ask, bid_cluster)
                 clusters = [cluster for cluster in self.clusters if cluster != bid_cluster]
-                best_clearing, best_cluster, _ = self.get_best_cluster(dispute_value, current_profit,
-                                                                       bottom_ask, clusters)
+                best_clearing, best_cluster, _ = self.get_best_cluster(
+                    dispute_value, current_profit, bottom_ask, clusters)
                 if best_cluster is None:
                     # no better cluster found than the current one
                     continue
@@ -672,7 +674,6 @@ class BestMarket(Market):
                     bottom_asks.append((asks_with_cluster.iloc[0], cluster))
         bottom_asks = sorted(bottom_asks, key=lambda x: x[0].price)
         return bottom_asks
-
 
     def find_best_profit_cluster(self, ask_id):
         best_profit = float("-inf")
