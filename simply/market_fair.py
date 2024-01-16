@@ -541,8 +541,11 @@ class BestMarket(Market):
 
             # best cluster to match found. Remove matches from other clusters and adjust their
             # clearing price
-            print(f"removing {ask_id} from "
-                  f"{[cluster.idx for cluster in self.clusters if cluster != best_match_cluster]}")
+            if cfg.config.debug:
+                print(
+                    f"removing {ask_id} from "
+                    f"{[cluster.idx for cluster in self.clusters if cluster != best_match_cluster]}"
+                )
             self.remove_from_other_clusters(ask_id, best_match_cluster)
 
             if best_match_cluster == bid_cluster:
