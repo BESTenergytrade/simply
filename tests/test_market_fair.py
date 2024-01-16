@@ -547,6 +547,38 @@ class TestBestMarket:
                     found_match[i] = True
         assert all(found_match)
 
+    def test_update_clearing_cluster_issue220_c(self):
+        """Test the update of a cluster clearing price is correctly done when a better match with
+        another cluster is found."""
+        cfg.config.default_grid_fee = 0.1
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.03)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.15))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.13))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.27, 0.02))
+        m.accept_order(Order(1, 0, "seller_c1_4", 1, 0.12, 0.04))
+
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.03
+        matches = m.match()
+        print("\n")
+        for match in matches:
+            print(match)
+
+        assert False
+
     def test_disputed_matching_approaches(self):
         # Highest price match is selected
         # ToDo not implemented
