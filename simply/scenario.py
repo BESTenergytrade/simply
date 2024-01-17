@@ -255,7 +255,7 @@ class Scenario:
         dirpath.joinpath('network.json').write_text(
             json.dumps(
                 {self.power_network.name: self.power_network.to_dict()},
-                indent=2,
+                indent=2, default=serialize_int64
             )
         )
 
@@ -335,6 +335,12 @@ class Scenario:
             market_maker.reset()
             # But add the market maker again
             self.add_participant(market_maker)
+
+
+def serialize_int64(obj):
+    if isinstance(obj, np.int64):
+        return int(obj)
+    raise TypeError ("Type %s is not serializable" % type(obj))
 
 
 def from_dict(scenario_dict):
