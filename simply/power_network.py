@@ -114,7 +114,9 @@ class PowerNetwork:
         # TODO: improved plot with or without Graphvis
         # from simply.plotting import plot_hierarchical
         # plot_hierarchical(self.network)
-        nx.draw(self.network, with_labels=True, font_weight="bold", node_size=50)
+        # nx.draw(self.network, with_labels=True, font_weight="bold", node_size=50)
+        plot_topology_graphvis(self.network)
+
         if show:
             plt.show()
 
@@ -232,3 +234,9 @@ def remove_weights_from_leef_nodes(network):
     for leaf in leaf_nodes:
         for u, v, d in network.edges(leaf, data=True):
             d["weight"] = 0
+
+
+def plot_topology_graphvis(G):
+    from networkx.drawing.nx_pydot import graphviz_layout
+    pos = graphviz_layout(G, prog="dot")
+    nx.draw(G, pos, with_labels=True, font_weight='bold', node_size=50)
