@@ -28,7 +28,7 @@ convert string dates to datetime dtype, and build a pandas dataframe from the co
 
 # Helper functions
 def get_mm_prices(dirpath, start_date, end_date):
-    csv_df = pd.read_csv(dirpath, sep=',', parse_dates=['Time'], dayfirst=True,
+    csv_df = pd.read_csv(dirpath, sep=',', parse_dates=['Time'], dayfirst=False,
                          index_col=['Time'])
     # Make sure dates are parsed
     csv_df.index = pd.to_datetime(csv_df.index)
@@ -99,7 +99,7 @@ def map_actors(config_df):
     """Helper function to build power network from community config json."""
     map = {}
     for i in config_df.index:
-        map[config_df["prosumerName"][i]] = config_df["gridLocation"][i]
+        map[config_df["prosumerName"][i]] = str(config_df["gridLocation"][i])
     return map
 
 
@@ -174,6 +174,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
 
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
+                                buy_sell_function=None,
                                 weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
                                 start_date=None, plot_network=False,
                                 price_filename="basic_prices.csv", ps=None, ls=None):
@@ -223,7 +224,7 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date)
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
-    scenario = Scenario(None, None, buy_prices=buy_prices)
+    scenario = Scenario(None, None, buy_prices=buy_prices, buy_to_sell_function=buy_sell_function)
     for i, actor_row in config_df.iterrows():
         file_dict = {}
         asset_dict = {}
@@ -318,6 +319,7 @@ def main(project_dir, data_dir):
         network_path,
         weight_factor=cfg.weight_factor,
         data_dirpath=data_dirpath,
+        buy_sell_function=lin_parameter_function(cfg.buy_sell_lin_param),
         start_date=cfg.start_date,
         nb_ts=cfg.nb_ts,
         horizon=cfg.horizon,
@@ -332,6 +334,11 @@ def main(project_dir, data_dir):
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_participant_data()
+
+
+def lin_parameter_function(p):
+    assert len(p) == 2
+    return lambda x: p[0] + x * p[1]
 
 
 if __name__ == "__main__":
