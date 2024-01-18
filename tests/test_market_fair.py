@@ -2,10 +2,11 @@ from simply.actor import Order
 from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD
 from simply.power_network import PowerNetwork
 import simply.config as cfg
+from simply.scenario import Scenario
 
 import networkx as nx
 import pytest
-from simply.scenario import Scenario
+import pandas as pd
 
 
 class TestBestMarket:
@@ -570,12 +571,13 @@ class TestBestMarket:
         m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.27, 0.02))
         m.accept_order(Order(1, 0, "seller_c1_4", 1, 0.12, 0.04))
 
+        print("\n")
         print(m.orders)
         assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.03
         matches = m.match()
         print("\n")
-        for match in matches:
-            print(match)
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
 
         assert False
 
