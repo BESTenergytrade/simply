@@ -6,15 +6,17 @@ from argparse import ArgumentParser
 import numpy as np
 
 
-def plot_agg_flows(project_dir, data_dir, start=None, end=None):
+def plot_agg_flow_proj(project_dir, data_dir, start=None, end=None):
     print(f'project_dir: {project_dir}')
     # File path for the matches csv
     project_dir = Path(project_dir)
     matches_fp = project_dir / 'market_results/matches.csv'  # 'results_inputs/matches_dummy_2.csv'
-
     # Saves matches csv as a dataframe
     matches_df = pd.read_csv(matches_fp)
+    plot_agg_flows(matches_df)
 
+
+def plot_agg_flows(matches_df, start=None, end=None):
     # TODO Temporary (time slots not yet saved as datetime in output file)
     start_date = "2021-01-01 00:00:00"
     ts_hour = 4  # quarterhourly
@@ -185,4 +187,4 @@ if __name__ == "__main__":
             FileNotFoundError(
                 "Project directory path must be specified. Please provide the path as a "
                 "command-line argument."))
-    plot_agg_flows(args.project_dir, None)
+    plot_agg_flow_proj(args.project_dir, None)
