@@ -3,6 +3,7 @@ from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_T
 from simply.power_network import PowerNetwork
 import simply.config as cfg
 from simply.scenario import Scenario
+from multidigraph import plot_agg_flows
 
 import networkx as nx
 import pytest
@@ -579,7 +580,514 @@ class TestBestMarket:
         matches_df = pd.DataFrame(matches)
         print(matches_df.to_string())
 
+        plot_agg_flows(matches_df)
+
+        '''
+          type time     actor_id cluster                 energy price
+        0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
+        1   -1    0   buyer_c1_1       0                   0.37  0.15
+        2   -1    0   buyer_c1_3       1                   0.07  0.13
+        3    1    0    seller_MM    None  9223372036854775808.0  0.04
+        4    1    0  seller_c1_2       1                   0.27  0.02
+        5    1    0  seller_c1_4       1                   0.12  0.04
+        
+           time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       1       4  buyer_c1_1  seller_c1_2            0          1.0    0.27   0.14               0.03
+        1     0       1       5  buyer_c1_1  seller_c1_4            0          1.0    0.09   0.14               0.03
+        2     0       2       5  buyer_c1_3  seller_c1_4            1          1.0    0.03   0.04               0.00
+        3     0       1       3  buyer_c1_1    seller_MM            0          NaN    0.01   0.14               0.10
+        '''
+
         assert False
+
+    def test_update_clearing_cluster_issue220_new(self):
+        """Test the update of a cluster clearing price is correctly done when a better match with
+        another cluster is found."""
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.1, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c1_2", 1, 0.17, 0.06))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_3", 1, 0.30, 0.04))
+
+        print("\n")
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
+
+        plot_agg_flows(matches_df)
+
+        '''
+        locally unmatched ask of seller_c1_3 is not sold to market maker
+        
+          type time     actor_id cluster                 energy price
+        0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
+        1   -1    0   buyer_c1_1       0                    0.1  0.06
+        2   -1    0   buyer_c1_2       1                   0.17  0.06
+        3    1    0    seller_MM    None  9223372036854775808.0  0.05
+        4    1    0  seller_c1_3       1                    0.3  0.04
+        
+        
+           time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       2       4  buyer_c1_2  seller_c1_3            1            1    0.17   0.04                  0
+        '''
+
+        assert False
+
+    def test_update_clearing_cluster_issue220_d(self):
+        """Test a scenario without batteries and with load surplus. MarketMaker selling price is
+        greater than MarketMaker buying price. """
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.20, 0.03))
+
+        print("\n")
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
+
+        # plot_agg_flows(matches_df)
+
+        '''
+          type time     actor_id cluster                 energy price
+        0   -1    0     buyer_MM    None  9223372036854775808.0  0.04
+        1   -1    0   buyer_c1_1       0                   0.37  0.06
+        2   -1    0   buyer_c1_3       1                   0.07  0.06
+        3    1    0    seller_MM    None  9223372036854775808.0  0.05
+        4    1    0  seller_c1_2       1                    0.2  0.03
+        
+        
+           time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.05  0.033              0.003
+        1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.030              0.000
+        '''
+
+        assert False
+
+    def test_update_clearing_cluster_issue220_e(self):
+        """Test a scenario without batteries and with load surplus. MarketMaker selling price is
+        equal to MarketMaker buying price.  """
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.20, 0.04))
+
+        print("\n")
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
+
+        # plot_agg_flows(matches_df)
+
+        '''
+         type time     actor_id cluster                 energy price
+        0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
+        1   -1    0   buyer_c1_1       0                   0.37  0.06
+        2   -1    0   buyer_c1_3       1                   0.07  0.06
+        3    1    0    seller_MM    None  9223372036854775808.0  0.05
+        4    1    0  seller_c1_2       1                    0.2  0.04
+        
+        
+           time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.05  0.043              0.003
+        1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.040              0.000
+        '''
+
+        assert False
+
+    def test_update_clearing_cluster_issue220_f(self):
+        """Test a scenario without batteries and with generation surplus. MarketMaker buying price is
+        equal to MarketMaker selling price. """
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.10, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.27, 0.04))
+
+        print("\n")
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
+
+        # plot_agg_flows(matches_df)
+
+        '''
+          type time     actor_id cluster                 energy price
+        0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
+        1   -1    0   buyer_c1_1       0                    0.1  0.06
+        2   -1    0   buyer_c1_3       1                   0.07  0.06
+        3    1    0    seller_MM    None  9223372036854775808.0  0.05
+        4    1    0  seller_c1_2       1                   0.27  0.04
+        
+        
+           time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       1       4  buyer_c1_1  seller_c1_2          0.0            1    0.10  0.043              0.003
+        1     0       2       4  buyer_c1_3  seller_c1_2          1.0            1    0.07  0.040              0.000
+        2     0       0       4    buyer_MM  seller_c1_2          NaN            1    0.01  0.050              0.01010
+        '''
+
+        assert False
+
+    def test_update_clearing_cluster_issue220_g(self):
+        """Test a scenario with batteries and with load surplus. MarketMaker selling price is
+        equal to MarketMaker buying price. Buying is urgent. Selling price of local actor is equal to
+        selling price of MarketMaker"""
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.20, 0.05))
+
+        print("\n")
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
+
+        # plot_agg_flows(matches_df)
+
+        '''
+          type time     actor_id cluster                 energy price
+        0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
+        1   -1    0   buyer_c1_1       0                   0.37  0.06
+        2   -1    0   buyer_c1_3       1                   0.07  0.06
+        3    1    0    seller_MM    None  9223372036854775808.0  0.05
+        4    1    0  seller_c1_2       1                    0.2  0.05
+        
+        
+           time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.12  0.053              0.003
+        1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.050              0.000
+        '''
+
+        assert False
+
+    def test_update_clearing_cluster_issue220_h(self):
+        """Test a scenario with batteries and with load surplus. MarketMaker selling price is
+        equal to MarketMaker buying price. Buying is urgent. Selling price of local actor is equal
+        to selling price of MarketMaker + 0.5 * grid fee"""
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.20, 0.055))
+
+        print("\n")
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
+
+        # plot_agg_flows(matches_df)
+
+        '''
+        type time     actor_id cluster                 energy  price
+        0   -1    0     buyer_MM    None  9223372036854775808.0   0.05
+        1   -1    0   buyer_c1_1       0                   0.37   0.06
+        2   -1    0   buyer_c1_3       1                   0.07   0.06
+        3    1    0    seller_MM    None  9223372036854775808.0   0.05
+        4    1    0  seller_c1_2       1                    0.2  0.055
+        
+        
+           time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.12  0.058              0.003
+        1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.055              0.000
+        '''
+
+        assert False
+
+    def test_update_clearing_cluster_issue220_i(self):
+        """Test a scenario with batteries and with load surplus. MarketMaker selling price is
+        equal to MarketMaker buying price. Selling is urgent. Buying prices of local actors are less
+        than selling price od MarketMaker and equal to or less than selling price of local actors"""
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.04))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.03))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.20, 0.04))
+
+        print("\n")
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
+
+        # plot_agg_flows(matches_df)
+
+        '''
+          type time     actor_id cluster                 energy price
+        0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
+        1   -1    0   buyer_c1_1       0                   0.37  0.04
+        2   -1    0   buyer_c1_3       1                   0.07  0.03
+        3    1    0    seller_MM    None  9223372036854775808.0  0.05
+        4    1    0  seller_c1_2       1                    0.2  0.04
+        
+        
+           time  bid_id  ask_id bid_actor    ask_actor bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       0       4  buyer_MM  seller_c1_2        None            1     0.2   0.05               0.01
+        '''
+
+        assert False
+
+    def test_update_clearing_cluster_issue220_j(self):
+        """Test a scenario with batteries and generation surplus. MarketMaker selling price is
+        equal to MarketMaker buying price. Buying is urgent. Selling price of local actor is equal to
+        selling price of MarketMaker"""
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.10, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.27, 0.05))
+
+        print("\n")
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
+
+        # plot_agg_flows(matches_df)
+
+        '''
+          type time     actor_id cluster                 energy price
+        0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
+        1   -1    0   buyer_c1_1       0                    0.1  0.06
+        2   -1    0   buyer_c1_3       1                   0.07  0.06
+        3    1    0    seller_MM    None  9223372036854775808.0  0.05
+        4    1    0  seller_c1_2       1                   0.27  0.05
+        
+        
+           time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.10  0.053              0.003
+        1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.050              0.000
+        '''
+
+        assert False
+
+    def test_update_clearing_cluster_issue220_k(self):
+        """Test a scenario with batteries and generation surplus. MarketMaker selling price is
+        equal to MarketMaker buying price. Buying is urgent. Selling price of local actor is equal
+        to selling price of MarketMaker + 0.5 * grid fee"""
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.10, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.27, 0.055))
+
+        print("\n")
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
+
+        # plot_agg_flows(matches_df)
+
+        '''
+          type time     actor_id cluster                 energy  price
+        0   -1    0     buyer_MM    None  9223372036854775808.0   0.05
+        1   -1    0   buyer_c1_1       0                    0.1   0.06
+        2   -1    0   buyer_c1_3       1                   0.07   0.06
+        3    1    0    seller_MM    None  9223372036854775808.0   0.05
+        4    1    0  seller_c1_2       1                   0.27  0.055
+        
+        
+           time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.10  0.058              0.003
+        1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.055              0.000
+        '''
+
+        assert False
+
+    def test_update_clearing_cluster_issue220_l(self):
+        """Test a scenario with batteries and generation surplus. MarketMaker selling price is
+        equal to MarketMaker buying price. Selling is urgent. Buying prices of local actors are less
+        than selling price od MarketMaker and equal to or less than selling price of local actors"""
+        cfg.config.default_grid_fee = 0.01
+        cfg.config.energy_unit = 0.01
+        pn = PowerNetwork("", self.nw, weight_factor=0.003)
+        m = BestMarket(time_step=0, network=pn, disputed_matching="grid_fee")
+
+        # Cluster None: _MM
+        # Cluster 0: Actor _1
+        # Cluster 1: Actor _2, _3, _4
+        # ---------- add bids ----------------
+        m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # buyer_c1_1:
+        # - expected ...
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.10, 0.04))
+        m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.03))
+        # ---------- add asks ----------------
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
+        # - expected ...
+        m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.27, 0.04))
+
+        print("\n")
+        print(m.orders)
+        assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
+        matches = m.match()
+        print("\n")
+        matches_df = pd.DataFrame(matches)
+        print(matches_df.to_string())
+
+        # plot_agg_flows(matches_df)
+
+        '''
+        Why does seller_c1_2 not sell to buyer_c1_3 ?
+        
+          type time     actor_id cluster                 energy price
+        0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
+        1   -1    0   buyer_c1_1       0                    0.1  0.04
+        2   -1    0   buyer_c1_3       1                   0.07  0.03
+        3    1    0    seller_MM    None  9223372036854775808.0  0.05
+        4    1    0  seller_c1_2       1                   0.27  0.04
+        
+        
+           time  bid_id  ask_id bid_actor    ask_actor bid_cluster  ask_cluster  energy  price  included_grid_fee
+        0     0       0       4  buyer_MM  seller_c1_2        None            1    0.27   0.05               0.01
+        '''
+
+        assert False
+
 
     def test_disputed_matching_approaches(self):
         # Highest price match is selected
