@@ -430,17 +430,17 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - after match with seller_c1_2 (0.2)
         # - the rest can be matched with seller_MM (0.17)
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.05))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.37, 0.05))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.01, 0.05))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
         # should be matched in
         # - own cluster 1 (with buyer_c1_3) 0.01
         #   (even if profit is temporarily higher in cluster 0, as "best Cluster"
-        # - other cluster 0 (with buyer_c1_1) 0.2, i.e. rest
+        # - other cluster 0 (with buyer_c0_1) 0.2, i.e. rest
         m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.21, 0.03))
         print(m.orders)
         assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
@@ -461,7 +461,7 @@ class TestBestMarket:
             {
                 'time': 0,
                 'bid_id': 1, 'ask_id': 4,
-                'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_c1_2',
+                'bid_actor': 'buyer_c0_1', 'ask_actor': 'seller_c1_2',
                 'bid_cluster': 0, 'ask_cluster': 1,
                 'energy': 0.2,
                 'price': 0.05, 'included_grid_fee': 0.003
@@ -469,7 +469,7 @@ class TestBestMarket:
             {
                 'time': 0,
                 'bid_id': 1, 'ask_id': 3,
-                'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_MM',
+                'bid_actor': 'buyer_c0_1', 'ask_actor': 'seller_MM',
                 'bid_cluster': 0, 'ask_cluster': None,
                 'energy': 0.17,
                 'price': 0.05, 'included_grid_fee': 0.01
@@ -496,17 +496,17 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - after match with seller_c1_2 (0.2)
         # - the rest can be matched with seller_MM (0.17)
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.05))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.37, 0.05))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.05))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
         # should be matched in
         # - own cluster 1 (with buyer_c1_3) 0.07
         #   (even if profit is temporarily higher in cluster 0, as "best Cluster"
-        # - other cluster 0 (with buyer_c1_1) 0.20, i.e. rest
+        # - other cluster 0 (with buyer_c0_1) 0.20, i.e. rest
         m.accept_order(Order(1, 0, "seller_c1_2", 1, 0.27, 0.03))
         print(m.orders)
         assert m.get_grid_fee(bid_cluster=0, ask_cluster=1) == 0.003
@@ -527,7 +527,7 @@ class TestBestMarket:
             {
                 'time': 0,
                 'bid_id': 1, 'ask_id': 4,
-                'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_c1_2',
+                'bid_actor': 'buyer_c0_1', 'ask_actor': 'seller_c1_2',
                 'bid_cluster': 0, 'ask_cluster': 1,
                 'energy': 0.2,
                 'price': 0.05, 'included_grid_fee': 0.003
@@ -535,7 +535,7 @@ class TestBestMarket:
             {
                 'time': 0,
                 'bid_id': 1, 'ask_id': 3,
-                'bid_actor': 'buyer_c1_1', 'ask_actor': 'seller_MM',
+                'bid_actor': 'buyer_c0_1', 'ask_actor': 'seller_MM',
                 'bid_cluster': 0, 'ask_cluster': None,
                 'energy': 0.17,
                 'price': 0.05, 'included_grid_fee': 0.01
@@ -562,9 +562,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.15))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.37, 0.15))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.13))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
@@ -585,17 +585,17 @@ class TestBestMarket:
         '''
           type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
-        1   -1    0   buyer_c1_1       0                   0.37  0.15
+        1   -1    0   buyer_c0_1       0                   0.37  0.15
         2   -1    0   buyer_c1_3       1                   0.07  0.13
         3    1    0    seller_MM    None  9223372036854775808.0  0.04
         4    1    0  seller_c1_2       1                   0.27  0.02
         5    1    0  seller_c1_4       1                   0.12  0.04
         
            time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
-        0     0       1       4  buyer_c1_1  seller_c1_2            0          1.0    0.27   0.14               0.03
-        1     0       1       5  buyer_c1_1  seller_c1_4            0          1.0    0.09   0.14               0.03
+        0     0       1       4  buyer_c0_1  seller_c1_2            0          1.0    0.27   0.14               0.03
+        1     0       1       5  buyer_c0_1  seller_c1_4            0          1.0    0.09   0.14               0.03
         2     0       2       5  buyer_c1_3  seller_c1_4            1          1.0    0.03   0.04               0.00
-        3     0       1       3  buyer_c1_1    seller_MM            0          NaN    0.01   0.14               0.10
+        3     0       1       3  buyer_c0_1    seller_MM            0          NaN    0.01   0.14               0.10
         '''
 
         assert False
@@ -613,9 +613,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.1, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.1, 0.06))
         m.accept_order(Order(-1, 0, "buyer_c1_2", 1, 0.17, 0.06))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
@@ -637,7 +637,7 @@ class TestBestMarket:
         
           type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
-        1   -1    0   buyer_c1_1       0                    0.1  0.06
+        1   -1    0   buyer_c0_1       0                    0.1  0.06
         2   -1    0   buyer_c1_2       1                   0.17  0.06
         3    1    0    seller_MM    None  9223372036854775808.0  0.05
         4    1    0  seller_c1_3       1                    0.3  0.04
@@ -662,9 +662,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.04))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.37, 0.06))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
@@ -684,14 +684,14 @@ class TestBestMarket:
         '''
           type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.04
-        1   -1    0   buyer_c1_1       0                   0.37  0.06
+        1   -1    0   buyer_c0_1       0                   0.37  0.06
         2   -1    0   buyer_c1_3       1                   0.07  0.06
         3    1    0    seller_MM    None  9223372036854775808.0  0.05
         4    1    0  seller_c1_2       1                    0.2  0.03
         
         
            time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
-        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.05  0.033              0.003
+        0     0       1       4  buyer_c0_1  seller_c1_2            0            1    0.05  0.033              0.003
         1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.030              0.000
         '''
 
@@ -710,9 +710,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.37, 0.06))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
@@ -732,14 +732,14 @@ class TestBestMarket:
         '''
          type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
-        1   -1    0   buyer_c1_1       0                   0.37  0.06
+        1   -1    0   buyer_c0_1       0                   0.37  0.06
         2   -1    0   buyer_c1_3       1                   0.07  0.06
         3    1    0    seller_MM    None  9223372036854775808.0  0.05
         4    1    0  seller_c1_2       1                    0.2  0.04
         
         
            time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
-        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.05  0.043              0.003
+        0     0       1       4  buyer_c0_1  seller_c1_2            0            1    0.05  0.043              0.003
         1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.040              0.000
         '''
 
@@ -758,9 +758,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.10, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.10, 0.06))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
@@ -780,14 +780,14 @@ class TestBestMarket:
         '''
           type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
-        1   -1    0   buyer_c1_1       0                    0.1  0.06
+        1   -1    0   buyer_c0_1       0                    0.1  0.06
         2   -1    0   buyer_c1_3       1                   0.07  0.06
         3    1    0    seller_MM    None  9223372036854775808.0  0.05
         4    1    0  seller_c1_2       1                   0.27  0.04
         
         
            time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
-        0     0       1       4  buyer_c1_1  seller_c1_2          0.0            1    0.10  0.043              0.003
+        0     0       1       4  buyer_c0_1  seller_c1_2          0.0            1    0.10  0.043              0.003
         1     0       2       4  buyer_c1_3  seller_c1_2          1.0            1    0.07  0.040              0.000
         2     0       0       4    buyer_MM  seller_c1_2          NaN            1    0.01  0.050              0.01010
         '''
@@ -808,9 +808,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.37, 0.06))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
@@ -830,14 +830,14 @@ class TestBestMarket:
         '''
           type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
-        1   -1    0   buyer_c1_1       0                   0.37  0.06
+        1   -1    0   buyer_c0_1       0                   0.37  0.06
         2   -1    0   buyer_c1_3       1                   0.07  0.06
         3    1    0    seller_MM    None  9223372036854775808.0  0.05
         4    1    0  seller_c1_2       1                    0.2  0.05
         
         
            time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
-        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.12  0.053              0.003
+        0     0       1       4  buyer_c0_1  seller_c1_2            0            1    0.12  0.053              0.003
         1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.050              0.000
         '''
 
@@ -857,9 +857,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.37, 0.06))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
@@ -879,14 +879,14 @@ class TestBestMarket:
         '''
         type time     actor_id cluster                 energy  price
         0   -1    0     buyer_MM    None  9223372036854775808.0   0.05
-        1   -1    0   buyer_c1_1       0                   0.37   0.06
+        1   -1    0   buyer_c0_1       0                   0.37   0.06
         2   -1    0   buyer_c1_3       1                   0.07   0.06
         3    1    0    seller_MM    None  9223372036854775808.0   0.05
         4    1    0  seller_c1_2       1                    0.2  0.055
         
         
            time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
-        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.12  0.058              0.003
+        0     0       1       4  buyer_c0_1  seller_c1_2            0            1    0.12  0.058              0.003
         1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.055              0.000
         '''
 
@@ -906,9 +906,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.37, 0.04))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.37, 0.04))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.03))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
@@ -928,7 +928,7 @@ class TestBestMarket:
         '''
           type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
-        1   -1    0   buyer_c1_1       0                   0.37  0.04
+        1   -1    0   buyer_c0_1       0                   0.37  0.04
         2   -1    0   buyer_c1_3       1                   0.07  0.03
         3    1    0    seller_MM    None  9223372036854775808.0  0.05
         4    1    0  seller_c1_2       1                    0.2  0.04
@@ -954,9 +954,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.10, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.10, 0.06))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
@@ -976,14 +976,14 @@ class TestBestMarket:
         '''
           type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
-        1   -1    0   buyer_c1_1       0                    0.1  0.06
+        1   -1    0   buyer_c0_1       0                    0.1  0.06
         2   -1    0   buyer_c1_3       1                   0.07  0.06
         3    1    0    seller_MM    None  9223372036854775808.0  0.05
         4    1    0  seller_c1_2       1                   0.27  0.05
         
         
            time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
-        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.10  0.053              0.003
+        0     0       1       4  buyer_c0_1  seller_c1_2            0            1    0.10  0.053              0.003
         1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.050              0.000
         '''
 
@@ -1003,9 +1003,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.10, 0.06))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.10, 0.06))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.06))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
@@ -1025,14 +1025,14 @@ class TestBestMarket:
         '''
           type time     actor_id cluster                 energy  price
         0   -1    0     buyer_MM    None  9223372036854775808.0   0.05
-        1   -1    0   buyer_c1_1       0                    0.1   0.06
+        1   -1    0   buyer_c0_1       0                    0.1   0.06
         2   -1    0   buyer_c1_3       1                   0.07   0.06
         3    1    0    seller_MM    None  9223372036854775808.0   0.05
         4    1    0  seller_c1_2       1                   0.27  0.055
         
         
            time  bid_id  ask_id   bid_actor    ask_actor  bid_cluster  ask_cluster  energy  price  included_grid_fee
-        0     0       1       4  buyer_c1_1  seller_c1_2            0            1    0.10  0.058              0.003
+        0     0       1       4  buyer_c0_1  seller_c1_2            0            1    0.10  0.058              0.003
         1     0       2       4  buyer_c1_3  seller_c1_2            1            1    0.07  0.055              0.000
         '''
 
@@ -1052,9 +1052,9 @@ class TestBestMarket:
         # Cluster 1: Actor _2, _3, _4
         # ---------- add bids ----------------
         m.accept_order(Order(-1, 0, "buyer_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
-        # buyer_c1_1:
+        # buyer_c0_1:
         # - expected ...
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 0, 0.10, 0.04))
+        m.accept_order(Order(-1, 0, "buyer_c0_1", 0, 0.10, 0.04))
         m.accept_order(Order(-1, 0, "buyer_c1_3", 1, 0.07, 0.03))
         # ---------- add asks ----------------
         m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 0.05))
@@ -1076,7 +1076,7 @@ class TestBestMarket:
         
           type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
-        1   -1    0   buyer_c1_1       0                    0.1  0.04
+        1   -1    0   buyer_c0_1       0                    0.1  0.04
         2   -1    0   buyer_c1_3       1                   0.07  0.03
         3    1    0    seller_MM    None  9223372036854775808.0  0.05
         4    1    0  seller_c1_2       1                   0.27  0.04
