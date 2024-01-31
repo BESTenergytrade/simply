@@ -634,6 +634,7 @@ class TestBestMarket:
 
         '''
         locally unmatched ask of seller_c1_3 is not sold to market maker
+        - TM: yes this is an error, market maker bid cluster is not correctly cleared
         
           type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
@@ -1073,6 +1074,8 @@ class TestBestMarket:
 
         '''
         Why does seller_c1_2 not sell to buyer_c1_3 ?
+        - TM: buyer price < ask price. e.g. if buyer_c1_3 price was 0.04 it would match
+          - TM: similarly, buyer_c0_1 would match if its price was 0.044
         
           type time     actor_id cluster                 energy price
         0   -1    0     buyer_MM    None  9223372036854775808.0  0.05
