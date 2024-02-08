@@ -77,7 +77,7 @@ def main(cfg: Config):
                                    disputed_matching=cfg.disputed_matching)
     else:
         # default
-        m = market.Market(network=sc.power_network)
+        m = market.Market()
 
     sc.add_market(m)
     exec_start = time()

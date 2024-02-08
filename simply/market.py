@@ -18,8 +18,7 @@ class Market:
     Representation of a market. Collects orders, implements a matching strategy for clearing,
     finalizes post-matching.
 
-    If a network and a grid_fee_matrix parameter are both supplied, Market will favour
-    grid_fee_matrix.
+    If a grid_fee_matrix parameter is not given, the default grid fee will be used.
 
     This class provides a basic matching strategy which may be overridden.
     """
@@ -38,8 +37,11 @@ class Market:
         if not self.csv_path.exists():
             self.csv_path.mkdir()
         self.grid_fee_matrix = grid_fee_matrix
-        if network is not None and grid_fee_matrix is None:
-            self.grid_fee_matrix = network.grid_fee_matrix
+        if grid_fee_matrix is None:
+            warnings.warn("Pay-As-Bid market was generated without a grid_fee_matrix "
+                          "in its constructor. The market will use the grid fee from the "
+                          f"configuration for all trades.\n Grid Fee = "
+                          f"{cfg.config.default_grid_fee}")
         if self.save_csv:
             match_header = ["time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
                             "ask_cluster", "energy", "price", 'included_grid_fee']
@@ -180,15 +182,14 @@ class Market:
         # i.e. higher probability of matching for higher ask prices or lower bid prices
         bids = self.get_bids().iloc[::-1].sort_values(["price"], ascending=False)
         asks = self.get_asks().iloc[::-1].sort_values(["price"], ascending=True)
+
         matches = []
         for ask_id, ask in asks.iterrows():
             for bid_id, bid in bids.iterrows():
                 if ask.actor_id == bid.actor_id:
                     continue
-                if self.grid_fee_matrix:
-                    self.apply_grid_fee(ask, bid)
                 if ask.energy >= cfg.config.energy_unit and bid.energy >= cfg.config.energy_unit \
-                        and ask.price <= bid.price:
+                        and ask.price + cfg.config.default_grid_fee <= bid.price:
                     # match ask and bid
                     energy = min(ask.energy, bid.energy)
                     ask.energy -= energy
