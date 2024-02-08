@@ -49,7 +49,7 @@ class Environment:
         self.add_actor_to_scenario = add_actor_to_scenario
         # Get grid fee method of market to make grid fees accessible for actors. Will be overwritten
         # when market is added to scenario
-        self.get_grid_fee = Market().get_grid_fee
+        self.get_grid_fee = None  # is instance of Market().get_grid_fee
         self.market_maker: MarketMaker = None
 
 
