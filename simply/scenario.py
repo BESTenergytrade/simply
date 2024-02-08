@@ -344,7 +344,7 @@ class Scenario:
 def serialize_int64(obj):
     if isinstance(obj, np.int64):
         return int(obj)
-    raise TypeError ("Type %s is not serializable" % type(obj))
+    raise TypeError("Type %s is not serializable" % type(obj))
 
 
 def from_dict(scenario_dict):
