@@ -16,7 +16,7 @@ class TestTwoSidedPayAsClear:
         """Tests the basic functionality of the TwoSidedPayAsClear object to accept bids and asks
         via the accept_order method and correctly match asks and bids when the match method
         is called."""
-        m = TwoSidedPayAsClear(time_step=0)
+        m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
         # no orders: no matches
         matches = m.match()
         assert len(matches) == 0
@@ -42,7 +42,7 @@ class TestTwoSidedPayAsClear:
         asks above the crossover (when the bidding price becomes lower than the asking price)
         are matched on the clearing price."""
         # different prices
-        m = TwoSidedPayAsClear(time_step=0)
+        m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
         # ask above bid: no match
         m.accept_order(Order(-1, 0, 0, None, 1, 2))
         m.accept_order(Order(1, 0, 1, None, 1, 2.5))
@@ -63,7 +63,7 @@ class TestTwoSidedPayAsClear:
         """Tests that matches can be made when the amount of energy requested by the bid
         differs from the total amount of energy being offered by the ask."""
         # different energies
-        m = TwoSidedPayAsClear(time_step=0)
+        m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
         m.accept_order(Order(-1, 0, 0, None, .1, 1))
         m.accept_order(Order(1, 0, 1, None, 1, 1))
         matches = m.match()
