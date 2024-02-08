@@ -86,7 +86,8 @@ class Config:
                                                                                  "scenario"))
         self.scenario_path = Path(self.scenario_path)
         self.data_format = parser.get("default", "data_format", fallback="json")
-        self.buy_sell_lin_param = json.loads(parser.get("default", "buy_sell_lin_param", fallback="[0, 1]"))
+        self.buy_sell_lin_param = json.loads(
+            parser.get("default", "buy_sell_lin_param", fallback="[0, 1]"))
         # load existing scenario
         self.load_scenario = parser.getboolean("default", "load_scenario", fallback=False)
 
