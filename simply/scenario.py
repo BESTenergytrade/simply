@@ -81,13 +81,13 @@ class Scenario:
             map_actors = {}
         self.map_actors: dict = map_actors
 
+        self.kwargs = kwargs
+        self.environment = Environment(steps_per_hour, self.add_participant, **kwargs)
         if buy_prices is None:
             buy_prices = np.array(())
         else:
             buy_prices = np.array(buy_prices)
-        self.kwargs = kwargs
-        self.environment = Environment(steps_per_hour, self.add_participant, **kwargs)
-        self.add_market_maker(buy_prices, **kwargs)
+            self.add_market_maker(buy_prices, **kwargs)
         if "market" in kwargs.keys():
             self.set_market(kwargs["market"])
 
@@ -154,7 +154,11 @@ class Scenario:
 
         # Make sure not to have more than 1 MarketMaker
         error = "Can not add a 2nd MarketMaker to a scenario, which already has one."
-        assert len([x for x in self.market_participants if isinstance(x, MarketMaker)]) <= 1, error
+        mm_list = [x for x in self.market_participants if isinstance(x, MarketMaker)]
+        if mm_list != 0:
+            print(" + Added MarketMaker to the Scenario.")
+        print(f" + Added {len(actors)} Actors to the Scenario.")
+        assert len(mm_list) <= 1, error
 
     def add_participant(self, participant, map_node=None, add_to_network=False):
         self._add_participant(participant)
