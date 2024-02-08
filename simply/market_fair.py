@@ -168,10 +168,15 @@ class BestMarket(Market):
     If a match becomes disputed (order matched more than once), the higher offer is taken,
     while the other one is removed as a possible match and that cluster is re-evaluated.
     This converges to an optimal solution.
+
+    If a network and a grid_fee_matrix parameter are both supplied, Market will favour
+    grid_fee_matrix.
     """
 
     def __init__(self, network=None, grid_fee_matrix=None, time_step=None,
                  disputed_matching='bid_price'):
+        if network is not None and grid_fee_matrix is None:
+            grid_fee_matrix = network.grid_fee_matrix
         super().__init__(network, grid_fee_matrix, time_step)
         self.clusters: List[BestCluster] = []
         # ToDo: enum-type would be nicer than string
