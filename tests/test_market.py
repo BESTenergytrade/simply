@@ -10,7 +10,7 @@ from simply.scenario import Scenario
 
 
 class TestMarket:
-    cfg.Config("")
+    cfg.Config("", "")
     scenario = Scenario(None, None, [])
 
     def test_init(self):
@@ -96,7 +96,7 @@ class TestMarket:
         assert m.orders.at[2, "energy"] == pytest.approx(5)
 
         # reset config
-        cfg.Config("")
+        cfg.Config("", "")
 
     def test_get_bids(self):
         """
