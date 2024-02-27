@@ -49,7 +49,7 @@ class Environment:
         self.add_actor_to_scenario = add_actor_to_scenario
         # Get grid fee method of market to make grid fees accessible for actors. Will be overwritten
         # when market is added to scenario
-        self.get_grid_fee = Market().get_grid_fee
+        self.get_grid_fee = None  # is instance of Market().get_grid_fee
         self.market_maker: MarketMaker = None
 
 
@@ -81,13 +81,13 @@ class Scenario:
             map_actors = {}
         self.map_actors: dict = map_actors
 
+        self.kwargs = kwargs
+        self.environment = Environment(steps_per_hour, self.add_participant, **kwargs)
         if buy_prices is None:
             buy_prices = np.array(())
         else:
             buy_prices = np.array(buy_prices)
-        self.kwargs = kwargs
-        self.environment = Environment(steps_per_hour, self.add_participant, **kwargs)
-        self.add_market_maker(buy_prices, **kwargs)
+            self.add_market_maker(buy_prices, **kwargs)
         if "market" in kwargs.keys():
             self.set_market(kwargs["market"])
 
@@ -154,7 +154,11 @@ class Scenario:
 
         # Make sure not to have more than 1 MarketMaker
         error = "Can not add a 2nd MarketMaker to a scenario, which already has one."
-        assert len([x for x in self.market_participants if isinstance(x, MarketMaker)]) <= 1, error
+        mm_list = [x for x in self.market_participants if isinstance(x, MarketMaker)]
+        if mm_list != 0:
+            print(" + Added MarketMaker to the Scenario.")
+        print(f" + Added {len(actors)} Actors to the Scenario.")
+        assert len(mm_list) <= 1, error
 
     def add_participant(self, participant, map_node=None, add_to_network=False):
         self._add_participant(participant)
@@ -266,12 +270,14 @@ class Scenario:
             for participant in self.market_participants:
                 a_dict[participant.id] = participant.to_dict(external_data=True)
                 participant.save_csv(dirpath)
-            dirpath.joinpath('actors.json').write_text(json.dumps(a_dict, indent=2))
+            dirpath.joinpath('actors.json').write_text(
+                json.dumps(a_dict, indent=2, default=serialize_int64))
         else:
             # Save config and data per actor in a single file
             for participant in self.market_participants:
                 dirpath.joinpath(f'actor_{participant.id}.{data_format}').write_text(
-                    json.dumps(participant.to_dict(external_data=False), indent=2)
+                    json.dumps(participant.to_dict(external_data=False), indent=2,
+                               default=serialize_int64)
                 )
 
         # save map_actors
@@ -340,7 +346,7 @@ class Scenario:
 def serialize_int64(obj):
     if isinstance(obj, np.int64):
         return int(obj)
-    raise TypeError ("Type %s is not serializable" % type(obj))
+    raise TypeError("Type %s is not serializable" % type(obj))
 
 
 def from_dict(scenario_dict):

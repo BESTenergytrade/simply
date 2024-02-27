@@ -116,7 +116,7 @@ class TwoSidedPayAsClear(Market):
             bid_cluster = match['bid_cluster']
             ask_cluster = match['ask_cluster']
 
-        if bid_cluster != ask_cluster:
+        if cfg.config.debug and bid_cluster != ask_cluster:
             warnings.warn('"bid_cluster" and "ask_cluster" are not equal.\n'
                           'Pay-as-Clear Market ignores clusters. '
                           f'Single, fixed grid fee will be used: {self.grid_fee_matrix}')
