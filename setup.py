@@ -9,7 +9,7 @@ except OSError:
     REQUIREMENTS = []
 
 
-with open("README.md", "r", encoding="utf-8") as readme:
+with open("README.rst", "r", encoding="utf-8") as readme:
     README = readme.read()
 
 VERSION = 0.1

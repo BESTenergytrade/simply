@@ -26,7 +26,7 @@ class MarketMaker:
                  sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
         self.environment = environment
         self.id = MARKETMAKERID
-        self.cluster = kwargs.get("cluster", None)
+        self.cluster = kwargs.get("market_maker_cluster", None)
         # All prices the market maker is paying to buy energy. Mostly the prediction of these
         # values is used and provided via property
         self.all_buy_prices = np.array(buy_prices)
