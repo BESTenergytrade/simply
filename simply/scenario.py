@@ -270,12 +270,12 @@ class Scenario:
             for participant in self.market_participants:
                 a_dict[participant.id] = participant.to_dict(external_data=True)
                 participant.save_csv(dirpath)
-            dirpath.joinpath('actors.json').write_text(json.dumps(a_dict, indent=2))
+            dirpath.joinpath('actors.json').write_text(json.dumps(a_dict, indent=2, default=serialize_int64))
         else:
             # Save config and data per actor in a single file
             for participant in self.market_participants:
                 dirpath.joinpath(f'actor_{participant.id}.{data_format}').write_text(
-                    json.dumps(participant.to_dict(external_data=False), indent=2)
+                    json.dumps(participant.to_dict(external_data=False), indent=2, default=serialize_int64)
                 )
 
         # save map_actors
