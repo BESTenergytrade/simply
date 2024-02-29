@@ -532,6 +532,12 @@ class BestMarket(Market):
                     # filter out MM asks
                     cluster.asks = cluster.asks[~(cluster.asks.cluster == mm_cluster)]
 
+                if len(cluster.asks) == 0:
+                    # no asks within this cluster: can't match here
+                    # remove cluster from clusters to match
+                    cluster.clearing_price_reached = True
+                    continue
+
             cluster.ask_iterator = [*range(0, len(cluster.asks))]
 
             # annotate asking price by grid-fee:
@@ -861,6 +867,8 @@ def get_clearing(bids, asks, prev_clearing_energy: int = None, ask_iterator=None
     clearing["clearing_price"] = -float("inf")
     clearing["bid_clearing_price"] = None
     start_row = 0
+    if asks.empty or bids.empty:
+        return clearing
     if prev_clearing_energy:
         start_row = max(prev_clearing_energy - 5, 0)
 
