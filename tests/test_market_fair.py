@@ -293,9 +293,10 @@ class TestBestMarket:
 
     def test_market_maker_orders(self):
         """Test to check that market maker orders are not being ignored."""
+        cfg.config.default_grid_fee = 2
         m = BestMarket(time_step=0, network=self.pn)
-        m.accept_order(Order(-1, 0, 2, None, 1, 4))
-        m.accept_order(Order(1, 0, 3, None, MARKET_MAKER_THRESHOLD, 4))
+        m.accept_order(Order(-1, 0, "buyer_c0", 0, 1, 4))
+        m.accept_order(Order(1, 0, "seller_MM", None, MARKET_MAKER_THRESHOLD, 2))
         matches = m.match()
         # matched with market maker
         assert len(matches) == 1

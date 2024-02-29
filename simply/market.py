@@ -101,6 +101,9 @@ class Market:
         # look up cluster
         if order.cluster is None and self.network is not None:
             cluster = self.network.node_to_cluster.get(order.actor_id)
+            if cfg.config.verbose and cluster is not None:
+                warnings.warn(f"Order has cluster None. Found actor_id {order.actor_id} in network,"
+                              f" new cluster: {cluster}")
             order = order._replace(cluster=cluster)
 
         # make certain energy has step size of energy_unit

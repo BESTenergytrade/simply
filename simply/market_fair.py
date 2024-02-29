@@ -466,6 +466,11 @@ class BestMarket(Market):
                 or (bids.empty and bids_mm.empty):
             # no asks or bids at all: no matches
             return []
+        mm_cluster = None
+        if not asks_mm.empty:
+            mm_cluster = asks_mm.iloc[0].cluster
+        if not bids_mm.empty:
+            assert mm_cluster == bids_mm.iloc[0].cluster
 
         # filter out actor orders without cluster
         asks = asks[~asks.cluster.isna()]
@@ -490,10 +495,11 @@ class BestMarket(Market):
         # if asks and bids are already equal in volume, there is no
 
         # keep track which clusters have to be (re)matched
-        # start with all clusters
-
+        # start with all clusters:
+        # - If market maker cluster is not contained in fee matrix, add it to the list additionally
+        additional_cluster_idx = [None] * (mm_cluster is None)
         self.clusters = [BestCluster(idx=idx, bestmarket=self) for idx in
-                         list(range(len(self.grid_fee_matrix))) + [None]]
+                         list(range(len(self.grid_fee_matrix))) + additional_cluster_idx]
 
         # Work with copy to be able to remove empty bid clusters
         clusters_to_match = self.get_clusters_to_match()
@@ -512,13 +518,19 @@ class BestMarket(Market):
             # get local bids
             cluster.bids = bids[bids.cluster == cluster.idx]
             cluster.asks = asks.copy()
-            if cluster.idx is None:
-                # This is the MM cluster with cluster None which does not match cluster.idx
-                assert cluster.bids.empty
-                # set this Cluster with MM bids
-                cluster.bids = bids[bids.cluster.isna()]
-                # filter out MM asks
-                cluster.asks = cluster.asks[~cluster.asks.cluster.isna()]
+            if cluster.idx is mm_cluster:
+                # This is the MM cluster, MM should not match with itself, i.e. filter out asks:
+                if mm_cluster is None:
+                    # if MM cluster is None, it does not == cluster.idx even if it also is None
+                    assert cluster.bids.empty
+                    # set this Cluster with MM bids
+                    cluster.bids = bids[bids.cluster.isna()]
+                    # filter out MM asks
+                    cluster.asks = cluster.asks[~cluster.asks.cluster.isna()]
+                else:
+                    # bids are already correctly filtered
+                    # filter out MM asks
+                    cluster.asks = cluster.asks[~(cluster.asks.cluster == mm_cluster)]
 
             cluster.ask_iterator = [*range(0, len(cluster.asks))]
 

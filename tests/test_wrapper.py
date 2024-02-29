@@ -1,6 +1,7 @@
 from simply.market_wrapper import (BestPayAsBidMatchingAlgorithm,
                                    BestPayAsClearMatchingAlgorithm,
                                    BestClusterPayAsClearMatchingAlgorithm)
+from simply.market import MARKET_MAKER_THRESHOLD
 import pytest
 
 FLOATING_POINT_TOLERANCE = 0.00001
@@ -408,6 +409,45 @@ class TestBestClusterPayAsClearMatchingAlgorithm:
              "bid": {"id": 3, "buyer": "C", "energy_rate": 5, "energy": 0.2, 'cluster': 0},
              "offer": {"id": 4, "seller": "A", "energy_rate": 3, "energy": 0.3, 'cluster': 1},
              "selected_energy": 0.2, "trade_rate": 4, "matching_requirements": None},
+        ]
+        compare_dicts(expected_recommendations, recommendations)
+
+    @staticmethod
+    def test_perform_simple_best_match_with_marketmaker():
+        """
+        Test whether the matches from a list of offers and bids are the expected ones.
+        Single market maker bid and single prosumer offer
+        """
+        grid_fee_matrix = [[0, 0], [1, 0]]
+        mm_cluster = 0
+        data = {
+            "market1": {
+                "2021-10-06T12:00": {
+                    "bids": [
+                        {"id": 3, "buyer": "MM", "energy_rate": 0.05,
+                         "energy": MARKET_MAKER_THRESHOLD, 'cluster': mm_cluster}
+                    ],
+                    "offers": [
+                        {"id": 4, "seller": "A", "energy_rate": 0.03,
+                         "energy": 0.3, 'cluster': 1},
+                        {"id": 5, "seller": "MM", "energy_rate": 0.04,
+                         "energy": MARKET_MAKER_THRESHOLD, 'cluster': mm_cluster}
+                    ],
+                }
+            }
+        }
+        recommendations = BestClusterPayAsClearMatchingAlgorithm.get_matches_recommendations(
+            data, grid_fee_matrix)
+        print(recommendations)
+        expected_recommendations = [
+            {"market_id": "market1",
+             "time_slot": "2021-10-06T12:00",
+             "bid": {
+                 "id": 3, "buyer": "MM", "energy_rate": 0.05,
+                 "energy": MARKET_MAKER_THRESHOLD, 'cluster': mm_cluster
+             },
+             "offer": {"id": 4, "seller": "A", "energy_rate": 0.03, "energy": 0.3, 'cluster': 1},
+             "selected_energy": 0.3, "trade_rate": 0.03, "matching_requirements": None},
         ]
         compare_dicts(expected_recommendations, recommendations)
 
