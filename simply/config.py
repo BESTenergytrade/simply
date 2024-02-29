@@ -79,9 +79,6 @@ class Config:
         # scenario
         # --------------------------
         self.project_path = Path(project_dir)
-        self.results_path = parser.get("default", "results_path", fallback=str(self.project_path /
-                                                                               "market_results"))
-        self.results_path = Path(self.results_path)
         self.scenario_path = parser.get("default", "scenario_path", fallback=str(self.project_path /
                                                                                  "scenario"))
         self.scenario_path = Path(self.scenario_path)
@@ -151,3 +148,12 @@ class Config:
         self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
         # save orders and matching results to csv files
         self.save_csv = parser.getboolean("default", "save_csv", fallback=False)
+        self.results_path = parser.get("default", "results_path", fallback=str(self.project_path /
+                                                                               "market_results"))
+        try:
+            self.results_path = Path(self.results_path)
+        except FileNotFoundError as e:
+            if self.save_csv:
+                raise FileNotFoundError(e)
+            else:
+                warnings.warn(e)
