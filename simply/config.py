@@ -150,10 +150,4 @@ class Config:
         self.save_csv = parser.getboolean("default", "save_csv", fallback=False)
         self.results_path = parser.get("default", "results_path", fallback=str(self.project_path /
                                                                                "market_results"))
-        try:
-            self.results_path = Path(self.results_path)
-        except FileNotFoundError as e:
-            if self.save_csv:
-                raise FileNotFoundError(e)
-            else:
-                warnings.warn(e)
+        self.results_path = Path(self.results_path)
