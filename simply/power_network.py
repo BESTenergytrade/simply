@@ -114,8 +114,11 @@ class PowerNetwork:
         # TODO: improved plot with or without Graphvis
         # from simply.plotting import plot_hierarchical
         # plot_hierarchical(self.network)
-        # nx.draw(self.network, with_labels=True, font_weight="bold", node_size=50)
-        plot_topology_graphvis(self.network)
+        try:
+            plot_topology_graphvis(self.network)
+        except ImportError:
+            # In case dot is not installed
+            nx.draw(self.network, with_labels=True, font_weight="bold", node_size=50)
 
         if show:
             plt.show()
