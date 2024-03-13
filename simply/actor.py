@@ -7,7 +7,7 @@ from collections import namedtuple
 import matplotlib.pyplot as plt
 from pytest import approx
 
-from simply.battery import Battery
+from simply.battery import Battery, VariableBattery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
@@ -113,8 +113,9 @@ class Actor:
     """
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
-                 cluster=None, strategy: int = 0, pricing_strategy=None, battery_cap=0,
-                 battery_initial_soc=0.5):
+                 cluster=None, strategy: int = 0, pricing_strategy=None,
+                 battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
+                 ev_available=False, ev_max_c_rate=1, ev_max_power=11):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -129,7 +130,10 @@ class Actor:
         self.bank = 0
         self.matched_energy_current_step = 0
         self.socs = []
+        self.ev_socs = []
         self.diffs = []
+        self.bank_hist = []
+        self.traded_energy = []
         self.predicted_soc = None
         self.load_scale = ls
         self.pv_scale = ps
@@ -138,6 +142,7 @@ class Actor:
         if self.battery is None:
             self.battery = Battery(capacity=max(battery_cap, 2 * cfg.config.energy_unit),
                                    soc_initial=battery_initial_soc)
+        self.var_battery = None
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -159,6 +164,15 @@ class Actor:
                 prediction_multiplier = self.error_scale * np.random.rand(self.horizon)
                 self.pm[column] = prediction_multiplier.tolist()
 
+        # if ev_cap > 0:
+        # If EV should be included expect necessary time series in actor DataFrame `df`
+        self.ess_capacity = None
+        self.ev_max_power = ev_max_power
+        self.set_var_battery(
+            ev_cap, ev_initial_soc, df, available=ev_available, max_c_rate=ev_max_c_rate,
+            refresh=False)
+        assert self.ess_capacity is not None
+
         self._environment = None
         if environment is not None:
             # Let the actor have a reference to the environment and add it to the other
@@ -171,6 +185,23 @@ class Actor:
         self.traded = {}
         self.args = {"id": id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
+
+    def set_var_battery(self, capacity, soc_initial, df, available=False, max_c_rate=4,
+                        refresh=True):
+        """
+        available: initial availability status
+        """
+        self.var_battery = VariableBattery(
+            capacity=capacity, soc_initial=soc_initial, available=available, max_c_rate=max_c_rate)
+        # If EV should be included expect necessary time series in actor DataFrame
+        if capacity > 0:
+            for column in ["ev_avail", "ev_demand"]:
+                self.data[column] = df[column]
+                self.pm[column] = 0
+
+            if refresh:
+                self.create_prediction()
+        self.ess_capacity = self.battery.capacity + self.var_battery.capacity
 
     def get_environment(self):
         return self._environment
@@ -247,7 +278,7 @@ class Actor:
         if strategy == 1:
             # overwrite the current value of the market schedule if the soc would surpass 1
             if self.predicted_soc[0] > 1:
-                self.market_schedule[0] -= (self.predicted_soc[0] - 1) * self.battery.capacity
+                self.market_schedule[0] -= (self.predicted_soc[0] - 1) * self.ess_capacity
             return self.market_schedule
 
         self.market_schedule = self.plan_selling_strategy()
@@ -266,10 +297,20 @@ class Actor:
         :return: default market schedule
         """
         default_market_schedule = -np.array(self.pred.schedule.values)
+        if self.var_battery.capacity > 0:
+            # ev_demand is a load, which has to be bought => positive sign
+            # ev demand is applied while EV is unavailable, a buy needs to be scheduled before
+            ev_charging = np.array(np.roll(self.pred.ev_demand.values, -1))
+            ev_charging[-1] = 0
+            default_market_schedule += ev_charging
         # If there is energy in the battery, try making use of it in the next time step. This can
         # happen due to small differences in between traded energy and needed energy due to the
         # energy unit
-        default_market_schedule[0] -= self.battery.energy()
+        # - var_battery energy is zero if not available
+        default_market_schedule[0] -= (
+            self.battery.energy()
+            + self.var_battery.energy()
+        )
         return default_market_schedule
 
     def predict_socs(self, clip=False, clip_value=1, planning_horizon=None):
@@ -289,11 +330,22 @@ class Actor:
             planning_horizon = self.horizon - 1
 
         # cumulative scheduled energy per time step plus battery energy up to the planning horizon
-        cum_energy_demand = (self.pred.schedule.cumsum() + self.market_schedule.cumsum() +
-                             self.battery.soc * self.battery.capacity)[:planning_horizon+1]
+        cum_energy_demand = (
+            self.pred.schedule.cumsum()
+            # TODO check roll shift
+            - (0 if self.var_battery.capacity == 0 else np.roll(self.pred.ev_demand, -1).cumsum())
+            + self.market_schedule.cumsum()
+            + self.var_battery.energy()
+            + self.battery.soc * self.battery.capacity
+        )[:planning_horizon + 1]
+
         #  Effect the cumulative schedule would have on SOC
-        soc_prediction = np.ones(planning_horizon+1) * self.battery.soc \
-            + (cum_energy_demand - self.battery.soc * self.battery.capacity) / self.battery.capacity
+        ess_energy = (
+            self.battery.soc * self.battery.capacity
+            + self.var_battery.soc * self.var_battery.capacity
+        )
+        soc_prediction = np.ones(planning_horizon+1) * (ess_energy / self.ess_capacity) \
+            + (cum_energy_demand - ess_energy) / self.ess_capacity
 
         last_val = 0
 
@@ -305,7 +357,18 @@ class Actor:
         # this value is used to fill up nan array values
         soc_prediction[counter:] = last_val
         if clip:
-            clip_soc(soc_prediction, clip_value)
+            clipping_hull = None
+            if self.var_battery.capacity > 0:
+                # The hull represents the maximal available soc per time step
+                # If EV is currently not available do not plan with it in the future, as no energy
+                # can be charged above stationary capacity.
+                clipping_hull = (
+                    self.battery.capacity
+                    + self.pred.ev_avail * self.var_battery.available * self.var_battery.capacity
+                ) / self.ess_capacity
+            clip_soc(soc_prediction,
+                     clipping_hull[0] if clipping_hull is not None else clip_value,
+                     clipping_hull=clipping_hull)
         return soc_prediction
 
     def plan_global_self_supply(self):
@@ -327,7 +390,7 @@ class Actor:
 
         # Go through the cumulated demands, deducting the demand if we plan on buying energy
         for i, _ in enumerate(soc_prediction):
-            energy = soc_prediction[i] * self.battery.capacity
+            energy = soc_prediction[i] * self.ess_capacity
             while energy < 0:
                 # where is the lowest price in between now and when the energy is needed?
                 # only check price where the battery is not full and time before when the energy
@@ -355,12 +418,22 @@ class Actor:
 
                 # cheapest price is some time before the energy is needed. Check the storage
                 # how much energy can be stored in the battery
+                # TODO check for special cases (EV leaving between cheap and needed price)
+                #  in combination with favored charging
                 max_soc = min(1, max(0, np.max(soc_prediction[min_price_index:i])))
-                max_storable_energy = (1 - max_soc) * self.battery.capacity
+                max_storable_energy = (1 - max_soc) * self.ess_capacity
 
                 # how much energy can be stored in the battery per time step via c-rate
-                max_storable_energy = min(max_storable_energy, self.battery.capacity *
-                                          self.battery.max_c_rate / self.steps_per_hour)
+                max_storable_energy = min(
+                    [
+                        max_storable_energy,
+                        self.ev_max_power / self.steps_per_hour,  # TODO: battery power connection
+                        (
+                            self.battery.capacity * self.battery.max_c_rate
+                            + self.var_battery.capacity * self.var_battery.max_c_rate
+                        ) / self.steps_per_hour
+                    ]
+                )
 
                 # how much energy needs to be stored. Energy needs are negative
                 stored_energy = min(max_storable_energy, -energy)
@@ -551,7 +624,7 @@ class Actor:
     def create_prediction(self):
         """Reset asset and schedule prediction horizon to the current planning time step self.t"""
         # ToDo add selling price
-        for column in ["load", "pv", "schedule"]:
+        for column in ["load", "pv", "schedule", "ev_avail", "ev_demand"]:
             if column in self.data.columns:
                 self.pred[column] = (
                         self.data[column].iloc[self.t_step: self.t_step + self.horizon].
@@ -592,7 +665,32 @@ class Actor:
                 f"scheduled: {self.pred.schedule[0]}, matched: {self.matched_energy_current_step})"
             )
 
+        if self.var_battery.capacity > 0:
+            # EV demand consumption is possible while not available (other than `charge`)
+            self.var_battery.consume(self.pred.ev_demand[0], constrain=True)
+
+            missing = self.pred.ev_demand[1] + self.var_battery.min_soc * self.var_battery.capacity\
+                - self.var_battery.energy()
+            # Favor charging into variable battery if necessary soc for the subsequent drive is not
+            # reached yet.
+            if missing > 0:
+                diff, _, _ = self.var_battery.charge(missing, constrain=True)
+                if cfg.config.debug:
+                    print(f"EV: charge {charge_energy}/ needs {missing} / diff {diff}")
+                charge_energy = charge_energy - missing + diff
+            # update value
+            missing = self.pred.ev_demand[1] + self.var_battery.min_soc * self.var_battery.capacity\
+                - self.var_battery.energy()
         diff, _, _ = self.battery.charge(charge_energy, constrain=True)
+        if cfg.config.debug:
+            print(f"Bat: charge {charge_energy} / diff {diff}")
+        # If stationary battery is full, try to charge the variable battery further
+        if self.var_battery.capacity > 0 and diff > missing:
+            charge_energy = diff
+            diff, _, _ = self.var_battery.charge(charge_energy, constrain=True)
+            if cfg.config.debug:
+                print(f"EV+: charge {charge_energy} / diff {diff}")
+
         self.diffs.append(diff)
         # TODO: add post settlement to adjust bank
 
@@ -744,7 +842,12 @@ class Actor:
 
         if self.battery and not self.pred.empty:
             self.update_battery()
+            self.var_battery.set_available(
+                0 if self.var_battery.capacity == 0 else self.pred.ev_avail[1])
             self.socs.append(self.battery.soc)
+            self.ev_socs.append(self.var_battery.soc)
+            self.traded_energy.append(self.matched_energy_current_step)
+            self.bank_hist.append(self.bank)
         self.matched_energy_current_step = 0
 
     def receive_market_results(self, time, sign, energy, price):
@@ -810,25 +913,24 @@ class Actor:
         args = self.args.copy()
         args["csv"] = self.csv_file
         if external_data:
-            args_no_df = args
-            args_no_df.update({"df": {}, "pm": {}, "ls": 1, "ps": 1})
-            args_no_df.update(
-                {"df": {}, "pm": {}, "ls": 1, "ps": 1, "battery_cap": self.battery.capacity,
-                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy,
-                 "pricing_strategy": self.pricing_strategy}
-            )
-            return args_no_df
+            # here df is empty
+            args.update({"df": {}, "pm": {}, "ls": 1, "ps": 1})
         else:
             # since data is already scaled by ls and ps, both of these values are set to 1, so
             # they don't get applied twice
-            args_df = args
-            args_df.update(
-                {"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1,
-                 "battery_cap": self.battery.capacity,
-                 "battery_initial_soc": self.battery.soc, "strategy": self.strategy,
-                 "pricing_strategy": self.pricing_strategy}
+            args.update({"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1})
+        # Add battery and strategy parameter
+        args.update(
+            {"battery_cap": self.battery.capacity, "battery_initial_soc": self.battery.soc,
+             "strategy": self.strategy, "pricing_strategy": self.pricing_strategy}
+        )
+        # Add EV parameter
+        if self.var_battery.capacity > 0:
+            args.update({
+                "ev_cap": self.var_battery.capacity, "ev_initial_soc": self.var_battery.soc,
+                "ev_available": False}
             )
-            return args_df
+        return args
 
     def save_csv(self, dirpath):
         """
@@ -842,7 +944,47 @@ class Actor:
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
         save_df = self.data[["load", "pv", "schedule"]]
+        if self.var_battery.capacity > 0:
+            save_df.loc[:, ["ev_avail", "ev_demand"]] = self.data[["ev_avail", "ev_demand"]]
         save_df.to_csv(dirpath.joinpath(self.csv_file))
+
+    def save_actor_result(self, dirpath=None):
+        """
+        Saves data and pred dataframes to given directory with actor specific csv file.
+
+        :param str dirpath: (optional) Path of the directory in which the actor csv file should be
+            stored.
+        :return: pandas.DataFrame with additional historic data
+        """
+        # TODO if "predicted" values do not equal actual time series values,
+        #  also errors need to be saved.
+        if self.error_scale != 0:
+            raise Exception('Prediction Error is not yet implemented!')
+        save_df = self.data[["schedule"]]
+        save_df.loc[:, "mm_sell_prices"] = self.mm_sell_prices
+        save_df.loc[:, "mm_buy_prices"] = self.mm_buy_prices
+        if self.var_battery.capacity > 0:
+            save_df[["ev_avail", "ev_demand"]] = self.data[["ev_avail", "ev_demand"]]
+        # Not every time step has an order or trade, so iterate over time steps and insert
+        order_iter = iter(self.orders)
+        o = next(order_iter)
+        for i in range(len(self.traded_energy)):
+            if i == o.time:
+                save_df.loc[i, "ordered_energy"] = o.energy * o.type
+                save_df.loc[i, "ordered_price"] = o.price
+                o = next(order_iter, None)
+                if o is None:
+                    break
+        save_df.loc[range(len(self.traded_energy)), "traded_energy"] = self.traded_energy
+        save_df.loc[range(len(self.bank_hist)), "bank"] = self.bank_hist
+        save_df.loc[range(len(self.socs)), "bat_soe"] = np.array(self.socs) * self.battery.capacity
+        if self.var_battery.capacity > 0:
+            save_df.loc[range(len(self.ev_socs)), "ev_soe"] = np.array(
+                self.ev_socs) * self.var_battery.capacity
+        if dirpath is not None:
+            save_df.to_csv(dirpath.joinpath(self.csv_file))
+
+        return save_df
 
 
 def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_hour=1):
@@ -966,7 +1108,7 @@ def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None
                  ps=peak["pv"])
 
 
-def clip_soc(soc_prediction, upper_clipping):
+def clip_soc(soc_prediction, upper_clipping=1, clipping_hull=None):
     """ Clip the soc values above the upper_clipping threshold.
 
     SOC predictions can be useful with and without soc restrictions. One restriction is that socs
@@ -982,7 +1124,16 @@ def clip_soc(soc_prediction, upper_clipping):
     :type upper_clipping: float
     """
     soc_max = np.max(soc_prediction)
-    while soc_max > upper_clipping:
+    if clipping_hull is None:
+        clipping_hull = np.ones(len(soc_prediction)) * upper_clipping
+
+    # TODO remove debug plot
+    # if any(soc_prediction > clipping_hull) and cfg.config.debug:
+    #     f, ax = plt.subplots()
+    #     plt.plot(clipping_hull)
+    #     ax.plot(soc_prediction)
+    counter = 0
+    while any(soc_prediction > clipping_hull):
         # descending array
         desc = np.arange(len(soc_prediction), 0, -1)
         # gradient of soc i.e. positive if charging negative if discharging
@@ -990,16 +1141,32 @@ def clip_soc(soc_prediction, upper_clipping):
         # masking of socs >1 and negative gradient for local maximum
         # i.e. after lifting the soc, it finds the first spot where the soc is bigger
         # than the upper threshold and descending.
-        idc_loc_max = np.argmax(desc * (soc_prediction > upper_clipping) * (diff < 0))
-
+        # TODO: non-working fix:
+        # idc_loc_max_bound = np.argmax(desc * (soc_prediction < 0))
+        idc_loc_max_bound = 24
+        idc_loc_max = np.argmax(
+            (desc * (soc_prediction > clipping_hull) * (diff < 0))[:idc_loc_max_bound])
         # find the soc value of this local maximum
         soc_max = soc_prediction[idc_loc_max]
         # reducing everything after local maximum
-        soc_prediction[idc_loc_max:] = soc_prediction[idc_loc_max:] - (soc_max - upper_clipping)
-
+        soc_prediction[idc_loc_max:] = soc_prediction[idc_loc_max:]\
+            - (soc_max - clipping_hull[idc_loc_max:])
         # clipping everything before local maximum
         soc_prediction[:idc_loc_max][soc_prediction[:idc_loc_max] > upper_clipping] = upper_clipping
+        # TODO Fix exceeding soc when EV unavailable not working properly
+        # soc_prediction[:idc_loc_max][soc_prediction[:idc_loc_max] > clipping_hull[
+        #                                                             :idc_loc_max]] = \
+        #     clipping_hull[soc_prediction[:idc_loc_max][
+        #         soc_prediction[:idc_loc_max] > clipping_hull[:idc_loc_max]].index]
+        # ax plt.plot(soc_prediction)
         soc_max = np.max(soc_prediction)
+        if counter > 20:
+            warnings.warn("Please check clipping function for SOC prediction")
+            # TODO remove debug plot
+            # if cfg.config.debug:
+            #     ax.plot(soc_prediction)
+            #     plt.show()
+        counter += 1
 
 
 def get_price(pricing_strategy, steps, final_price, energy):
