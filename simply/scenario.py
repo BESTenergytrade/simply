@@ -285,6 +285,10 @@ class Scenario:
 
         self.power_network.to_image(dirpath)
 
+    def save_additional_results(self, dirpath):
+        for actor in list(filter(lambda x: isinstance(x, Actor), self.market_participants)):
+            actor.save_actor_result(dirpath / f"actor_{actor.id}.csv")
+
     def concat_actors_data(self):
         """
         Create a list of all actor data DataFrames and concatenate them using multi-column keys

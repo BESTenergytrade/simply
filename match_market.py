@@ -105,6 +105,9 @@ def main(cfg: Config):
         print("\nTraded energy volume and price at actor level")
         print(summerize_actor_trading(sc))
 
+    # save additional results
+    if cfg.save_csv:
+        sc.save_additional_results(sc.market.csv_path)
     print(f"Results saved to {sc.market.csv_path}")
 
     return sc
