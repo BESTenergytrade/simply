@@ -84,6 +84,7 @@ def main(cfg: Config):
     for t in range(cfg.nb_ts):
         # actors calculate strategy based market interaction with the market maker
         sc.create_strategies()
+        print("Actors finished scheduling created")
 
         # orders are generated based on the flexibility towards the planned market interaction
         # and a pricing scheme. Orders are matched at the end
@@ -94,6 +95,10 @@ def main(cfg: Config):
 
         if cfg.show_prints:
             print(f"Cleared Volume: {round(m.cleared_volume[cfg.start + t], cfg.round_decimal)}")
+
+        # save/update additional actor results every at least 10 time steps
+        if cfg.save_csv and t % 10 == 0:
+            sc.save_additional_results(sc.market.csv_path)
 
     print(f"Execution time was: {time()-exec_start} s")
 

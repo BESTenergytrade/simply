@@ -288,6 +288,7 @@ class Scenario:
     def save_additional_results(self, dirpath):
         for actor in list(filter(lambda x: isinstance(x, Actor), self.market_participants)):
             actor.save_actor_result(dirpath / f"actor_{actor.id}.csv")
+            print("Additional actor results saved.")
 
     def concat_actors_data(self):
         """
