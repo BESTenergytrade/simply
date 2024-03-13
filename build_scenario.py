@@ -57,9 +57,9 @@ def insert_market_maker_id(dirpath):
         dirpath.joinpath('actors.json').write_text(json.dumps(d, indent=2))
 
 
-def check_data_present(loads_path, pv_path, price_path):
+def check_data_present(loads_path, pv_path, ev_path, price_path):
     """Returns a custom error message if load, pv or price data files are missing."""
-    for path in [loads_path, pv_path, price_path]:
+    for path in [loads_path, pv_path, ev_path, price_path]:
         if len(os.listdir(path)) == 0:
             raise Exception(f'{path} is missing data.')
 
@@ -144,6 +144,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     csv_peak = {}
     battery_cap = 0
     init_soc = 0.5
+    ev_param = {}
     for col, info_dict in asset_dict.items():
         # if info_dict is empty
         if not info_dict:
@@ -154,6 +155,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
             continue
         csv_df = pd.read_csv(info_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=False,
                              index_col=['Time'])
+
         # Make sure dates are parsed
         csv_df.index = pd.to_datetime(csv_df.index)
         if csv_df.index[-1] < end_date:
@@ -161,6 +163,20 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
                              f"ends before configured ending time {end_date} resulting of config"
                              f"parameters:"
                              f"start_date + (nb_ts + horizon + 1) * (60 / ts_hour) min.")
+
+        if col == "ev":
+            ev_cap = info_dict.get("capacityKwh")
+            if ev_cap is None:
+                # assume max demand + a soc buffer of 20%
+                ev_cap = max(csv_df["consumption"]) * 1.2
+            ev_param = {
+                "ev_cap": ev_cap,
+                "ev_initial_soc": info_dict.get("initialSOC", 0.5),
+                "ev_available": False
+            }
+            df.loc[:, "ev_avail"] = csv_df.loc[start_date:end_date].loc[:, "availability"]
+            df.loc[:, "ev_demand"] = csv_df.loc[start_date:end_date].loc[:, "consumption"]
+            continue
 
         df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, 0]
         # Save peak value and normalize time series
@@ -170,7 +186,8 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     df = basic_strategy(df, csv_peak, ps, ls)
 
     return Actor(actor_id, df, environment, ls=1, ps=1, battery_cap=battery_cap,
-                 battery_initial_soc=init_soc, strategy=strategy, pricing_strategy=pricing_strategy)
+                 battery_initial_soc=init_soc, strategy=strategy, pricing_strategy=pricing_strategy,
+                 **ev_param)
 
 
 def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
@@ -203,10 +220,11 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     # Extend paths
     loads_path = data_dirpath.joinpath("load")
     pv_path = data_dirpath.joinpath("pv")
+    ev_path = data_dirpath.joinpath("ev")
     price_path = data_dirpath.joinpath("price")
 
     # check for data
-    check_data_present(loads_path, pv_path, price_path)
+    check_data_present(loads_path, pv_path, ev_path, price_path)
 
     # Parse json
     config_df = read_config_json(config_json)
@@ -243,6 +261,13 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
                             f"Actor{actor_row['prosumerName']} has multiple battery devices.")
                     device.pop('deviceType')
                     asset_dict['battery'] = device
+                elif device['deviceType'] == 'ev':
+                    if 'ev' in asset_dict.keys():
+                        warnings.warn(
+                            f"Actor{actor_row['prosumerName']} has multiple ev devices.")
+                    file_dict[device['deviceType']] = device['deviceID']
+                    device.pop('deviceType')
+                    asset_dict['ev'] = device
                 else:
                     file_dict[device['deviceType']] = device['deviceID']
 
@@ -257,6 +282,10 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
             if 'pv' in asset_dict.keys():
                 warnings.warn(f"Actor{actor_row['prosumerName']} has multiple solar devices.")
             asset_dict['pv'] = {"csv": pv_path.joinpath(file_dict['solar']), "col_index": 1}
+
+        # EV
+        if 'ev' in file_dict:
+            asset_dict['ev'].update({"csv": ev_path.joinpath(file_dict['ev'])})
 
         # Prices
         asset_dict['price'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
