@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import argparse
-from pandas.api.types import is_numeric_dtype
 from simply.actor import Actor
 from simply.scenario import Scenario
 from simply.power_network import create_power_network_from_config
@@ -27,23 +26,22 @@ convert string dates to datetime dtype, and build a pandas dataframe from the co
 
 
 # Helper functions
-def get_mm_prices(dirpath, start_date, end_date):
+def get_mm_prices(dirpath, start_date, end_date, col="prices", required=True):
     csv_df = pd.read_csv(dirpath, sep=',', parse_dates=['Time'], dayfirst=False,
                          index_col=['Time'])
     # Make sure dates are parsed
     csv_df.index = pd.to_datetime(csv_df.index)
     try:
-        return list(csv_df.loc[start_date:end_date]["prices"])
+        return list(csv_df.loc[start_date:end_date][col])
     except KeyError:
         # is first column after time column numeric?
-        if is_numeric_dtype(csv_df.loc[start_date:end_date].iloc[:, 0]):
+        if not required:
             # if so, we assume that is the price column even though its not named "prices"
-            warnings.warn("Prices data file does not contain column named 'prices'. Instead the "
-                          f"first column named {csv_df.iloc[:, 0].name} is used")
-            return list(csv_df.loc[start_date:end_date].iloc[:, 0])
+            warnings.warn(f"Prices data file does not contain column named '{col}', "
+                          f" but is not required.")
+            return None
         else:
-            raise Exception("Prices data file does not contain column named 'prices' and the "
-                            "second column is not numeric, which would be used otherwise.")
+            raise KeyError(f"Prices data file does not contain column named '{col}'")
 
 
 def insert_market_maker_id(dirpath):
@@ -178,7 +176,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
             df.loc[:, "ev_demand"] = csv_df.loc[start_date:end_date].loc[:, "consumption"]
             continue
 
-        df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, 0]
+        df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, info_dict["col_index"] - 1]
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
         df[col] = df[col] / csv_peak[col]
@@ -190,11 +188,13 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
                  **ev_param)
 
 
-def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
-                                buy_sell_function=None,
-                                weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
-                                start_date=None, plot_network=False,
-                                price_filename="basic_prices.csv", ps=None, ls=None):
+def create_scenario_from_config(
+        config_json, network_path, loads_dir_path, data_dirpath=None,
+        buy_sell_function=None,
+        weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
+        start_date=None, plot_network=False,
+        price_filename="basic_prices.csv", mm_buy_col="buy_prices", mm_sell_col="sell_prices",
+        ps=None, ls=None):
     """
     Create Scenario object while creating Actor objects from config_json referencing to time series
      data in data_path. The Actors are further mapped to a defined network.
@@ -213,6 +213,10 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     :param plot_network: Boolean value to indicate whether the network should be plotted,
         defaults to False
     :param price_filename: Name of the price csv file, defaults to "basic_prices.csv"
+    :param mm_buy_col: Column name of Market Maker buying prices of file "price_filename",
+        defaults to buy_prices
+    :param mm_sell_col: Column name of Market Maker selling prices of file "price_filename",
+        defaults to sell_prices
     :param ps: PV scalar, defaults to None
     :param ls: Load scalar, defaults to None
     :return: Scenario object
@@ -239,10 +243,20 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
         start_date = "2016-01-01"
         warnings.warn(f"No start date was given, use default date {start_date}.")
     start_date, end_date = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
-    buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date)
+    try:
+        buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
+                                   mm_buy_col, required=True)
+        sell_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
+                                    mm_sell_col, required=False)
+    except Exception as e:
+        buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
+                                   "prices", required=True)
+        warnings.warn(f"{e}: ... but found default column 'prices'.")
+
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
-    scenario = Scenario(None, None, buy_prices=buy_prices, buy_to_sell_function=buy_sell_function)
+    scenario = Scenario(None, None, buy_prices=buy_prices, sell_prices=sell_prices,
+                        buy_to_sell_function=buy_sell_function)
     for i, actor_row in config_df.iterrows():
         file_dict = {}
         asset_dict = {}
