@@ -115,7 +115,7 @@ class Actor:
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
                  cluster=None, strategy: int = 0, pricing_strategy=None,
                  battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
-                 ev_available=False, ev_max_c_rate=1, ev_max_power=11):
+                 ev_available=0, ev_max_c_rate=1, ev_max_power=11):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -188,7 +188,7 @@ class Actor:
         self.args = {"id": id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
 
-    def set_var_battery(self, capacity, soc_initial, df, available=False, max_c_rate=4,
+    def set_var_battery(self, capacity, soc_initial, df, available=0, max_c_rate=4,
                         refresh=True):
         """
         available: initial availability status
@@ -315,7 +315,11 @@ class Actor:
         # - var_battery energy is zero if not available
         default_market_schedule[0] -= (
             self.battery.energy()
-            + self.var_battery.energy()
+            # TODO: With current fix var_battery is always available, requires temporary adaption:
+            #  normally this would be handled by self.var_battery.energy() > 0 only if available
+            + (self.var_battery.energy()
+               - (self.pred.ev_demand[0] if self.var_battery.capacity > 0 else 0)
+               ) * self.var_battery.available
         )
         return default_market_schedule
 
