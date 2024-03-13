@@ -132,6 +132,8 @@ class Actor:
         self.socs = []
         self.ev_socs = []
         self.diffs = []
+        self.mm_sell_hist = []
+        self.mm_buy_hist = []
         self.bank_hist = []
         self.traded_energy = []
         self.predicted_soc = None
@@ -191,6 +193,8 @@ class Actor:
         """
         available: initial availability status
         """
+        # TODO: WIP availability changes not working properly
+        available = 1  # TODO remove line when done
         self.var_battery = VariableBattery(
             capacity=capacity, soc_initial=soc_initial, available=available, max_c_rate=max_c_rate)
         # If EV should be included expect necessary time series in actor DataFrame
@@ -198,6 +202,8 @@ class Actor:
             for column in ["ev_avail", "ev_demand"]:
                 self.data[column] = df[column]
                 self.pm[column] = 0
+            # TODO: WIP availability not working properly
+            self.data["ev_avail"] = available  # TODO remove line when done
 
             if refresh:
                 self.create_prediction()
@@ -848,6 +854,8 @@ class Actor:
             self.ev_socs.append(self.var_battery.soc)
             self.traded_energy.append(self.matched_energy_current_step)
             self.bank_hist.append(self.bank)
+            self.mm_sell_hist.append(self.mm_sell_prices[0])
+            self.mm_buy_hist.append(self.mm_buy_prices[0])
         self.matched_energy_current_step = 0
 
     def receive_market_results(self, time, sign, energy, price):
@@ -958,31 +966,32 @@ class Actor:
         """
         # TODO if "predicted" values do not equal actual time series values,
         #  also errors need to be saved.
+        simulated_range = range(cfg.config.start, len(self.socs) + cfg.config.start)
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
-        save_df = self.data[["schedule"]]
-        save_df.loc[:, "mm_sell_prices"] = self.mm_sell_prices
-        save_df.loc[:, "mm_buy_prices"] = self.mm_buy_prices
+        save_df = self.data[["schedule"]].copy()
+        save_df.loc[simulated_range, "mm_sell_prices"] = self.mm_sell_hist
+        save_df.loc[simulated_range, "mm_buy_prices"] = self.mm_buy_hist
         if self.var_battery.capacity > 0:
             save_df[["ev_avail", "ev_demand"]] = self.data[["ev_avail", "ev_demand"]]
         # Not every time step has an order or trade, so iterate over time steps and insert
         order_iter = iter(self.orders)
-        o = next(order_iter)
+        o = next(order_iter, None)
         for i in range(len(self.traded_energy)):
-            if i == o.time:
+            if o is not None and i == o.time:
                 save_df.loc[i, "ordered_energy"] = o.energy * o.type
                 save_df.loc[i, "ordered_price"] = o.price
                 o = next(order_iter, None)
                 if o is None:
                     break
-        save_df.loc[range(len(self.traded_energy)), "traded_energy"] = self.traded_energy
-        save_df.loc[range(len(self.bank_hist)), "bank"] = self.bank_hist
-        save_df.loc[range(len(self.socs)), "bat_soe"] = np.array(self.socs) * self.battery.capacity
+        save_df.loc[simulated_range, "traded_energy"] = self.traded_energy
+        save_df.loc[simulated_range, "bank"] = self.bank_hist
+        save_df.loc[simulated_range, "bat_soe"] = np.array(self.socs) * self.battery.capacity
         if self.var_battery.capacity > 0:
-            save_df.loc[range(len(self.ev_socs)), "ev_soe"] = np.array(
+            save_df.loc[simulated_range, "ev_soe"] = np.array(
                 self.ev_socs) * self.var_battery.capacity
         if dirpath is not None:
-            save_df.to_csv(dirpath.joinpath(self.csv_file))
+            save_df.to_csv(dirpath)
 
         return save_df
 
