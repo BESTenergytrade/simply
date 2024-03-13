@@ -103,6 +103,8 @@ class PowerNetwork:
                     w = self.get_path_weight(n1, n2) * weight_factor
                     self.grid_fee_matrix[i][j] = w
                     self.grid_fee_matrix[j][i] = w
+                if i == j:
+                    self.grid_fee_matrix[i][j] = cfg.config.local_grid_fee
 
     def to_image(self, dirpath=Path("./")):
         fig = self.plot(False)

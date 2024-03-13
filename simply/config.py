@@ -113,6 +113,8 @@ class Config:
         self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.03)
         # default grid_fee to be used by market maker
         self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
+        # local grid fee to be used
+        self.local_grid_fee = parser.getfloat("default", "local_grid_fee", fallback=0)
 
         # time related
         # start date of time series data
