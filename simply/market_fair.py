@@ -671,7 +671,7 @@ class BestMarket(Market):
         # decided, the following part runs through all asks, and checks if moving them is profitable
         # for them
         # move ask around / insert them for as long as they find higher profit chances
-        asks_changed = True
+        asks_changed = False  # TODO remove temporary exclusion
         # ToDo Might want to have a counter which stops this loop if it does not converge.
         while asks_changed:
             asks_changed = False
