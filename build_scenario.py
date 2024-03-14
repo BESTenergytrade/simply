@@ -57,7 +57,7 @@ def insert_market_maker_id(dirpath):
 
 def check_data_present(loads_path, pv_path, ev_path, price_path):
     """Returns a custom error message if load, pv or price data files are missing."""
-    for path in [loads_path, pv_path, ev_path, price_path]:
+    for path in [loads_path, pv_path, price_path]:
         if len(os.listdir(path)) == 0:
             raise Exception(f'{path} is missing data.')
 
@@ -251,6 +251,7 @@ def create_scenario_from_config(
     except Exception as e:
         buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
                                    "prices", required=True)
+        sell_prices = None
         warnings.warn(f"{e}: ... but found default column 'prices'.")
 
     # Empty scenario. Member Participants, map actors and power network will be added later
