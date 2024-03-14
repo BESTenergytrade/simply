@@ -286,8 +286,8 @@ class Scenario:
         self.power_network.to_image(dirpath)
 
     def save_additional_results(self, dirpath):
-        for actor in list(filter(lambda x: isinstance(x, Actor), self.market_participants)):
-            actor.save_actor_result(dirpath / f"actor_{actor.id}.csv")
+        for a in list(filter(lambda x: isinstance(x, Actor), self.market_participants)):
+            a.save_actor_result(dirpath / f"actor_{a.id}.csv")
         print("Additional actor results saved.")
 
     def concat_actors_data(self):
@@ -420,6 +420,13 @@ def load(dirpath, data_format):
     map_actors = json.loads(map_actor_text)
     scenario = Scenario(pn, map_actors, rng_seed=rng_seed)
     scenario.add_participants(participants)
+    # save applied grid fee matrix
+    results_path = cfg.config.results_path
+    # if the market_results directory does not already exist, create it
+    if not results_path.exists() and results_path:
+        results_path.mkdir()
+    results_path.joinpath('used_grid_fee_matrix.inf').write_text(json.dumps(pn.grid_fee_matrix))
+
     return scenario
 
 

@@ -105,6 +105,7 @@ class PowerNetwork:
                     self.grid_fee_matrix[j][i] = w
                 if i == j:
                     self.grid_fee_matrix[i][j] = cfg.config.local_grid_fee
+        print(f"Generated grid fee matrix: {self.grid_fee_matrix}")
 
     def to_image(self, dirpath=Path("./")):
         fig = self.plot(False)
