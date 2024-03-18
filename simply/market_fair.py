@@ -457,6 +457,7 @@ class BestMarket(Market):
     def match_new(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
+        bids.loc[:, "price"] = bids["price"].apply(lambda x: x.round(cfg.config.round_decimal))
 
         # filter out market makers (infinite bus) and really large orders
         asks, asks_mm, bids, bids_mm, _, _ = self.filter_orders(asks, bids)
