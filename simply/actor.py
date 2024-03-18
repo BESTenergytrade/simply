@@ -233,7 +233,7 @@ class Actor:
         env = self.environment
         grid_fee = env.get_grid_fee(ask_cluster=env.market_maker.cluster, bid_cluster=self.cluster)
         # the prices for which the mm sells energy to the actor are increased by the grid fee
-        return self.environment.market_maker.sell_prices+grid_fee
+        return (self.environment.market_maker.sell_prices+grid_fee).round(cfg.config.round_decimal)
 
     # creating a property object
     mm_sell_prices = property(get_mm_sell_prices)
@@ -487,8 +487,9 @@ class Actor:
         # ToDo selling is not capped by max c-rate of battery
         # iterate over socs
         for i, _ in enumerate(soc_prediction):
-            energy = soc_prediction[i] * self.battery.capacity
-            overcharge = energy - self.battery.capacity
+            # TODO: battery/ess capacity
+            energy = soc_prediction[i] * self.ess_capacity
+            overcharge = energy - self.ess_capacity
             # if overcharge is found, find the possible prices to sell this energy
             while overcharge > 0:
                 possible_prices = self.mm_buy_prices.copy()[:self.horizon]
@@ -518,8 +519,9 @@ class Actor:
                 # found at the highest_price_index. At this index only as much energy can be sold as
                 # the min predicted soc, in between this index and the time of overcharge, provides.
                 soc_to_zero = np.min(soc_prediction[highest_price_index:i + 1])
-                assert soc_to_zero <= 1 + cfg.config.EPS
-                energy_to_zero = soc_to_zero * self.battery.capacity
+                assert soc_to_zero <= 1 + cfg.config.EPS, f"Check Selling Strategy: " \
+                                                          f"{soc_to_zero} > {1 + cfg.config.EPS}"
+                energy_to_zero = soc_to_zero * self.ess_capacity
                 sellable_energy = min(energy_to_zero, overcharge)
                 self.market_schedule[highest_price_index] -= sellable_energy
                 overcharge -= sellable_energy
@@ -609,8 +611,9 @@ class Actor:
                         found_sell_index = sell_index
                         break
                 # find how much energy can be stored in between buying and selling
+                # TODO: check battery/ess capacity
                 storable_energy = (
-                    1-soc_prediction[buy_index:found_sell_index + 1].max()) * self.battery.capacity
+                    1-soc_prediction[buy_index:found_sell_index + 1].max()) * self.ess_capacity
                 assert storable_energy > 0
                 self.market_schedule[buy_index] += storable_energy
                 self.market_schedule[found_sell_index] -= storable_energy
