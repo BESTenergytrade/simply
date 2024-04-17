@@ -1,13 +1,15 @@
-# REQUIREMENTS
-# pyomo package needs to be installed
-# a solver needs to be installed: CBC or GLPK are open source; for CBC coppy cbc_solver (\\FS01\RL-Institut\05_Temp\Andreas\Pyomo\cbc_solver) in the directory where the repo clone is
+# REQUIREMENTS# pyomo package needs to be installed
+# a solver needs to be installed: CBC or GLPK are open source; for CBC
+# coppy cbc_solver (\\FS01\RL-Institut\05_Temp\Andreas\Pyomo\cbc_solver)
+# in the directory where the repo clone is
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 import pandas as pd
 
 
 def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initial=0.5):
-    # capacity=10, max_c_rate=1, soc_initial=0.5 parametrisation of battery specified in simply/battery.py
+    # parametrisation of battery specified in simply/battery.py
+    # capacity=10, max_c_rate=1, soc_initial=0.5
     # TODO battery-efficiency ?
 
     # generate single time series vectors
@@ -26,23 +28,26 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
         sell_prices[i] = df_prices.iat[i, 2]
 
     # other parameters
-    time_interval = 15  # minutes per time step, can be obtained using datetime functions from input csv-files
-    grid_fee = 0.0  # 0.09 # grid fee for buying electricity, see config.cfg
-    grid_connection_capacity = 20  # if no upper bound is provided the problem turns out to be unbounded
+    # TODO minutes per time step can be obtained using datetime functions from input csv-files
+    time_interval = 15  # minutes per time step
+    # TODO grid fee for buying electricity, see config.cfg
+    grid_fee = 0.0  # 0.09
+    # TODO if no upper bound is provided the problem turns out to be unbounded
+    grid_connection_capacity = 20
 
     # PYOMO OPTIMISATION MODEL
-    model = ConcreteModel()
-    model.charging_power = Var(t, bounds=(0, capacity * max_c_rate))
-    model.discharging_power = Var(t, bounds=(0, capacity * max_c_rate))
-    model.stored_energy = Var(t, bounds=(0, capacity))
+    model = pyo.ConcreteModel()
+    model.charging_power = pyo.Var(t, bounds=(0, capacity * max_c_rate))
+    model.discharging_power = pyo.Var(t, bounds=(0, capacity * max_c_rate))
+    model.stored_energy = pyo.Var(t, bounds=(0, capacity))
     # 0/ 1 for distinguishing between charging / discharging
-    model.bi_charge = Var(t, within=Binary)
-    model.power_from_grid = Var(t, bounds=(0, grid_connection_capacity))
-    model.power_to_grid = Var(t, bounds=(0, grid_connection_capacity))
-    model.cash_flow = Var(t)
+    model.bi_charge = pyo.Var(t, within=pyo.Binary)
+    model.power_from_grid = pyo.Var(t, bounds=(0, grid_connection_capacity))
+    model.power_to_grid = pyo.Var(t, bounds=(0, grid_connection_capacity))
+    model.cash_flow = pyo.Var(t)
 
     # energy balance for the system
-    model.energy_balance_system = ConstraintList()
+    model.energy_balance_system = pyo.ConstraintList()
     for i in range(len(t) - 1):
         model.energy_balance_system.add(
             0 ==
@@ -50,56 +55,56 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
             - load[i] - model.power_to_grid[i] - model.charging_power[i])
 
     # component energy storage
-    model.energy_balance_storage = ConstraintList()
+    model.energy_balance_storage = pyo.ConstraintList()
     for i in range(len(t) - 1):
         # constraint
         model.energy_balance_storage.add(
             model.stored_energy[i+1] - model.stored_energy[i] ==
             (model.charging_power[i] - model.discharging_power[i]) * time_interval/60)
 
-    model.start_storage = Constraint(
+    model.start_storage = pyo.Constraint(
         expr=model.stored_energy[0] ==
         soc_initial * capacity)
 
     # optional: equal soc at first and last time step
-    model.start_end_storage = Constraint(
+    model.start_end_storage = pyo.Constraint(
         expr=model.stored_energy[0] == model.stored_energy[len(t)-1])
 
     # needed in order to not have a discharge that affects the timestep after the last considered
-    model.end_no_discharge_storage = Constraint(
+    model.end_no_discharge_storage = pyo.Constraint(
         expr=0 == model.discharging_power[len(t)-1])
 
     # binary variable to separate charging and discharging timesteps in order to
     # exclude having both at the same time
-    model.binary_charge_storage = ConstraintList()
+    model.binary_charge_storage = pyo.ConstraintList()
     for i in t:
         model.binary_charge_storage.add(
             model.charging_power[i] <= model.bi_charge[i] * capacity * max_c_rate)
 
-    model.binary_discharge_storage = ConstraintList()
+    model.binary_discharge_storage = pyo.ConstraintList()
     for i in t:
         model.binary_discharge_storage.add(
             model.discharging_power[i] <= (1 - model.bi_charge[i]) * capacity * max_c_rate)
 
     # costs to be used in objective function
-    model.cash_flow_equation = ConstraintList()
+    model.cash_flow_equation = pyo.ConstraintList()
     for i in t:
         model.cash_flow_equation.add(
             model.cash_flow[i] ==
             sell_prices[i] * model.power_to_grid[i] * time_interval/60
             - (buy_prices[i] + grid_fee) * model.power_from_grid[i] * time_interval/60)
 
-    model.obj = Objective(
-        expr=sum(model.cash_flow[i] for i in t), sense=maximize)
+    model.obj = pyo.Objective(
+        expr=sum(model.cash_flow[i] for i in t), sense=pyo.maximize)
 
     # chose solver and solver-specific options
-    # opt = SolverFactory('glpk')
+    # opt = pyo.SolverFactory('glpk')
     # opt.options['mipgap'] = 1e-3    # solver option for GLPK: relative gap, default: 0.0
     # opt.options['tmlim'] = 60*30    # solver option for GLPK: timelimit in seconds
-    opt = SolverFactory('cbc')
+    opt = pyo.SolverFactory('cbc')
     opt.options['seconds'] = 60*30   # solver option for CBC: timelimit in seconds
 
-    result_obj = opt.solve(model, tee=True)  # solve the problem
+    _ = opt.solve(model, tee=True)  # solve the problem
     # model.pprint()                          # print results in run terminal
 
     # RESULTS
