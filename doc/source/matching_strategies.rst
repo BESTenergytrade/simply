@@ -40,6 +40,105 @@ Grid-fees are calculated for each order using the following grid fee matrix:
 | Origin Cluster: 1  | 1                        | 0                       |
 +--------------------+--------------------------+-------------------------+
 
+.. _grid_fee_matrix:
+
+Methods to Enter Grid Fee Matrix
+--------------------------------
+
+There are two primary methods to input a grid fee matrix into the Simply Simulation:
+
+1. Providing a Complete Grid Fee Matrix
+2. Building a Grid Fee Matrix from Configuration Files
+
+Providing an Already Complete Grid Fee Matrix
+---------------------------------------------
+
+Format
+~~~~~~
+
+- The grid fee matrix should be provided in a structured format such as JSON or CSV.
+
+Placement
+~~~~~~~~~
+
+- Place the complete grid fee matrix in the designated input location within the simulation environment, as specified in the simulation documentation or configuration settings.
+
+Requirements
+~~~~~~~~~~~~
+
+Names/Identifiers
+"""""""""""""""""
+
+- Each row and column must be labeled with unique identifiers representing different clusters or nodes.
+- Example Identifiers:
+  - **Network Lines:** line_1, line_2, line_n
+  - **Nodes or Clusters:** node_A, node_B, node_C
+
+Units
+"""""
+
+- Specify consistent units for both row and column headers to avoid confusion (e.g., USD, EUR).
+
+Weight Factor
+"""""""""""""
+
+- The weight factor describes the relationship between grid fee and cumulative power network edge weights.
+
+Example JSON Grid Fee Matrix
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:: 
+
+   {
+     "grid_fees": [
+       {
+         "name": "transmission_fee",
+         "unit": "$/kWh",
+         "value": 0.05
+       },
+       {
+         "name": "distribution_fee",
+         "unit": "$/kWh",
+         "value": 0.03
+       }
+     ]
+   }
+
+Building a Grid Fee Matrix from Config Files
+--------------------------------------------
+
+Composition from Config Files
+""""""""""""""""""""""""""""""
+
+The grid fee matrix can be composed by reading entries from configuration files using the following attributes:
+
+- ``default_grid_fee``: Default grid fee used by the market maker.
+- ``local_grid_fee``: Local grid fee to be used.
+- ``weight_factor``: Factor describing the relationship of grid fee to cumulative power network edge weights.
+
+Steps to Build Grid Fee Matrix
+""""""""""""""""""""""""""""""
+
+1. Retrieve ``default_grid_fee``, ``local_grid_fee``, and ``weight_factor`` values from the configuration file.
+2. Use these values to calculate or define the grid fee matrix entries.
+
+Example Configuration Entries
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:: 
+
+   #--------------------------
+   # market
+   #--------------------------
+   # default grid_fee to be used by market maker
+   default_grid_fee = 0.09
+   # local grid fee to be used
+   local_grid_fee = 0
+   # factor describing the relation of grid fee to cumulative power network edge weights
+   weight_factor = 0.03
+
+Entering a grid fee matrix into a simulation is essential for accurate cost calculations related to using the grid. Whether you choose to provide a complete grid fee matrix or build one from configuration file entries, ensure proper format, identifiers, units, and values. By following these guidelines, you can successfully integrate the grid fee matrix into your simulation for precise cost estimations.
+
 Bids and Asks
 ---------------
 
