@@ -137,7 +137,7 @@ Example Configuration Entries
    # factor describing the relation of grid fee to cumulative power network edge weights
    weight_factor = 0.03
 
-Entering a grid fee matrix into a simulation is essential for accurate cost calculations related to using the grid. Whether you choose to provide a complete grid fee matrix or build one from configuration file entries, ensure proper format, identifiers, units, and values. By following these guidelines, you can successfully integrate the grid fee matrix into your simulation for precise cost estimations.
+Entering a grid fee matrix into a simulation is essential for accurate cost calculations related to using the grid. Ensure proper format, identifiers, units, and values for the rate matrix, whether complete or created from config file entries.
 
 Bids and Asks
 ---------------
