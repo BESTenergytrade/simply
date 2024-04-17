@@ -103,6 +103,9 @@ class PowerNetwork:
                     w = self.get_path_weight(n1, n2) * weight_factor
                     self.grid_fee_matrix[i][j] = w
                     self.grid_fee_matrix[j][i] = w
+                if i == j:
+                    self.grid_fee_matrix[i][j] = cfg.config.local_grid_fee
+        print(f"Generated grid fee matrix: {self.grid_fee_matrix}")
 
     def to_image(self, dirpath=Path("./")):
         fig = self.plot(False)
@@ -114,7 +117,12 @@ class PowerNetwork:
         # TODO: improved plot with or without Graphvis
         # from simply.plotting import plot_hierarchical
         # plot_hierarchical(self.network)
-        nx.draw(self.network, with_labels=True, font_weight="bold", node_size=50)
+        try:
+            plot_topology_graphvis(self.network)
+        except ImportError:
+            # In case dot is not installed
+            nx.draw(self.network, with_labels=True, font_weight="bold", node_size=50)
+
         if show:
             plt.show()
 
@@ -232,3 +240,9 @@ def remove_weights_from_leef_nodes(network):
     for leaf in leaf_nodes:
         for u, v, d in network.edges(leaf, data=True):
             d["weight"] = 0
+
+
+def plot_topology_graphvis(G):
+    from networkx.drawing.nx_pydot import graphviz_layout
+    pos = graphviz_layout(G, prog="dot")
+    nx.draw(G, pos, with_labels=True, font_weight='bold', node_size=50)

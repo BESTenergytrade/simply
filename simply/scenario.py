@@ -16,7 +16,7 @@ from simply.market_maker import MarketMaker
 from simply.actor import Actor
 from simply.market import Market
 
-debug_actor = None  # 'residential_1'
+debug_actor = None  # 'residential_3'
 
 
 class Environment:
@@ -49,7 +49,7 @@ class Environment:
         self.add_actor_to_scenario = add_actor_to_scenario
         # Get grid fee method of market to make grid fees accessible for actors. Will be overwritten
         # when market is added to scenario
-        self.get_grid_fee = Market().get_grid_fee
+        self.get_grid_fee = None  # is instance of Market().get_grid_fee
         self.market_maker: MarketMaker = None
 
 
@@ -81,13 +81,15 @@ class Scenario:
             map_actors = {}
         self.map_actors: dict = map_actors
 
+        self.kwargs = kwargs
+        self.environment = Environment(steps_per_hour, self.add_participant, **kwargs)
         if buy_prices is None:
             buy_prices = np.array(())
         else:
             buy_prices = np.array(buy_prices)
-        self.kwargs = kwargs
-        self.environment = Environment(steps_per_hour, self.add_participant, **kwargs)
-        self.add_market_maker(buy_prices, **kwargs)
+            self.add_market_maker(buy_prices, **kwargs)
+        if "market" in kwargs.keys():
+            self.set_market(kwargs["market"])
 
     def add_market_maker(self, buy_prices: Sized, **kwargs):
         if len(buy_prices) == 0:
@@ -152,7 +154,11 @@ class Scenario:
 
         # Make sure not to have more than 1 MarketMaker
         error = "Can not add a 2nd MarketMaker to a scenario, which already has one."
-        assert len([x for x in self.market_participants if isinstance(x, MarketMaker)]) <= 1, error
+        mm_list = [x for x in self.market_participants if isinstance(x, MarketMaker)]
+        if mm_list != 0:
+            print(" + Added MarketMaker to the Scenario.")
+        print(f" + Added {len(actors)} Actors to the Scenario.")
+        assert len(mm_list) <= 1, error
 
     def add_participant(self, participant, map_node=None, add_to_network=False):
         self._add_participant(participant)
@@ -253,7 +259,7 @@ class Scenario:
         dirpath.joinpath('network.json').write_text(
             json.dumps(
                 {self.power_network.name: self.power_network.to_dict()},
-                indent=2,
+                indent=2, default=serialize_int64
             )
         )
 
@@ -264,18 +270,25 @@ class Scenario:
             for participant in self.market_participants:
                 a_dict[participant.id] = participant.to_dict(external_data=True)
                 participant.save_csv(dirpath)
-            dirpath.joinpath('actors.json').write_text(json.dumps(a_dict, indent=2))
+            dirpath.joinpath('actors.json').write_text(
+                json.dumps(a_dict, indent=2, default=serialize_int64))
         else:
             # Save config and data per actor in a single file
             for participant in self.market_participants:
                 dirpath.joinpath(f'actor_{participant.id}.{data_format}').write_text(
-                    json.dumps(participant.to_dict(external_data=False), indent=2)
+                    json.dumps(participant.to_dict(external_data=False), indent=2,
+                               default=serialize_int64)
                 )
 
         # save map_actors
         dirpath.joinpath('map_actors.json').write_text(json.dumps(self.map_actors, indent=2))
 
         self.power_network.to_image(dirpath)
+
+    def save_additional_results(self, dirpath):
+        for a in list(filter(lambda x: isinstance(x, Actor), self.market_participants)):
+            a.save_actor_result(dirpath / f"actor_{a.id}.csv")
+        print("Additional actor results saved.")
 
     def concat_actors_data(self):
         """
@@ -307,6 +320,15 @@ class Scenario:
         ax[2].legend(["pv", "load"])
         plt.show()
 
+    def plot_prices(self):
+        if self.environment.market_maker is not None:
+            fig, ax = plt.subplots(1, sharex=True)
+            ax = [ax]
+            ax[0].plot([p + cfg.config.default_grid_fee for p in
+                        self.environment.market_maker.all_sell_prices])
+            ax[0].plot(self.environment.market_maker.all_buy_prices)
+            plt.show()
+
     def reset(self):
         """ Reset the scenario after a simulation is run"""
         # Reset the time step
@@ -324,6 +346,12 @@ class Scenario:
             market_maker.reset()
             # But add the market maker again
             self.add_participant(market_maker)
+
+
+def serialize_int64(obj):
+    if isinstance(obj, np.int64):
+        return int(obj)
+    raise TypeError("Type %s is not serializable" % type(obj))
 
 
 def from_dict(scenario_dict):
@@ -354,7 +382,8 @@ def load(dirpath, data_format):
     meta = json.loads(meta_text)
     rng_seed = meta.get("rng_seed", None)
 
-    pn = power_network.create_power_network_from_config(next(dirpath.glob('network.*')))
+    pn = power_network.create_power_network_from_config(
+        next(dirpath.glob('network.*')), weight_factor=cfg.config.weight_factor)
 
     # read actors
     participants = []
@@ -391,6 +420,13 @@ def load(dirpath, data_format):
     map_actors = json.loads(map_actor_text)
     scenario = Scenario(pn, map_actors, rng_seed=rng_seed)
     scenario.add_participants(participants)
+    # save applied grid fee matrix
+    results_path = cfg.config.results_path
+    # if the market_results directory does not already exist, create it
+    if not results_path.exists() and results_path:
+        results_path.mkdir()
+    results_path.joinpath('used_grid_fee_matrix.inf').write_text(json.dumps(pn.grid_fee_matrix))
+
     return scenario
 
 

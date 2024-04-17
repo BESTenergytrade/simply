@@ -78,7 +78,7 @@ class MarketMaker:
                               "create selling prices from buying prices was provided as well, but "
                               "will not be used.")
             # if sell_prices are provided they are used
-            return sell_prices
+            return np.array(sell_prices)
         else:
             if buy_to_sell_function is None:
                 # if no specific function to calculate sell_prices is provided
@@ -88,6 +88,9 @@ class MarketMaker:
             else:
                 # if a specific function is provided, it is used to calculate sell_prices from
                 # the buy_prices
+                import inspect
+                warnings.warn("Market Maker selling prices defined by Buy-to-sell-function: "
+                              f"{inspect.getsource(buy_to_sell_function)}")
                 return buy_to_sell_function(self.all_buy_prices)
 
     def save_csv(self, dirpath):

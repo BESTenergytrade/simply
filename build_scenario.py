@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import argparse
-from pandas.api.types import is_numeric_dtype
 from simply.actor import Actor
 from simply.scenario import Scenario
 from simply.power_network import create_power_network_from_config
@@ -27,21 +26,22 @@ convert string dates to datetime dtype, and build a pandas dataframe from the co
 
 
 # Helper functions
-def get_mm_prices(dirpath, start_date, end_date):
-    csv_df = pd.read_csv(dirpath, sep=',', parse_dates=['Time'], dayfirst=True,
+def get_mm_prices(dirpath, start_date, end_date, col="prices", required=True):
+    csv_df = pd.read_csv(dirpath, sep=',', parse_dates=['Time'], dayfirst=False,
                          index_col=['Time'])
+    # Make sure dates are parsed
+    csv_df.index = pd.to_datetime(csv_df.index)
     try:
-        return list(csv_df.loc[start_date:end_date]["prices"])
+        return list(csv_df.loc[start_date:end_date][col])
     except KeyError:
         # is first column after time column numeric?
-        if is_numeric_dtype(csv_df.loc[start_date:end_date].iloc[:, 0]):
+        if not required:
             # if so, we assume that is the price column even though its not named "prices"
-            warnings.warn("Prices data file does not contain column named 'prices'. Instead the "
-                          f"first column named {csv_df.iloc[:, 0].name} is used")
-            return list(csv_df.loc[start_date:end_date].iloc[:, 0])
+            warnings.warn(f"Prices data file does not contain column named '{col}', "
+                          f" but is not required.")
+            return None
         else:
-            raise Exception("Prices data file does not contain column named 'prices' and the "
-                            "second column is not numeric, which would be used otherwise.")
+            raise KeyError(f"Prices data file does not contain column named '{col}'")
 
 
 def insert_market_maker_id(dirpath):
@@ -55,7 +55,7 @@ def insert_market_maker_id(dirpath):
         dirpath.joinpath('actors.json').write_text(json.dumps(d, indent=2))
 
 
-def check_data_present(loads_path, pv_path, price_path):
+def check_data_present(loads_path, pv_path, ev_path, price_path):
     """Returns a custom error message if load, pv or price data files are missing."""
     for path in [loads_path, pv_path, price_path]:
         if len(os.listdir(path)) == 0:
@@ -97,7 +97,7 @@ def map_actors(config_df):
     """Helper function to build power network from community config json."""
     map = {}
     for i in config_df.index:
-        map[config_df["prosumerName"][i]] = config_df["gridLocation"][i]
+        map[config_df["prosumerName"][i]] = str(config_df["gridLocation"][i])
     return map
 
 
@@ -142,6 +142,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     csv_peak = {}
     battery_cap = 0
     init_soc = 0.5
+    ev_param = {}
     for col, info_dict in asset_dict.items():
         # if info_dict is empty
         if not info_dict:
@@ -150,9 +151,32 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
             battery_cap = info_dict["capacityKwh"]
             init_soc = info_dict["initialSOC"]
             continue
-        csv_df = pd.read_csv(info_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=True,
+        csv_df = pd.read_csv(info_dict["csv"], sep=',', parse_dates=['Time'], dayfirst=False,
                              index_col=['Time'])
-        df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, 0]
+
+        # Make sure dates are parsed
+        csv_df.index = pd.to_datetime(csv_df.index)
+        if csv_df.index[-1] < end_date:
+            raise IndexError(f"Provided input data ({csv_df.index[-1]} + {int(60 / ts_hour)} min) "
+                             f"ends before configured ending time {end_date} resulting of config"
+                             f"parameters:"
+                             f"start_date + (nb_ts + horizon + 1) * (60 / ts_hour) min.")
+
+        if col == "ev":
+            ev_cap = info_dict.get("capacityKwh")
+            if ev_cap is None:
+                # assume max demand + a soc buffer of 20%
+                ev_cap = max(csv_df["consumption"]) * 1.2
+            ev_param = {
+                "ev_cap": ev_cap,
+                "ev_initial_soc": info_dict.get("initialSOC", 0.5),
+                "ev_available": False
+            }
+            df.loc[:, "ev_avail"] = csv_df.loc[start_date:end_date].loc[:, "availability"]
+            df.loc[:, "ev_demand"] = csv_df.loc[start_date:end_date].loc[:, "consumption"]
+            continue
+
+        df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, info_dict["col_index"] - 1]
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
         df[col] = df[col] / csv_peak[col]
@@ -160,13 +184,17 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     df = basic_strategy(df, csv_peak, ps, ls)
 
     return Actor(actor_id, df, environment, ls=1, ps=1, battery_cap=battery_cap,
-                 battery_initial_soc=init_soc, strategy=strategy, pricing_strategy=pricing_strategy)
+                 battery_initial_soc=init_soc, strategy=strategy, pricing_strategy=pricing_strategy,
+                 **ev_param)
 
 
-def create_scenario_from_config(config_json, network_path, loads_dir_path, data_dirpath=None,
-                                weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
-                                start_date="2016-01-01", plot_network=False,
-                                price_filename="basic_prices.csv", ps=None, ls=None):
+def create_scenario_from_config(
+        config_json, network_path, loads_dir_path, data_dirpath=None,
+        buy_sell_function=None,
+        weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
+        start_date=None, plot_network=False,
+        price_filename="basic_prices.csv", mm_buy_col="buy_prices", mm_sell_col="sell_prices",
+        ps=None, ls=None):
     """
     Create Scenario object while creating Actor objects from config_json referencing to time series
      data in data_path. The Actors are further mapped to a defined network.
@@ -185,6 +213,10 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     :param plot_network: Boolean value to indicate whether the network should be plotted,
         defaults to False
     :param price_filename: Name of the price csv file, defaults to "basic_prices.csv"
+    :param mm_buy_col: Column name of Market Maker buying prices of file "price_filename",
+        defaults to buy_prices
+    :param mm_sell_col: Column name of Market Maker selling prices of file "price_filename",
+        defaults to sell_prices
     :param ps: PV scalar, defaults to None
     :param ls: Load scalar, defaults to None
     :return: Scenario object
@@ -192,10 +224,11 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     # Extend paths
     loads_path = data_dirpath.joinpath("load")
     pv_path = data_dirpath.joinpath("pv")
+    ev_path = data_dirpath.joinpath("ev")
     price_path = data_dirpath.joinpath("price")
 
     # check for data
-    check_data_present(loads_path, pv_path, price_path)
+    check_data_present(loads_path, pv_path, ev_path, price_path)
 
     # Parse json
     config_df = read_config_json(config_json)
@@ -206,11 +239,25 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
     if plot_network is True:
         pn.plot()
 
+    if start_date is None:
+        start_date = "2016-01-01"
+        warnings.warn(f"No start date was given, use default date {start_date}.")
     start_date, end_date = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
-    buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date)
+    try:
+        buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
+                                   mm_buy_col, required=True)
+        sell_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
+                                    mm_sell_col, required=False)
+    except Exception as e:
+        buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
+                                   "prices", required=True)
+        sell_prices = None
+        warnings.warn(f"{e}: ... but found default column 'prices'.")
+
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
-    scenario = Scenario(None, None, buy_prices=buy_prices)
+    scenario = Scenario(None, None, buy_prices=buy_prices, sell_prices=sell_prices,
+                        buy_to_sell_function=buy_sell_function)
     for i, actor_row in config_df.iterrows():
         file_dict = {}
         asset_dict = {}
@@ -229,6 +276,13 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
                             f"Actor{actor_row['prosumerName']} has multiple battery devices.")
                     device.pop('deviceType')
                     asset_dict['battery'] = device
+                elif device['deviceType'] == 'ev':
+                    if 'ev' in asset_dict.keys():
+                        warnings.warn(
+                            f"Actor{actor_row['prosumerName']} has multiple ev devices.")
+                    file_dict[device['deviceType']] = device['deviceID']
+                    device.pop('deviceType')
+                    asset_dict['ev'] = device
                 else:
                     file_dict[device['deviceType']] = device['deviceID']
 
@@ -244,14 +298,18 @@ def create_scenario_from_config(config_json, network_path, loads_dir_path, data_
                 warnings.warn(f"Actor{actor_row['prosumerName']} has multiple solar devices.")
             asset_dict['pv'] = {"csv": pv_path.joinpath(file_dict['solar']), "col_index": 1}
 
+        # EV
+        if 'ev' in file_dict:
+            asset_dict['ev'].update({"csv": ev_path.joinpath(file_dict['ev'])})
+
         # Prices
         asset_dict['price'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
         # actors are automatically added to the scenario environment
         _ = create_actor_from_config(actor_row['prosumerName'], scenario.environment,
                                      asset_dict=asset_dict, start_date=start_date,
                                      nb_ts=nb_ts, horizon=horizon, ts_hour=ts_hour, ps=ps, ls=ls,
-                                     strategy=actor_row['strategy'],
-                                     pricing_strategy=actor_row["pricing_strategy"])
+                                     strategy=actor_row.get('strategy'),
+                                     pricing_strategy=actor_row.get("pricing_strategy"))
         print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{file_dict["load"]}"')
 
     actor_map = map_actors(config_df)
@@ -303,12 +361,15 @@ def main(project_dir, data_dir):
     sc = create_scenario_from_config(
         config_json_path,
         network_path,
+        weight_factor=cfg.weight_factor,
         data_dirpath=data_dirpath,
+        buy_sell_function=lin_parameter_function(cfg.buy_sell_lin_param),
+        start_date=cfg.start_date,
         nb_ts=cfg.nb_ts,
         horizon=cfg.horizon,
         ts_hour=cfg.ts_per_hour,
         loads_dir_path=loads_dir_path,
-        ps=1,
+        ps=None,
         ls=None
     )
     sc.save(cfg.path, cfg.data_format)
@@ -317,6 +378,11 @@ def main(project_dir, data_dir):
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_participant_data()
+
+
+def lin_parameter_function(p):
+    assert len(p) == 2
+    return lambda x: p[0] + x * p[1]
 
 
 if __name__ == "__main__":

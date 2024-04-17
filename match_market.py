@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 from argparse import ArgumentParser
+from time import time
 
 from simply import market, market_2pac, market_fair
 from simply.scenario import load, create_random, Scenario
@@ -66,20 +67,24 @@ def main(cfg: Config):
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_participant_data()
+        sc.plot_prices()
 
     # generate requested market
     if "pac" in cfg.market_type:
         m = market_2pac.TwoSidedPayAsClear(network=sc.power_network)
     elif "fair" in cfg.market_type:
-        m = market_fair.BestMarket(network=sc.power_network)
+        m = market_fair.BestMarket(network=sc.power_network,
+                                   disputed_matching=cfg.disputed_matching)
     else:
         # default
-        m = market.Market(network=sc.power_network)
+        m = market.Market()
 
     sc.add_market(m)
-    for _ in range(cfg.nb_ts):
+    exec_start = time()
+    for t in range(cfg.nb_ts):
         # actors calculate strategy based market interaction with the market maker
         sc.create_strategies()
+        print("Actors finished scheduling created")
 
         # orders are generated based on the flexibility towards the planned market interaction
         # and a pricing scheme. Orders are matched at the end
@@ -89,14 +94,26 @@ def main(cfg: Config):
         sc.next_time_step()
 
         if cfg.show_prints:
-            print("Matches of bid/ask ids: {}".format(m.matches))
-            print(
-                "\nCheck individual traded energy blocks (splitted) and price at market level"
-            )
+            print(f"Cleared Volume: {round(m.cleared_volume[cfg.start + t], cfg.round_decimal)}")
+
+        # save/update additional actor results every at least 10 time steps
+        if cfg.save_csv and t % 10 == 0:
+            sc.save_additional_results(sc.market.csv_path)
+
+    print(f"Execution time was: {time()-exec_start} s")
 
     if cfg.show_prints:
+        print("Matches of bid/ask ids: {}".format(m.matches))
+        print(
+            "\nCheck individual traded energy blocks (splitted) and price at market level"
+        )
         print("\nTraded energy volume and price at actor level")
         print(summerize_actor_trading(sc))
+
+    # save additional results
+    if cfg.save_csv:
+        sc.save_additional_results(sc.market.csv_path)
+    print(f"Results saved to {sc.market.csv_path}")
 
     return sc
 

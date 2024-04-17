@@ -2,6 +2,8 @@ import warnings
 from configparser import ConfigParser, MissingSectionHeaderError
 from numpy import linspace
 from pathlib import Path
+from math import log
+import json
 
 
 class Config:
@@ -77,13 +79,12 @@ class Config:
         # scenario
         # --------------------------
         self.project_path = Path(project_dir)
-        self.results_path = parser.get("default", "results_path", fallback=str(self.project_path /
-                                                                               "market_results"))
-        self.results_path = Path(self.results_path)
         self.scenario_path = parser.get("default", "scenario_path", fallback=str(self.project_path /
                                                                                  "scenario"))
         self.scenario_path = Path(self.scenario_path)
         self.data_format = parser.get("default", "data_format", fallback="json")
+        self.buy_sell_lin_param = json.loads(
+            parser.get("default", "buy_sell_lin_param", fallback="[0, 1]"))
         # load existing scenario
         self.load_scenario = parser.getboolean("default", "load_scenario", fallback=False)
 
@@ -95,12 +96,15 @@ class Config:
 
         # Tolerance value for assertions, comparison and so on
         self.EPS = parser.getfloat("default", "EPS", fallback=1e-6)
+        self.round_decimal = round(log(1 / self.EPS, 10))
 
         # --------------------------
         # market
         # --------------------------
         # market type to be use
         self.market_type = parser.get("default", "market_type", fallback="default").lower()
+        self.disputed_matching = parser.get("default", "disputed_matching",
+                                            fallback="grid_fee").lower()
         # reset market after each interval (discard unmatched orders)
         self.reset_market = parser.getboolean("default", "reset_market", fallback=True)
         # size of energy units to be traded individually
@@ -109,8 +113,12 @@ class Config:
         self.weight_factor = parser.getfloat("default", "weight_factor", fallback=0.03)
         # default grid_fee to be used by market maker
         self.default_grid_fee = parser.getfloat("default", "default_grid_fee", fallback=0)
+        # local grid fee to be used
+        self.local_grid_fee = parser.getfloat("default", "local_grid_fee", fallback=0)
 
         # time related
+        # start date of time series data
+        self.start_date = parser.get("default", "start_date", fallback="2016-01-01")
         # start time step
         self.start = parser.getint("default", "start", fallback=0)
         # number of timesteps in simulation
@@ -134,7 +142,14 @@ class Config:
         # --------------------------
         # show various plots
         self.show_plots = parser.getboolean("default", "show_plots", fallback=False)
+        # print warning info to console
+        self.verbose = parser.getboolean("default", "verbose", fallback=False)
         # print debug info to console
+        self.debug = parser.getboolean("default", "debug", fallback=False)
+        # print intermediate results info to console
         self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
         # save orders and matching results to csv files
         self.save_csv = parser.getboolean("default", "save_csv", fallback=False)
+        self.results_path = parser.get("default", "results_path", fallback=str(self.project_path /
+                                                                               "market_results"))
+        self.results_path = Path(self.results_path)

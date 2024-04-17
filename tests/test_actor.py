@@ -4,7 +4,7 @@ import pytest
 
 from simply.actor import Actor, create_random, Order
 from simply.battery import Battery
-from simply.market_fair import BestMarket
+from simply.market import Market
 from simply.power_network import PowerNetwork
 import simply.config as cfg
 import networkx as nx
@@ -44,7 +44,8 @@ class TestActor:
 
         scenario = Scenario(pn, None, buy_prices=np.tile(test_prices, 10), steps_per_hour=4,
                             sell_prices=np.tile(test_prices, 10)*SELL_MULT)
-        scenario.add_market(BestMarket(pn))
+        scenario.add_market(Market(pn))
+
         return scenario
 
     test_schedule = [0.164, 0.077, 0.019, -0.038, -0.281, -0.054, -0.814, -1.292, -1.301, -1.303,

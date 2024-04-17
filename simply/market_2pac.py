@@ -37,7 +37,7 @@ class TwoSidedPayAsClear(Market):
         # order orders by price
         bids = self.get_bids().sort_values(["price", "energy"], ascending=False)
         asks = self.get_asks().sort_values(["price", "energy"], ascending=True)
-        if show:
+        if show and cfg.config.show_plots:
             plot_merit_order(bids, asks)
 
         if len(bids) == 0 or len(asks) == 0:
@@ -116,7 +116,7 @@ class TwoSidedPayAsClear(Market):
             bid_cluster = match['bid_cluster']
             ask_cluster = match['ask_cluster']
 
-        if bid_cluster != ask_cluster:
+        if cfg.config.debug and bid_cluster != ask_cluster:
             warnings.warn('"bid_cluster" and "ask_cluster" are not equal.\n'
                           'Pay-as-Clear Market ignores clusters. '
                           f'Single, fixed grid fee will be used: {self.grid_fee_matrix}')

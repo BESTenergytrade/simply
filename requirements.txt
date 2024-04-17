@@ -4,3 +4,4 @@ pandas
 pytest
 pathlib
 numpy
+pydot
