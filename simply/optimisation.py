@@ -26,16 +26,17 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
         sell_prices[i] = df_prices.iat[i, 2]
 
     # other parameters
-    time_interval=15 # minutes per time step, can be obtained using datetime functions from input csv-files
-    grid_fee = 0.0 #0.09 # grid fee for buying electricity, see config.cfg
-    grid_connection_capacity = 20 # if no upper bound is provided the problem turns out to be unbounded
+    time_interval = 15  # minutes per time step, can be obtained using datetime functions from input csv-files
+    grid_fee = 0.0  # 0.09 # grid fee for buying electricity, see config.cfg
+    grid_connection_capacity = 20  # if no upper bound is provided the problem turns out to be unbounded
 
     # PYOMO OPTIMISATION MODEL
     model = ConcreteModel()
     model.charging_power = Var(t, bounds=(0, capacity * max_c_rate))
     model.discharging_power = Var(t, bounds=(0, capacity * max_c_rate))
     model.stored_energy = Var(t, bounds=(0, capacity))
-    model.bi_charge = Var(t, within=Binary)   # 0/ 1 for distinguishing between charging / discharging
+    # 0/ 1 for distinguishing between charging / discharging
+    model.bi_charge = Var(t, within=Binary)
     model.power_from_grid = Var(t, bounds=(0, grid_connection_capacity))
     model.power_to_grid = Var(t, bounds=(0, grid_connection_capacity))
     model.cash_flow = Var(t)
@@ -48,7 +49,7 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
             model.power_from_grid[i] + pv[i] + model.discharging_power[i]
             - load[i] - model.power_to_grid[i] - model.charging_power[i])
 
-    #component energy storage
+    # component energy storage
     model.energy_balance_storage = ConstraintList()
     for i in range(len(t) - 1):
         # constraint
@@ -58,7 +59,7 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
 
     model.start_storage = Constraint(
         expr=model.stored_energy[0] ==
-             soc_initial * capacity)
+        soc_initial * capacity)
 
     # optional: equal soc at first and last time step
     model.start_end_storage = Constraint(
@@ -81,7 +82,7 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
             model.discharging_power[i] <= (1 - model.bi_charge[i]) * capacity * max_c_rate)
 
     # costs to be used in objective function
-    model.cash_flow_equation = ConstraintList() #
+    model.cash_flow_equation = ConstraintList()
     for i in t:
         model.cash_flow_equation.add(
             model.cash_flow[i] ==
@@ -91,12 +92,12 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
     model.obj = Objective(
         expr=sum(model.cash_flow[i] for i in t), sense=maximize)
 
-    #chose solver and solver-specific options
+    # chose solver and solver-specific options
     # opt = SolverFactory('glpk')
     # opt.options['mipgap'] = 1e-3    # solver option for GLPK: relative gap, default: 0.0
     # opt.options['tmlim'] = 60*30    # solver option for GLPK: timelimit in seconds
     opt = SolverFactory('cbc')
-    opt.options['seconds'] =60*30   # solver option for CBC: timelimit in seconds
+    opt.options['seconds'] = 60*30   # solver option for CBC: timelimit in seconds
 
     result_obj = opt.solve(model, tee=True)  # solve the problem
     # model.pprint()                          # print results in run terminal
@@ -105,10 +106,10 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
     # calculate objective for result output
     objective = sum(model.cash_flow[i].value for i in t)
     return objective, pd.DataFrame({
-    #    "Time": [df_actor.iat[i, 0] for i in t],
+        #    "Time": [df_actor.iat[i, 0] for i in t],
         "load": load,
         "pv": pv,
-    #    "sell_prices": sell_prices,
+        #    "sell_prices": sell_prices,
         "buy_prices": buy_prices,
         "from_grid": [model.power_from_grid[i].value for i in t],
         "to_grid": [model.power_to_grid[i].value for i in t],
