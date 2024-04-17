@@ -11,21 +11,17 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
     # parametrisation of battery specified in simply/battery.py
     # capacity=10, max_c_rate=1, soc_initial=0.5
     # TODO battery-efficiency ?
+    # TODO electric vehicle parameter
 
-    # generate single time series vectors
-    t = [0] * len(df_actor)
-    load = [0] * len(df_actor)
-    pv = [0] * len(df_actor)
-    buy_prices = [0] * len(df_prices)
-    sell_prices = [0] * len(df_prices)
-
-    # fill time series vectors with data from df
-    for i in range(len(df_actor)):
-        t[i] = i
-        load[i] = df_actor.iat[i, 1]
-        pv[i] = df_actor.iat[i, 2]
-        buy_prices[i] = df_prices.iat[i, 1]
-        sell_prices[i] = df_prices.iat[i, 2]
+    # single time series vectors
+    t = list(range(len(df_actor)))
+    load = df_actor.loc[:, "load"].to_list()
+    pv = df_actor.loc[:, "pv"].to_list()
+    buy_prices = df_prices.loc[:, "all_buy_prices"].to_list()
+    sell_prices = df_prices.loc[:, "all_sell_prices"].to_list()
+    # TODO add electric vehicle
+    ev_avail = [1] * len(df_prices)
+    ev_demand = [0] * len(df_prices)
 
     # other parameters
     # TODO minutes per time step can be obtained using datetime functions from input csv-files
@@ -111,10 +107,10 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
     # calculate objective for result output
     objective = sum(model.cash_flow[i].value for i in t)
     return objective, pd.DataFrame({
-        #    "Time": [df_actor.iat[i, 0] for i in t],
+        "Time": [df_actor.iat[i, 0] for i in t],
         "load": load,
         "pv": pv,
-        #    "sell_prices": sell_prices,
+        "sell_prices": sell_prices,
         "buy_prices": buy_prices,
         "from_grid": [model.power_from_grid[i].value for i in t],
         "to_grid": [model.power_to_grid[i].value for i in t],
