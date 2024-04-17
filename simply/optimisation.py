@@ -1,7 +1,6 @@
 # REQUIREMENTS# pyomo package needs to be installed
 # a solver needs to be installed: CBC or GLPK are open source; for CBC
-# coppy cbc_solver (\\FS01\RL-Institut\05_Temp\Andreas\Pyomo\cbc_solver)
-# in the directory where the repo clone is
+# coppy cbc_solver in the directory where the repo clone is
 
 import pyomo.environ as pyo
 import pandas as pd
