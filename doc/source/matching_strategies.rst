@@ -45,7 +45,7 @@ Grid-fees are calculated for each order using the following grid fee matrix:
 Methods to Enter Grid Fee Matrix
 --------------------------------
 
-There are two primary methods to input a grid fee matrix into the Simply Simulation:
+There are two methods to define a grid fee matrix for the simply simulation:
 
 1. Providing a Complete Grid Fee Matrix
 2. Building a Grid Fee Matrix from Configuration Files
