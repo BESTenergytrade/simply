@@ -112,9 +112,9 @@ Composition from Config Files
 
 The grid fee matrix can be composed by reading entries from configuration files using the following attributes:
 
-- ``default_grid_fee``: Default grid fee used by the market maker.
-- ``local_grid_fee``: Local grid fee to be used.
-- ``weight_factor``: Factor describing the relationship of grid fee to cumulative power network edge weights.
+- ``default_grid_fee``: Default grid fee applied for trades with the market maker
+- ``local_grid_fee``: Local grid fee applied for trades within a cluster
+- ``weight_factor``: Factor describing the relationship of grid fee to cumulative power network edge weights (see description above)
 
 Steps to Build Grid Fee Matrix
 """"""""""""""""""""""""""""""
