@@ -82,7 +82,7 @@ Units
 Weight Factor
 """""""""""""
 
-- The weight factor describes the relationship between grid fee and cumulative power network edge weights.
+- The weight factor describes the relationship between grid fee and cumulative power network edge weight between two nodes in the network. The cumulative weight is the sum of all edge weights along the shortest path in the network between those nodes. If there are multiple nodes per cluster, nodes of one cluster have equivalent cumulative weights to all nodes of of another cluster.
 
 Example JSON Grid Fee Matrix
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
