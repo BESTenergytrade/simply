@@ -56,27 +56,25 @@ Providing an Already Complete Grid Fee Matrix
 ---------------------------------------------
 
 Format: The grid fee matrix should be provided in a structured format such as JSON or CSV.
-~~~~~~~
 
 Placement: Place the complete grid fee matrix in the designated input location within the simulation environment, as specified in the simulation documentation or 
-~~~~~~~~~~
 configuration settings.
 
 Requirements
 ~~~~~~~~~~~~
-   Names/Identifiers
-   """""""""""""""""
-      - Each row and column must be labeled with unique identifiers representing different clusters or nodes.
-      - Example Identifiers:
-        - **Network Lines:** line_1, line_2, line_n
-        - **Nodes or Clusters:** node_A, node_B, node_C
-   Units
-   """""
-      - Specify consistent units for both row and column headers to avoid confusion (e.g., USD, EUR).
+Names/Identifiers
+"""""""""""""""""
+   - Each row and column must be labeled with unique identifiers representing different clusters or nodes.
+   - Example Identifiers:
+      - **Network Lines:** line_1, line_2, line_n
+      - **Nodes or Clusters:** node_A, node_B, node_C
+Units
+"""""
+   - Specify consistent units for both row and column headers to avoid confusion (e.g., USD, EUR).
 
-   Weight Factor
-   """""""""""""
-      - The weight factor describes the relationship between grid fee and cumulative power network edge weight between two nodes in the network. The cumulative weight is the sum of all edge weights along the shortest path in the network between those nodes. If there are multiple nodes per cluster, nodes of one cluster have equivalent cumulative weights to all nodes of another cluster.
+Weight Factor
+"""""""""""""
+   - The weight factor describes the relationship between grid fee and cumulative power network edge weight between two nodes in the network. The cumulative weight is the sum of all edge weights along the shortest path in the network between those nodes. If there are multiple nodes per cluster, nodes of one cluster have equivalent cumulative weights to all nodes of another cluster.
 
 Example JSON Grid Fee Matrix
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
