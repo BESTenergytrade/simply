@@ -45,48 +45,41 @@ Grid-fees are calculated for each order using the following grid fee matrix:
 Methods to Enter Grid Fee Matrix
 --------------------------------
 
+Entering a grid fee matrix into a simulation is essential for accurate cost calculations related to using the grid. Ensure proper format, identifiers, units, and values for the rate matrix, whether complete or created from config file entries.
+
 There are two methods to define a grid fee matrix for the simply simulation:
 
-1. Providing a Complete Grid Fee Matrix
-2. Building a Grid Fee Matrix from Configuration Files
+1. [Providing a Complete Grid Fee Matrix](#Providing-a-Complete-Grid-Fee-Matrix)
+2. [Building a Grid Fee Matrix from Configuration Files](#Building-a-Grid-Fee-Matrix-from-Configuration-Files)
 
 Providing an Already Complete Grid Fee Matrix
 ---------------------------------------------
 
-Format
-~~~~~~
+Format: - The grid fee matrix should be provided in a structured format such as JSON or CSV.
+~~~~~~~
 
-- The grid fee matrix should be provided in a structured format such as JSON or CSV.
-
-Placement
-~~~~~~~~~
-
-- Place the complete grid fee matrix in the designated input location within the simulation environment, as specified in the simulation documentation or configuration settings.
+Placement: - Place the complete grid fee matrix in the designated input location within the simulation environment, as specified in the simulation documentation or 
+~~~~~~~~~~
+configuration settings.
 
 Requirements
 ~~~~~~~~~~~~
-
 Names/Identifiers
 """""""""""""""""
-
 - Each row and column must be labeled with unique identifiers representing different clusters or nodes.
 - Example Identifiers:
   - **Network Lines:** line_1, line_2, line_n
   - **Nodes or Clusters:** node_A, node_B, node_C
-
 Units
 """""
-
 - Specify consistent units for both row and column headers to avoid confusion (e.g., USD, EUR).
 
 Weight Factor
 """""""""""""
-
-- The weight factor describes the relationship between grid fee and cumulative power network edge weight between two nodes in the network. The cumulative weight is the sum of all edge weights along the shortest path in the network between those nodes. If there are multiple nodes per cluster, nodes of one cluster have equivalent cumulative weights to all nodes of of another cluster.
+- The weight factor describes the relationship between grid fee and cumulative power network edge weight between two nodes in the network. The cumulative weight is the sum of all edge weights along the shortest path in the network between those nodes. If there are multiple nodes per cluster, nodes of one cluster have equivalent cumulative weights to all nodes of another cluster.
 
 Example JSON Grid Fee Matrix
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 :: 
 
    {
@@ -116,12 +109,6 @@ The grid fee matrix can be composed by reading entries from configuration files 
 - ``local_grid_fee``: Local grid fee applied for trades within a cluster
 - ``weight_factor``: Factor describing the relationship of grid fee to cumulative power network edge weights (see description above)
 
-Steps to Build Grid Fee Matrix
-""""""""""""""""""""""""""""""
-
-1. Retrieve ``default_grid_fee``, ``local_grid_fee``, and ``weight_factor`` values from the configuration file.
-2. Use these values to calculate or define the grid fee matrix entries.
-
 Example Configuration Entries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -137,7 +124,6 @@ Example Configuration Entries
    # factor describing the relation of grid fee to cumulative power network edge weights
    weight_factor = 0.03
 
-Entering a grid fee matrix into a simulation is essential for accurate cost calculations related to using the grid. Ensure proper format, identifiers, units, and values for the rate matrix, whether complete or created from config file entries.
 
 Bids and Asks
 ---------------
