@@ -43,6 +43,7 @@ def time_it(function, timers={}):
     return sorted_timer
 
 
+
 class BestCluster:
     """Class which keeps track of attributes resolving around a cluster and
     implements functionality to keep the best algorithm more readable.
