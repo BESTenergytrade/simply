@@ -49,10 +49,9 @@ Entering a grid fee matrix into a simulation is essential for accurate cost calc
 
 There are two methods to define a grid fee matrix for the simply simulation:
 
-1. :ref:`Providing a Complete Grid Fee Matrix`
-2. :ref:`Building a Grid Fee Matrix from Configuration Files`
+1. Providing a Complete Grid Fee Matrix
+2. Building a Grid Fee Matrix from Configuration Files
 
-.. _Providing a Complete Grid Fee Matrix:
 
 Providing an Already Complete Grid Fee Matrix
 ---------------------------------------------
@@ -99,7 +98,6 @@ The weight factor describes the relationship between grid fee and cumulative pow
      ]
    }
 
-.. _Building a Grid Fee Matrix from Configuration Files:
 
 Building a Grid Fee Matrix from Config Files
 --------------------------------------------
