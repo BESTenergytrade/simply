@@ -13,8 +13,10 @@ def time_it(function, timers={}):
 
     :param function: function do be decorated
     :type function: function
+    
     :param timers: storage for cumulated time and call number
     :type timers: dict
+    
     :return: decorated function or timer if given function is None
     :rtype function or dict
 
