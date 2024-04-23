@@ -57,19 +57,16 @@ There are two methods to define a grid fee matrix for the simply simulation:
 Providing an Already Complete Grid Fee Matrix
 ---------------------------------------------
 
-Format
-^^^^^^
+**Format:**
 The grid fee matrix should be provided in a structured format such as JSON or CSV.
 
-Placement
-^^^^^^^^^
+**Placement:**
 Place the complete grid fee matrix in the designated input location within the simulation environment, as specified in the simulation documentation or configuration settings.
 
 Requirements
 ------------
 
-Names/Identifiers
-~~~~~~~~~~~~~~~~~
+**Names/Identifiers:**
 Each row and column must be labeled with unique identifiers representing different clusters or nodes.
 
 **Example Identifiers:**
@@ -77,16 +74,13 @@ Each row and column must be labeled with unique identifiers representing differe
 - **Network Lines:** line_1, line_2, line_n
 - **Nodes or Clusters:** node_A, node_B, node_C
 
-Units
-~~~~~
+**Units:**
 Specify consistent units for both row and column headers to avoid confusion (e.g., USD, EUR).
 
-Weight Factor
-~~~~~~~~~~~~~
+**Weight Factor:**
 The weight factor describes the relationship between grid fee and cumulative power network edge weight between two nodes in the network. The cumulative weight is the sum of all edge weights along the shortest path in the network between those nodes. If there are multiple nodes per cluster, nodes of one cluster have equivalent cumulative weights to all nodes of another cluster.
 
-Example JSON Grid Fee Matrix
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Example JSON Grid Fee Matrix**
 
 .. code-block:: json
 
@@ -110,16 +104,15 @@ Example JSON Grid Fee Matrix
 Building a Grid Fee Matrix from Config Files
 --------------------------------------------
 
-Composition from Config Files
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Composition from Config Files**
+
 The grid fee matrix can be composed by reading entries from configuration files using the following attributes:
 
 - ``default_grid_fee``: Default grid fee applied for trades with the market maker
 - ``local_grid_fee``: Local grid fee applied for trades within a cluster
 - ``weight_factor``: Factor describing the relationship of grid fee to cumulative power network edge weights (see description above)
 
-Example Configuration Entries
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Example Configuration Entries**
 
 .. code-block:: python
 
