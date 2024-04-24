@@ -43,9 +43,11 @@ class Config:
     :param cfg_file: configuration file path with the attributes listed above.
     :type cfg_file: str
     :keyword cfg_file: start
+    :param project_dir: directory path for the project. If not provided, default project_dir ./projects/example_projects/example_project is used.
+    :type project_dir: str
     """
 
-    def __init__(self, cfg_file, project_dir):
+    def __init__(self, cfg_file, project_dir="./projects/example_projects/example_project"):
         global config
         config = self
         global parser
@@ -61,7 +63,7 @@ class Config:
             warnings.warn("No project_dir was provided. Default project_dir ./projects/"
                           "example_projects/example_project is used")
             project_dir = "projects/example_projects/example_project"
-        elif not Path(project_dir):
+        elif not Path(project_dir).is_dir():
             warnings.warn(f"{project_dir} was provided as directory, but this directory does not "
                           f"exist. Default project_dir ./projects/example_project will be used.")
             project_dir = "projects/example_projects/example_project"
