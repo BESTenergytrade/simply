@@ -24,12 +24,11 @@ class StubClass:
 
 class TestActor:
     df = pd.DataFrame(np.random.rand(24, 4), columns=["load", "pv", "price", "schedule"])
-    cfg.Config("", "")
-
     # Sell prices are higher than buy_prices. This way the MarketMaker makes a profit
 
     @pytest.fixture()
     def scenario(self):
+        cfg.Config("")
         nw = nx.Graph()
         nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
         pn = PowerNetwork("", nw, weight_factor=1)
