@@ -9,6 +9,11 @@ import pytest
 import pandas as pd
 
 
+@pytest.fixture
+def reset_config():
+    return cfg.Config("")
+
+
 class TestBestMarket:
     cfg.Config("", "")
     cfg.config.energy_unit = 0.1
@@ -17,7 +22,7 @@ class TestBestMarket:
     pn = PowerNetwork("", nw, weight_factor=1)
     scenario = Scenario(None, None, [])
 
-    def test_basic(self):
+    def test_basic(self, reset_config):
         """Tests the basic functionality of the BestMarket object to accept bids and asks via the
         accept_order method and correctly match asks and bids when the match method is called."""
         m = BestMarket(time_step=0, network=self.pn)
@@ -41,7 +46,7 @@ class TestBestMarket:
         assert matches[0]["energy"] == pytest.approx(1)
         assert matches[0]["price"] == pytest.approx(1)
 
-    def test_prices_network(self):
+    def test_prices_network(self, reset_config):
         """Tests that the prices of the orders are correctly affected by the weights of
         the PowerNetwork."""
         # test prices with a given power network
@@ -103,7 +108,7 @@ class TestBestMarket:
         assert matches[0]["energy"] == pytest.approx(1)
         assert matches[0]["price"] == pytest.approx(4)
 
-    def test_prices_matrix(self):
+    def test_prices_matrix(self, reset_config):
         # test prices with a given grid fee matrix
         # example: cost 1 for trade between clusters
         m = BestMarket(time_step=0, grid_fee_matrix=[[0, 1], [1, 0]])
@@ -165,7 +170,7 @@ class TestBestMarket:
         assert matches[0]["energy"] == pytest.approx(1)
         assert matches[0]["price"] == pytest.approx(4)
 
-    def test_energy(self):
+    def test_energy(self, reset_config):
         """Tests that the amount of energy traded equals the maximum amount available that is
         less than or equal to the amount requested by the bid."""
         # different energies
@@ -183,7 +188,7 @@ class TestBestMarket:
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
 
-    def test_setting_order_id(self):
+    def test_setting_order_id(self, reset_config):
         # Check if matched orders retain original ID
         m = BestMarket(time_step=0, network=self.pn)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
@@ -194,7 +199,7 @@ class TestBestMarket:
         assert matches[0]["bid_id"] == "ID1"
         assert matches[0]["ask_id"] == "ID2"
 
-    def test_setting_id_market_maker(self):
+    def test_setting_id_market_maker(self, reset_config):
         # Check if matched orders retain original ID for selling or buying market makers
         m = BestMarket(time_step=0, network=self.pn)
         # Test asking market maker with order ID
@@ -221,7 +226,7 @@ class TestBestMarket:
         # maket maker does not have a cluster associated
         assert matches[0]['bid_cluster'] is None
 
-    def test_multiple(self):
+    def test_multiple(self, reset_config):
         """Tests that matches can be made which require multiple asks to satisfy one bid or multiple
         bids to satisfy one ask."""
         # multiple bids to satisfy one ask
@@ -248,7 +253,7 @@ class TestBestMarket:
         assert matches[2]["energy"] == pytest.approx(3)
         assert matches[3]["energy"] == pytest.approx(4)  # only 100 in bid
 
-    def test_match_ordering(self):
+    def test_match_ordering(self, reset_config):
         """Test to check that matching favors local orders in case of equal (adjusted) price."""
         m = BestMarket(time_step=0, network=self.pn)
         m.accept_order(Order(-1, 0, 2, None, 1, 4))
@@ -282,7 +287,7 @@ class TestBestMarket:
         # match cluster must be closest to bid cluster
         assert matches[0]['price'] == 5
 
-    def test_filter_large_orders(self):
+    def test_filter_large_orders(self, reset_config):
         """Test to check that very large orders are ignored."""
         m = BestMarket(time_step=0, network=self.pn)
         m.accept_order(Order(-1, 0, 2, None, 1, 4))
@@ -291,7 +296,7 @@ class TestBestMarket:
         # large ask is discarded, no match possible
         assert len(matches) == 0
 
-    def test_market_maker_orders(self):
+    def test_market_maker_orders(self, reset_config):
         """Test to check that market maker orders are not being ignored."""
         cfg.config.default_grid_fee = 2
         m = BestMarket(time_step=0, network=self.pn)
@@ -303,7 +308,7 @@ class TestBestMarket:
         assert matches[0]['energy'] == pytest.approx(1)
         assert matches[0]['price'] == pytest.approx(4)
 
-    def test_update_clearing_cluster(self):
+    def test_update_clearing_cluster(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         cfg.config.default_grid_fee = 0
@@ -359,7 +364,7 @@ class TestBestMarket:
         matched_energy = sum([match["energy"] for match in matches])
         assert matched_energy == pytest.approx(0.3)
 
-    def test_update_clearing_cluster_bug1(self):
+    def test_update_clearing_cluster_bug1(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         cfg.config.default_grid_fee = 0
@@ -388,7 +393,7 @@ class TestBestMarket:
         assert any([match["ask_actor"] == "seller_c1_5" and match["bid_cluster"] == 1
                     and match["price"] == 6 for match in matches])
 
-    def test_update_clearing_cluster_bug2_matched_twice(self):
+    def test_update_clearing_cluster_bug2_matched_twice(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         cfg.config.default_grid_fee = 0
@@ -417,7 +422,7 @@ class TestBestMarket:
         assert any([match["ask_actor"] == "seller_c1_5" and match["bid_cluster"] == 1
                     and match["price"] == 6 for match in matches])
 
-    def test_update_clearing_cluster_issue220(self):
+    def test_update_clearing_cluster_issue220(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         cfg.config.default_grid_fee = 0.01
@@ -492,7 +497,7 @@ class TestBestMarket:
                     found_match[i] = True
         assert all(found_match)
 
-    def test_update_clearing_cluster_issue220_b(self):
+    def test_update_clearing_cluster_issue220_b(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         cfg.config.default_grid_fee = 0.01
@@ -569,7 +574,7 @@ class TestBestMarket:
         assert all(found_match)
 
     '''
-    def test_update_clearing_cluster_issue220_c(self):
+    def test_update_clearing_cluster_issue220_c(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found.
 
@@ -609,7 +614,7 @@ class TestBestMarket:
         assert False
     '''
 
-    def test_disputed_matching_approaches(self):
+    def test_disputed_matching_approaches(self, reset_config):
         # Highest price match is selected
         # ToDo not implemented
         # m = BestMarket(self.pn, time_step=0, disputed_matching='price')
@@ -641,7 +646,7 @@ class TestBestMarket:
         matches = m.match()
         assert matches[0]['included_grid_fee'] == 0
 
-    def test_update_clusters(self):
+    def test_update_clusters(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         grid_fee_matrix = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
@@ -663,7 +668,7 @@ class TestBestMarket:
         print([match["ask_cluster"] for match in matches])
         assert all([match["price"] == matches[0]["price"] for match in matches])
 
-    def test_profit_and_new_matching(self):
+    def test_profit_and_new_matching(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         # Scenario 0 / Simple case
@@ -780,7 +785,7 @@ class TestBestMarket:
 
     # TODO revise
     '''
-    def test_single_loop_multiple_bid_clusters(self):
+    def test_single_loop_multiple_bid_clusters(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         cfg.config.energy_unit = 0.01
@@ -816,7 +821,7 @@ class TestBestMarket:
                             self.check_consistency(matches, grid_fee)
     '''
 
-    def test_single_loop_multiple_ask_clusters(self):
+    def test_single_loop_multiple_ask_clusters(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         cfg.config.energy_unit = 0.01
