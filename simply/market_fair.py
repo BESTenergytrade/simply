@@ -16,8 +16,7 @@ def time_it(function, timers={}):
     :param timers: storage for cumulated time and call number
     :type timers: dict
     :return: decorated function or timer if given function is None
-    :rtype function or dict
-
+    :rtype: function or dict
     """
     if function == "flush":
         keys = [key for key in timers.keys()]
