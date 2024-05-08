@@ -11,11 +11,13 @@ import pandas as pd
 
 @pytest.fixture
 def reset_config():
-    return cfg.Config("")
+    c = cfg.Config("")
+    cfg.config.energy_unit = 0.1
+    return c
 
 
 class TestBestMarket:
-    cfg.Config("", "")
+    cfg.Config("")
     cfg.config.energy_unit = 0.1
     nw = nx.Graph()
     nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
@@ -146,17 +148,17 @@ class TestBestMarket:
         assert matches[0]["price"] == pytest.approx(3)  # 2 + 1
 
         m.orders = m.orders[:0]
-        # match different clusters, even though there are orders from same cluster
-        m.accept_order(Order(1, 0, 2, 0, 1, 2))
-        m.accept_order(Order(-1, 0, 3, 0, 1, 2))
-        m.accept_order(Order(-1, 0, 4, 1, 1, 4))
-        # expected: match 2 and 4, even though 2 and 3 are in same cluster (worse conditions)
+        assert m.disputed_matching == 'grid_fee'
+        m.accept_order(Order(1, 0, 2, 0, 1, 2))  # ask
+        m.accept_order(Order(-1, 0, 3, 0, 1, 2))  # bid
+        m.accept_order(Order(-1, 0, 4, 1, 1, 4))  # bid
+        # expected: match 2 and 3, due to grid fee condition despite other possible match option
         matches = m.match()
         assert len(matches) == 1
         assert matches[0]["ask_actor"] == 2
-        assert matches[0]["bid_actor"] == 4
+        assert matches[0]["bid_actor"] == 3
         assert matches[0]["energy"] == pytest.approx(1)
-        assert matches[0]["price"] == pytest.approx(3)  # 2 + 1
+        assert matches[0]["price"] == pytest.approx(2)  # 2 + 0 vs. 2 + 1
 
         m.orders = m.orders[:0]
         # same price: favor local orders
@@ -314,8 +316,12 @@ class TestBestMarket:
         cfg.config.default_grid_fee = 0
         cfg.config.energy_unit = 0.1
         m = BestMarket(time_step=0, network=self.pn)
+        assert m.disputed_matching == "grid_fee"
 
-        # Case "seller_c1_5" matched within cluster
+        # Case 1: "seller_c1_5" (with lowest ask price) matched within own cluster
+        # - while "seller_c0_6" cannot be matches in cluster 1 due to a low bid price of 6 < 5.1 + 1
+        #   (see tests below)
+
         # add bids
         m.accept_order(Order(-1, 0, "buyer_c1_0", 1, 0.1, 10))  # will match with "seller_c1_5"
         m.accept_order(Order(-1, 0, "buyer_c1_1", 1, 0.1, 6))
@@ -324,33 +330,74 @@ class TestBestMarket:
         # add asks
         m.accept_order(Order(1, 0, "seller_c1_4", 1, 0.1, 6))
         m.accept_order(Order(1, 0, "seller_c1_5", 1, 0.1, 4))  # higher profit in Cluster 1
-        m.accept_order(Order(1, 0, "seller_c1_6", 0, 0.1, 5.1))  # is price setting for Cluster 0
+        m.accept_order(Order(1, 0, "seller_c0_6", 0, 0.1, 5.1))  # is price setting for Cluster 0
         matches = m.match()
 
         # seller_c1_5 (located in cluster 1) could match in
         # a) cluster 1 with buyer_c1_0 at clearing price 6 (due to price setting seller_c1_4)
-        # b) cluster 0 with buyer_c0_0 at clearing price 5.1 (due to price setting seller_c0_6)
+        # b) cluster 0 with seller_c0_2 at clearing price 5.1 (due to price setting seller_c0_6)
         #     adjusted_price is lower: 5 = 4 + 1 (due to additional fee)
-        # TODO currently there is a bug that seller_c0_6 is only price setting as it cannot be
-        #  matches in cluster 1 due to a low bid price of 6 < 5.1 + 1 (see tests below)
-        # Assert that match a) exisits within matches
+        # Assert that match a) exists within matches
         assert any([match["ask_actor"] == "seller_c1_5" and match["bid_cluster"] == 1
                     and match["price"] == 6 for match in matches])
+        # Assert seller_c0_6 is still matched within own cluster and is price setting
+        assert any([match["ask_actor"] == "seller_c0_6" and match["bid_cluster"] == 0
+                    and match["price"] == 5.1 for match in matches])
 
-        # Case "seller_c1_5" matched in other cluster with more profit
         # reset order list
         m.orders = m.orders[:0]
+        ############################################################################################
+        # Case 2: "seller_c1_5" (with lowest ask price) matched in own cluster due to dispute value
+        # - higher bid prices of buyer_c1_1 and buyer_c0_3 so seller_c0_6 could possibly also be
+        #   matched within cluster 1 including grid fees with as 9 > 5.1 + 1
+        # => as seller_c0_6 would be both price setting in cluster 0 (5.1) or cluster 1 (6.1) the
+        #    dispute value "grid_fee" favors the own cluster 1 without grid fees
+
         # add bids
-        m.accept_order(Order(-1, 0, "buyer_c1_0", 1, 0.1, 10))
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 1, 0.1, 9))   # matching Cluster 1 asks possible
-        m.accept_order(Order(-1, 0, "buyer_c0_2", 0, 0.1, 10))  # will match with "seller_c1_5"
-        m.accept_order(Order(-1, 0, "buyer_c0_3", 0, 0.1, 9))  # matching 2 energy units
+        m.accept_order(Order(-1, 0, "buyer_c1_0", 1, 0.1, 10))  # will match with "seller_c1_5"
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 1, 0.1, 9))   # matching Cluster 0 asks possible
+        m.accept_order(Order(-1, 0, "buyer_c0_2", 0, 0.1, 10))
+        m.accept_order(Order(-1, 0, "buyer_c0_3", 0, 0.1, 9))  # matching Cluster 1 asks possible
         # add asks
         m.accept_order(Order(1, 0, "seller_c1_4", 1, 0.1, 6))  # is price setting for Cluster 1
         m.accept_order(Order(1, 0, "seller_c1_5", 1, 0.1, 4))  # higher profit in other Cluster 0
-        m.accept_order(Order(1, 0, "seller_c1_6", 0, 0.1, 7.1))  # is price setting for Cluster 0
+        m.accept_order(Order(1, 0, "seller_c0_6", 0, 0.1, 5.1))  # is price setting for Cluster 0
         matches = m.match()
 
+        matched_energy = sum([match["energy"] for match in matches])
+        assert matched_energy == pytest.approx(0.3)
+        # Assert that seller_c0_6 is not matched in other cluster due to grid_fee dispute decision
+        assert any([match["ask_actor"] == "seller_c0_6" and match["bid_cluster"] == 0
+                    and match["price"] == 5.1 for match in matches])
+
+        # reset order list
+        m.orders = m.orders[:0]
+        ############################################################################################
+        # Case 3: "seller_c1_5" (with lowest ask price) matched in other cluster with more profit
+        # - higher bid prices of buyer_c1_1 and buyer_c0_3 => seller_c0_6 could possibly also be
+        #   matched within bid_cluster 1 including grid fees as 9 > 5.1 + 1
+
+        # add bids
+        m.accept_order(Order(-1, 0, "buyer_c1_0", 1, 0.1, 10))
+        m.accept_order(Order(-1, 0, "buyer_c1_1", 1, 0.1, 9))   # matching Cluster 0 asks possible
+        m.accept_order(Order(-1, 0, "buyer_c0_2", 0, 0.1, 10))  # will match with "seller_c1_5"
+        m.accept_order(Order(-1, 0, "buyer_c0_3", 0, 0.1, 9))  # matching with all asks possible
+        # add asks
+        m.accept_order(Order(1, 0, "seller_c1_4", 1, 0.1, 6))  # is price setting for Cluster 1
+        m.accept_order(Order(1, 0, "seller_c1_5", 1, 0.1, 4))  # higher profit in other Cluster 0
+        m.accept_order(Order(1, 0, "seller_c0_6", 0, 0.1, 7.1))  # is price setting for Cluster 0
+        matches = m.match()
+
+        print("\n")
+        for match in matches:
+            print(match)
+        matched_energy = sum([match["energy"] for match in matches])
+        assert matched_energy == pytest.approx(0.3)
+
+        assert any([match["ask_actor"] == "seller_c0_6" and match["bid_cluster"] == 0
+                    and match["price"] == 7.1 for match in matches])
+
+        # Assert that the cheepest
         match_in_more_profitable_cluster = {
             'time': 0,
             'bid_id': 2, 'ask_id': 5,
@@ -359,12 +406,9 @@ class TestBestMarket:
             'energy': 0.1,
             'price': 7.1, 'included_grid_fee': 1
         }
-        assert match_in_more_profitable_cluster in matches
+        assert match_in_more_profitable_cluster in matches, matches
 
-        matched_energy = sum([match["energy"] for match in matches])
-        assert matched_energy == pytest.approx(0.3)
-
-    def test_update_clearing_cluster_bug1(self, reset_config):
+    def test_update_clearing_cluster_dispute_fee(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
         another cluster is found."""
         cfg.config.default_grid_fee = 0
@@ -380,47 +424,23 @@ class TestBestMarket:
         # add asks
         m.accept_order(Order(1, 0, "seller_c1_4", 1, 0.1, 6))
         m.accept_order(Order(1, 0, "seller_c1_5", 1, 0.1, 4))  # higher profit in Cluster 1
-        # TODO seller_c1_6 could achieve a higher profit in Cluster 1 leads to seller_c1_5 not
-        #  matching in Cluster 1 but not at all
-        m.accept_order(Order(1, 0, "seller_c1_6", 0, 0.1, 5))  # is price setting for Cluster 0
+        # seller_c0_6 could achieve a higher profit in Cluster 1 if seller_c1_4 is price
+        #  setting, instead seller_c0_6 would become price setting: As profit is equal the own
+        #  cluster 0 is favored due to dispute decision based on grid_fee
+
+        m.accept_order(Order(1, 0, "seller_c0_6", 0, 0.1, 5))  # is price setting for Cluster 0
         matches = m.match()
         for match in matches:
             print(match)
         # seller_c1_5 could match in
         # a) cluster 1 with buyer_c1_0 at clearing price 6 (due to price setting seller_c1_4)
-        # b) cluster 0 with buyer_c0_0 at clearing price 5 = 4 + 1 (due to additional fee)
-        # Assert that match a) exisits within matches
+        # b) cluster 0 with buyer_c0_2 at clearing price 5 = 4 + 1 (due to additional fee)
+        # Assert that match a) exists within matches
         assert any([match["ask_actor"] == "seller_c1_5" and match["bid_cluster"] == 1
                     and match["price"] == 6 for match in matches])
-
-    def test_update_clearing_cluster_bug2_matched_twice(self, reset_config):
-        """Test the update of a cluster clearing price is correctly done when a better match with
-        another cluster is found."""
-        cfg.config.default_grid_fee = 0
-        cfg.config.energy_unit = 0.1
-        m = BestMarket(time_step=0, network=self.pn, disputed_matching="grid_fee")
-
-        # Case "seller_c1_5" matched within cluster
-        # add bids
-        m.accept_order(Order(-1, 0, "buyer_c1_0", 1, 0.1, 10))  # will match with "seller_c1_5"
-        m.accept_order(Order(-1, 0, "buyer_c1_1", 1, 0.1, 7))
-        m.accept_order(Order(-1, 0, "buyer_c0_2", 0, 0.1, 10))  # could match with "seller_c1_5"
-        m.accept_order(
-            Order(-1, 0, "buyer_c0_3", 0, 0.1, 7))  # matching 2 energy units possible
-        # add asks
-        m.accept_order(Order(1, 0, "seller_c1_4", 1, 0.1, 6))
-        m.accept_order(Order(1, 0, "seller_c1_5", 1, 0.1, 4))  # higher profit in Cluster 1
-        m.accept_order(
-            Order(1, 0, "seller_c1_6", 0, 0.1, 5.1))  # is price setting for Cluster 0
-        matches = m.match()
-        for match in matches:
-            print(match)
-        # seller_c1_5 could match in
-        # a) cluster 1 with buyer_c1_0 at clearing price 6 (due to price setting seller_c1_4)
-        # b) cluster 0 with buyer_c0_0 at clearing price 5 = 4 + 1 (due to additional fee)
-        # Assert that match a) exisits within matches
-        assert any([match["ask_actor"] == "seller_c1_5" and match["bid_cluster"] == 1
-                    and match["price"] == 6 for match in matches])
+        # Assert that seller_c0_6 is still matched despite dispute
+        assert any([match["ask_actor"] == "seller_c0_6" and match["bid_cluster"] == 0
+                    and match["price"] == 5 for match in matches])
 
     def test_update_clearing_cluster_issue220(self, reset_config):
         """Test the update of a cluster clearing price is correctly done when a better match with
@@ -627,22 +647,37 @@ class TestBestMarket:
         # assert matches[0]['included_grid_fee'] == 1
 
         # Match with the highest bid price is selected
+        # match different clusters, even though there are orders from same cluster
         m = BestMarket(self.pn, time_step=0, disputed_matching='bid_price')
         # cluster 0
         m.accept_order(Order(1, 0, 0, 0, 0.1, 1))  # ask
         m.accept_order(Order(-1, 0, 4, 0, 0.1, 2))  # bid
         # cluster 1
-        m.accept_order(Order(-1, 0, 3, 1, 0.1, 2))  # bid
+        m.accept_order(Order(-1, 0, 3, 1, 0.1, 3))  # bid
         matches = m.match()
-        assert matches[0]['included_grid_fee'] == 0
+        assert matches[0]['included_grid_fee'] == 1
+        assert matches[0]['price'] == 2  # 1 (ask price) + 1 (grid fee)
 
-        # Disputed matches are resolved based on price
+        m = BestMarket(self.pn, time_step=0, disputed_matching='bid_price')
+        # expected: match 2 and 4, even though 2 and 3 are in same cluster (worse conditions)
+        m.accept_order(Order(1, 0, 2, 0, 1, 2))  # ask
+        m.accept_order(Order(-1, 0, 3, 0, 1, 2))  # bid
+        m.accept_order(Order(-1, 0, 4, 1, 1, 4))  # bid
+        # expected: match 2 and 3, with potentially equal clearing price due to grid fee condition
+        matches = m.match()
+        assert len(matches) == 1
+        assert matches[0]["ask_actor"] == 2
+        assert matches[0]["bid_actor"] == 4
+        assert matches[0]["energy"] == pytest.approx(1)
+        assert matches[0]["price"] == pytest.approx(3)  # 2 + 1
+
+        # Disputed matches are resolved based on grid fee
         m = BestMarket(self.pn, time_step=0, disputed_matching='grid_fee')
         # cluster 0
         m.accept_order(Order(1, 0, 0, 0, 0.1, 1))
         m.accept_order(Order(-1, 0, 4, 0, 0.1, 2))
         # cluster 1
-        m.accept_order(Order(-1, 0, 3, 1, 0.1, 2))
+        m.accept_order(Order(-1, 0, 3, 1, 0.1, 3))
         matches = m.match()
         assert matches[0]['included_grid_fee'] == 0
 
