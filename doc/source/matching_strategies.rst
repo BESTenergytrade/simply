@@ -45,7 +45,7 @@ Grid-fees are calculated for each order using the following grid fee matrix:
 Methods to Enter Grid Fee Matrix
 --------------------------------
 
-Entering a grid fee matrix into a simulation is essential for accurate cost calculations related to using the grid. Ensure proper format, identifiers, units, and values for the rate matrix, whether complete or created from config file entries.
+Entering a grid fee matrix into a simulation is essential for accurate cost calculations related to using the grid. Ensure proper format, identifiers, units, and values for the grid fee matrix, whether complete or created from config file entries.
 
 There are two methods to define a grid fee matrix for the simply simulation:
 
@@ -75,7 +75,8 @@ Each row and column must be labeled with unique identifiers representing differe
 - **Nodes or Clusters:** node_A, node_B, node_C
 
 **Units:**
-Specify consistent units for both row and column headers to avoid confusion (e.g., USD, EUR).
+Specify consistent units for both row and column headers to avoid confusion (e.g., USD/kWh, EUR/kWh).
+Currently, fees are always attributed as a price rate (i.e. per kWh).
 
 **Weight Factor:**
 The weight factor describes the relationship between grid fee and cumulative power network edge weight between two nodes in the network. The cumulative weight is the sum of all edge weights along the shortest path in the network between those nodes. If there are multiple nodes per cluster, nodes of one cluster have equivalent cumulative weights to all nodes of another cluster.
