@@ -5,20 +5,23 @@ Actor Strategies
 ~~~~~~~~~~~~~~~~~~~
 
 Actor strategies are used to determine the timing of electricity trading, the amount of electrical energy to be traded,
-and the bid prices (buying and selling) for an actor. Each actor has constraints on when to buy or sell based on their
-demand and possibly their supply of electrical energy, as well as their battery. The price bid of the
-actor corresponds to the price of the market maker at the time of electricity trading. This ensures that electrical
-energy can be drawn from the grid and, if necessary, that excess energy from own generation can be sold.
+and the order prices (buying and selling) for an actor. Each actor has constraints on when to buy or sell energy based on their
+demand and if existing their supply of electrical energy, as well as their battery. The order price of the
+actor corresponds to the price of the market maker at the time of electricity trading. In cases where, due to exceeding battery
+constraints, energy has to be drawn from or fed into the grid, the actor sends an order with a price that corresponds to the
+market maker prices (incl. grid fees). This way a successful trade is guaranteed.
 
-There are four different actor strategies. Strategy 0 represents the simplest case, where the actor only knows the
-market maker's electricity price for the current time. The other three strategies represent forecast-based ,
-market-oriented alternatives. The market maker's price time series as well as the respective actor's demand and supply of
-electrical energy are now known for the near future. Thus, the timing of electricity trading with the market maker can
-be planned in advance and costs can be saved for the actor or higher profits can be achieved through smart trading.
+There are four different actor strategies. Strategy 0 represents the simplest case, which is only based on the market maker's
+electricity price of the current time slot. The other three strategies represent forecast-based,
+market-oriented alternatives: The market maker's price time series as well as the actor's demand and supply of
+electrical energy are considered for the near future given the configured horizon. Thus, the timing of
+electricity trading based on future market maker prices permits the actor to
+plan ahead in order to save costs or achieve higher profits through smart trading.
 
-The extent to which the plan for trading electricity with the market maker is adhered to depends on whether further bids
-from other actors exist and whether, as a result, energy can be purchased at a lower price or sold at a higher
-price by the scheduled trading date at the latest (cf. :ref:`pricing_strategies` and :ref:`matching_algorithms`).
+The extent to which matches are realized as a trade with the market maker depends on further orders from other actors given
+the selected matching algorithm, applied grid fees and additional pricing strategies
+(cf. :ref:`pricing_strategies` and :ref:`matching_algorithms`). As a result, this allows the actor - within its constraints - to
+purchase energy at a lower price or sell energy at a higher price with respect to the guaranteed trading with the market maker.
 
 The four actor strategies build on each other and are characterized by different features:
 
@@ -35,20 +38,20 @@ The four actor strategies build on each other and are characterized by different
 From left to right, the strategies gain in economic advantage for the actor, but also in complexity. While an actor in
 strategy 0 can only directly use or feed in energy from its own generation, in strategies 1 - 3 an actor can also have a
 battery storage system, which enables it to temporarily store energy that is not used by the household or, for example,
-an electric car. In this way, the strategies serve self-consumption. By also selling electrical energy from the battery
-in strategy 2 und 3 the economic efficiency of the power plant and the battery storage system is increased.
+an electric vehicle. In this way, the strategies serve self-consumption. By also selling electrical energy from the battery
+in strategy 2 und 3 the economic efficiency of the generator and the battery storage system is increased.
 
 Strategy 0
 ==========
 
 Electrical energy is bought or sold at the moment it is needed or there is generation surplus. The energy is traded at
-the price at which it is offered by the market maker. Since the future prices of the market maker are not known and
-there is no battery storage system, price fluctuations of the market maker cannot be used specifically.
+the price at which it is offered by the market maker. Since the future prices of the market maker are not considered and
+a battery storage system is not used to improve profits from price fluctuations of the guaranteed market maker prices.
 
 Strategy 1
 ==========
 
-In strategy 1, the actor knows its own electricity demand, the state of charge (SOC) of the battery storage system, and
+In strategy 1, the actor trades based on its own residual electricity demand, the state of charge (SOC) of the battery storage system, and
 the prices of the market maker in the near future. This makes it possible to derive an ideal time to purchase
 electricity that is ahead of actual demand and minimizes the cost of purchasing electricity. This is possible due to the
 intermediate storage of energy in the battery. Electricity consumption and purchase can thus be decoupled in terms of
@@ -59,8 +62,8 @@ Strategy 2
 
 Strategy 2 uses strategy 1 and additionally considers the sale of electrical energy from own generation that has been
 stored in the battery storage system. From the boundary conditions of the battery and the electricity generation and
-demand, the times are derived at which the sale of electrical energy from the battery and / or directly from the own
-power plant achieves the highest price. Only those amounts of electrical energy are sold that would result in a SOC
+demand, the times are derived at which the sale of electrical energy from the battery and / or current generation
+achieves the highest price. Only those amounts of electrical energy are sold that would result in a SOC
 above 1 and thus could not be stored. To do this, the algorithm compares the current SOC with the first SOC > 1 that
 would result if all unused energy from own generation were stored in the battery. In case the amount of energy that
 causes the positive deviation from the SOC of 1 can be sold the optimal time for selling is determined. If additional
