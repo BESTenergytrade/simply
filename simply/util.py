@@ -1,5 +1,14 @@
 import numpy as np
 import pandas as pd
+import simply.config as cfg
+
+
+def round_price(price):
+    return round(price, cfg.config.round_decimal)
+
+
+def round_prices_array(prices):
+    return np.round(prices, cfg.config.round_decimal)
 
 
 def gaussian_pv(ts_hour, std):

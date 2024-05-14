@@ -1,0 +1,8 @@
+name,description,type,default
+start,initial timestep,int,0
+nb_ts,number of timesteps in simulation,int,3
+step_size,interval between simulation timesteps,int,1
+market_type,selects matching strategy: NEED TO CLARIFY STRATEGIES,str,?
+reset_market,resets market after each interval (discards unmatched orders),bool,True
+energy_unit,size of energy units to be traded individually,num,0.01
+default_grid_fee,default grid fee to be used by the market maker,num,0

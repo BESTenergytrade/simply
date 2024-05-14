@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Sized
 import simply.config as cfg
 from simply.actor import Order
 from simply.market import MARKET_MAKER_THRESHOLD, ASK, BID
+from simply.util import round_prices_array
 if TYPE_CHECKING:
     from simply.scenario import Environment
 
@@ -26,11 +27,12 @@ class MarketMaker:
                  sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
         self.environment = environment
         self.id = MARKETMAKERID
-        self.cluster = kwargs.get("cluster", None)
+        self.cluster = kwargs.get("market_maker_cluster", None)
         # All prices the market maker is paying to buy energy. Mostly the prediction of these
         # values is used and provided via property
-        self.all_buy_prices = np.array(buy_prices)
-        self.all_sell_prices = self.generate_sell_prices(buy_to_sell_function, sell_prices)
+        self.all_buy_prices = round_prices_array(np.array(buy_prices))
+        self.all_sell_prices = round_prices_array(
+            self.generate_sell_prices(buy_to_sell_function, sell_prices))
 
         # Since resetting of objects should be possible the initial values are stored. In case
         # of a reset they are triggered and overwrite the above possibly mutated prices
@@ -78,7 +80,7 @@ class MarketMaker:
                               "create selling prices from buying prices was provided as well, but "
                               "will not be used.")
             # if sell_prices are provided they are used
-            return sell_prices
+            return np.array(sell_prices)
         else:
             if buy_to_sell_function is None:
                 # if no specific function to calculate sell_prices is provided
@@ -88,6 +90,9 @@ class MarketMaker:
             else:
                 # if a specific function is provided, it is used to calculate sell_prices from
                 # the buy_prices
+                import inspect
+                warnings.warn("Market Maker selling prices defined by Buy-to-sell-function: "
+                              f"{inspect.getsource(buy_to_sell_function)}")
                 return buy_to_sell_function(self.all_buy_prices)
 
     def save_csv(self, dirpath):

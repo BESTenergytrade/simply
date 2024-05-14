@@ -9,11 +9,16 @@ import pytest
 from simply.scenario import Scenario
 
 
+@pytest.fixture
+def reset_config():
+    return cfg.Config("")
+
+
 class TestMarket:
     cfg.Config("")
     scenario = Scenario(None, None, [])
 
-    def test_init(self):
+    def test_init(self, reset_config):
         """
         Tests the initialisation of instance of the Market class with current market time
          set to 0.
@@ -21,7 +26,7 @@ class TestMarket:
         m = Market(time_step=0)
         assert m.t_step == 0
 
-    def test_accept_order(self):
+    def test_accept_order(self, reset_config):
         """
         Tests if Market class accept_order method correctly adds new orders with appropriate time,
         type and energy to the orders dataframe and raises ValueError when order with inappropriate
@@ -49,21 +54,21 @@ class TestMarket:
         with pytest.raises(ValueError):
             m.accept_order(Order(0, 0, 0, None, 1, 1))
 
-    def test_not_accept_existing_order_id(self):
+    def test_not_accept_existing_order_id(self, reset_config):
         # The order ID is used twice, but should be unique -> else raise ValueError
         m = Market(time_step=0)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
         with pytest.raises(ValueError):
             m.accept_order(Order(1, 0, 3, None, 1, 1), "ID1")
 
-    def test_setting_order_id_wrong(self):
+    def test_setting_order_id_wrong(self, reset_config):
         # Check if error is raised when previously defined order IDs will be overridden i.e. ignored
         m = Market(time_step=0)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
         with pytest.raises(IndexError):
             m.accept_order(Order(1, 0, 3, None, 1, 1))
 
-    def test_order_energy(self):
+    def test_order_energy(self, reset_config):
         """
         Tests that orders are accepted based on energy unit with energy above the unit being rounded
         down and energy below the unit not being accepted.
@@ -96,9 +101,9 @@ class TestMarket:
         assert m.orders.at[2, "energy"] == pytest.approx(5)
 
         # reset config
-        cfg.Config("")
+        cfg.Config("", "")
 
-    def test_get_bids(self):
+    def test_get_bids(self, reset_config):
         """
         Tests the Market class get_bids method returns a dataframe with the correct number of bids
          when new bids and asks are added to the Market instance via the accept_orders method.
@@ -115,7 +120,7 @@ class TestMarket:
         m.accept_order(Order(-1, 0, 1, None, 2, 1))
         assert m.get_bids().shape[0] == 2
 
-    def test_get_asks(self):
+    def test_get_asks(self, reset_config):
         """
         Tests the Market class get_asks method returns a dataframe with the correct number of asks
         when new bids and asks are added to the Market instance via the accept_orders method.
@@ -132,7 +137,7 @@ class TestMarket:
         m.accept_order(Order(1, 0, 1, None, 2, 1))
         assert m.get_asks().shape[0] == 2
 
-    def test_clear(self):
+    def test_clear(self, reset_config):
         """
         Tests that new list of matches is saved when the Market class's clear method
         is called.
@@ -159,7 +164,7 @@ class TestMarket:
 class TestPayAsBid:
     scenario = Scenario(None, None, [])
 
-    def test_basic(self):
+    def test_basic(self, reset_config):
         """
         Tests the basic functionality of the Market object to accept bids and asks via the
         accept_order method and correctly match asks and bids when the match method is called.
@@ -179,7 +184,7 @@ class TestPayAsBid:
         assert matches[0]["energy"] == 1
         assert matches[0]["price"] == 1
 
-    def test_prices(self):
+    def test_prices(self, reset_config):
         """
         Tests that the match method only registers matches when the ask is less than or equal
         to the bid. If matched, the price of the bid is taken.
@@ -202,7 +207,7 @@ class TestPayAsBid:
         assert matches[0]["energy"] == 1
         assert matches[0]["price"] == 2
 
-    def test_energy(self):
+    def test_energy(self, reset_config):
         """
         Tests that matches can be made when the amount of energy requested by the bid differs
         from the total amount of energy being offered by the ask.
@@ -222,7 +227,7 @@ class TestPayAsBid:
         assert len(matches) == 1
         assert matches[0]["energy"] == pytest.approx(0.3)
 
-    def test_setting_order_id(self):
+    def test_setting_order_id(self, reset_config):
         # Check if matched orders retain original ID
         m = Market(time_step=0)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
@@ -233,7 +238,7 @@ class TestPayAsBid:
         assert matches[0]["bid_id"] == "ID1"
         assert matches[0]["ask_id"] == "ID2"
 
-    def test_multiple(self):
+    def test_multiple(self, reset_config):
         """
         Tests that multiple bids can be matched with one ask while there is available energy
         within the order.
@@ -262,46 +267,48 @@ class TestPayAsBid:
         assert matches[2]["energy"] == 30
         assert matches[3]["energy"] == 40  # only 100 in bid
 
-    def test_market_maker(self):
+    def test_market_maker(self, reset_config):
         # Test if inserting market_maker order works
         # example: cost 1 all trades
-        m = Market(grid_fee_matrix=[[0, 1], [1, 0]], time_step=0)
+        cfg.config.default_grid_fee = 1
+        m = Market(grid_fee_matrix=None, time_step=0)
         # Market Maker
         mm_price = 5
-        m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
-        m.accept_order(Order(1, 0, "MarketMaker", 1, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(-1, 0, "MarketMaker", None, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(1, 0, "MarketMaker", None, MARKET_MAKER_THRESHOLD, mm_price))
 
         # grid-fees between nodes only allow for partial matching
         # Bids
-        m.accept_order(Order(-1, 0, 1, 0, 5, mm_price * 3))
+        m.accept_order(Order(-1, 0, 1, 0, 5, mm_price * 3))  #
         m.accept_order(Order(-1, 0, 2, 0, 5, mm_price))
 
         # Asks
-        m.accept_order(Order(1, 0, 3, 1, 3, mm_price * 2))
-        m.accept_order(Order(1, 0, 4, 1, 2, mm_price))
-        m.accept_order(Order(1, 0, 5, 1, 1, mm_price / 2))
+        m.accept_order(Order(1, 0, 3, 0, 3, mm_price * 2))  # more expensive than MM (not matched)
+        m.accept_order(Order(1, 0, 4, 0, 2, mm_price))  # matched secondly
+        m.accept_order(Order(1, 0, 5, 0, 1, mm_price / 2))  # matched first
         matches = m.match()
-        # Bid actor 1 gets matched with 4,5 and the MM
+        # Bid actor 1 gets matched with actor 5, 4 and the MM
         assert len(matches) == 3
         for m in matches:
             assert m["bid_actor"] == 1
             assert m["ask_actor"] in [4, 5, "MarketMaker"]
             assert m["price"] == mm_price * 3
 
-        # Without a grid fee MarketMaker could match with itself
-        # this should not happen
-        m = Market(grid_fee_matrix=0, time_step=0)
+        # Test, that MarketMaker does not match with itself, even if price would allow it
+        m = Market(grid_fee_matrix=None, time_step=0)
+        cfg.config.default_grid_fee = 0
         # Market Maker
         mm_price = 1
-        m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
-        m.accept_order(Order(1, 0, "MarketMaker", 1, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(-1, 0, "MarketMaker", "MM", MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(1, 0, "MarketMaker", "MM", MARKET_MAKER_THRESHOLD, mm_price))
 
         matches = m.match()
-        # 1 bid gets matched, MM doesn't match with itself
+        # MM doesn't match with itself
         assert len(matches) == 0
 
         # but market maker should still match with other orders
-        m = Market(grid_fee_matrix=0, time_step=0)
+        m = Market(grid_fee_matrix=None, time_step=0)
+        cfg.config.default_grid_fee = 0
         # Market Maker
         mm_price = 1
         m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
@@ -314,10 +321,11 @@ class TestPayAsBid:
         # 1 bid gets matched, MM doesn't match with itself
         assert len(matches) == 1
 
-    def test_prices_matrix(self):
+    def test_prices_matrix(self, reset_config):
         # test prices with a given grid fee matrix
-        # example: cost 1 for trade between clusters
-        m = Market(grid_fee_matrix=[[0, 1], [1, 0]], time_step=0)
+        # example: fees at cost 1
+        m = Market(grid_fee_matrix=None, time_step=0)
+        cfg.config.default_grid_fee = 1
 
         # grid-fees between nodes only allow for partial matching
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
@@ -328,13 +336,37 @@ class TestPayAsBid:
         assert matches[0]["energy"] == 0.1
         assert matches[0]["price"] == 3
 
-        # grid fee of 1 is used from grid_fee_matrix instead of grid fee of 2 from pn
+        m.orders = m.orders[:0]
+        # grid-fees between nodes only allow for partial matching
+        m.accept_order(Order(-1, 0, 2, 0, 1, 3))
+        m.accept_order(Order(1, 0, 3, 0, 0.9, 2))
+        m.accept_order(Order(1, 0, 4, 0, 0.2, 1.5))
+        m.accept_order(Order(1, 0, 0, 0, 0.1, 1.2))
+        matches = m.match()
+        assert len(matches) == 3
+        assert matches[-1]["energy"] == 0.7
+        assert matches[-1]["price"] == 3
+
+        m.orders = m.orders[:0]
+        # grid-fees between nodes only allow for partial matching
+        m.accept_order(Order(-1, 0, 3, 0, 0.1, 3))
+        m.accept_order(Order(-1, 0, 4, 0, 0.2, 2.8))
+        m.accept_order(Order(-1, 0, 0, 0, 0.9, 2.2))
+        m.accept_order(Order(1, 0, 2, 0, 1, 1.2))
+        matches = m.match()
+        assert len(matches) == 3
+        assert matches[-1]["energy"] == 0.7
+        assert matches[-1]["price"] == 2.2
+
+        # grid fee of 1 is used instead of grid fee of 2 from pn
+        # default fee is used as grid_fee_matrix is None
         nw = nx.Graph()
         nw.add_edges_from([(0, 1, {"weight": 1}), (1, 2), (1, 3), (0, 4)])
         pn = PowerNetwork("", nw, weight_factor=2)
-        grid_fee_matrix = [[0, 1], [1, 0]]
+        grid_fee_matrix = None
+        cfg.config.default_grid_fee = 1
         m = Market(network=pn, grid_fee_matrix=grid_fee_matrix, time_step=0)
         m.accept_order(Order(-1, 0, 2, 0, 1, 3))
-        m.accept_order(Order(1, 0, 0, 1, 1, 2))
+        m.accept_order(Order(1, 0, 0, 0, 1, 2))
         matches = m.match()
         assert len(matches) == 1
