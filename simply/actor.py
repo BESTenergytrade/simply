@@ -977,8 +977,9 @@ class Actor:
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
         save_df = self.data[["schedule"]].copy()
-        save_df.iloc[simulated_range]["mm_sell_prices"] = self.mm_sell_hist
-        save_df.iloc[simulated_range]["mm_buy_prices"] = self.mm_buy_hist
+        simulated_range_ts = save_df.iloc[simulated_range].index
+        save_df.loc[simulated_range_ts, "mm_sell_prices"] = self.mm_sell_hist
+        save_df.loc[simulated_range_ts, "mm_buy_prices"] = self.mm_buy_hist
         if self.var_battery.capacity > 0:
             save_df[["ev_avail", "ev_demand"]] = self.data[["ev_avail", "ev_demand"]]
         # Not every time step has an order or trade, so iterate over time steps and insert
@@ -986,16 +987,16 @@ class Actor:
         o = next(order_iter, None)
         for i in range(len(self.traded_energy)):
             if o is not None and i == o.time:
-                save_df.iloc[i]["ordered_energy"] = o.energy * o.type
-                save_df.iloc[i]["ordered_price"] = o.price
+                save_df.loc[simulated_range_ts[i], "ordered_energy"] = o.energy * o.type
+                save_df.loc[simulated_range_ts[i], "ordered_price"] = o.price
                 o = next(order_iter, None)
                 if o is None:
                     break
-        save_df.iloc[simulated_range]["traded_energy"] = self.traded_energy
-        save_df.iloc[simulated_range]["bank"] = self.bank_hist
-        save_df.iloc[simulated_range]["bat_soe"] = np.array(self.socs) * self.battery.capacity
+        save_df.loc[simulated_range_ts, "traded_energy"] = self.traded_energy
+        save_df.loc[simulated_range_ts, "bank"] = self.bank_hist
+        save_df.loc[simulated_range_ts, "bat_soe"] = np.array(self.socs) * self.battery.capacity
         if self.var_battery.capacity > 0:
-            save_df.iloc[simulated_range]["ev_soe"] = np.array(
+            save_df.loc[simulated_range_ts, "ev_soe"] = np.array(
                 self.ev_socs) * self.var_battery.capacity
         if dirpath is not None:
             save_df.to_csv(dirpath)
