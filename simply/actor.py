@@ -904,6 +904,8 @@ class Actor:
                 # unexpected behaviour or self defined orders might be the reason. In this case give
                 # warning and do not adjust market_schedule
                 warnings.warn("Matched energy does not match planned energy.")
+                print(f"Actor {self.id}' last order {self.orders[-1]}")
+                print(f"Actor {self.id}' last order {self.orders[-1]}")
                 return
             planned_energy = self.market_schedule[i]
             if planned_energy == 0:
@@ -1039,7 +1041,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_ho
     ps = random.uniform(1, 7)
     # Probability of an actor to possess a PV, here 40%
     pv_prob = 0.4
-    ps = random.choices([0, ps], [1 - pv_prob, pv_prob], k=1)
+    ps = random.choices([0, ps], [1 - pv_prob, pv_prob], k=1)[0]
     df["schedule"] = ps * df["pv"] - ls * df["load"]
     max_price = 0.3
     df["price"] *= max_price
