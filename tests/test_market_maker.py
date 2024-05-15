@@ -8,6 +8,11 @@ from simply.scenario import Scenario
 from simply.actor import create_random
 
 
+@pytest.fixture
+def reset_config():
+    return cfg.Config("")
+
+
 class TestMarketMaker:
     cfg.Config("", "")
     buy_prices = np.arange(1, 100, 1)

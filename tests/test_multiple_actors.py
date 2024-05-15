@@ -9,7 +9,7 @@ from simply.battery import Battery
 from simply.market_2pac import TwoSidedPayAsClear
 # from simply.market_fair import BestMarket
 from simply.scenario import Scenario
-from simply.config import Config
+import simply.config as cfg
 
 
 class TestMultipleActors:
@@ -20,10 +20,10 @@ class TestMultipleActors:
 
     @pytest.fixture()
     def scenario(self, tmp_path):
-        cfg = Config("", tmp_path)
+        cfg.Config("", tmp_path)
         self.NUM_STEPS = 24
         df = pd.DataFrame(np.random.rand(self.NUM_STEPS + 24, 2), columns=["load", "pv"])
-        self.df = df - df % cfg.energy_unit
+        self.df = df - df % cfg.config.energy_unit
         test_prices = [0.082, 0.083, 0.087, 0.102, 0.112, 0.122, 0.107, 0.103, 0.1, 0.1, 0.09,
                        0.082,
                        0.083, 0.083, 0.094, 0.1, 0.11, 0.109, 0.106, 0.105, 0.1, 0.093, 0.084,
@@ -39,9 +39,9 @@ class TestMultipleActors:
         # scenario.add_market(Market(grid_fee_matrix=[[0, 1], [1, 0]]))
         return scenario
 
+    # TODO: commented out and currently not working
     """
     def test_interaction(self, scenario):
-
         cfg.config.default_grid_fee = 0.1
         actor_strat = 2
         pricing_strategy = {"name": "linear", "param": [0]}

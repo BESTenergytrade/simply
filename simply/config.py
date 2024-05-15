@@ -12,8 +12,10 @@ class Config:
 
     After creation, the generated instance is available as Config.config,
     the parsed file as Config.parser.
+    The attributes defining paths i.e. for loading/storing scenarios and results are only
+    available, if `project_path` parameter is given e.g. using the match_market.py script.
 
-    Config attributes, grouped by section, with default in brackets
+    Config attributes, grouped by section, with default in brackets below:
 
     [default]
         - start - initial timestep [8]\n
@@ -25,7 +27,8 @@ class Config:
         - show_plots - show various plots [False]\n
         - show_prints - show debug info in terminal [False]\n
         - save_csv - save orders and matched results to csv files [True]\n
-        - path - path of scenario directory to load and/or store [./scenarios/default]\n
+        - scenario_path - path of scenario directory to load and/or store (optional)\n
+        - project_path - path of project directory for all in-/output files (optional)\n
         - data_format - how to save actor data. Supported values\n
             csv: save data in separate csv file and all actors in one config file,\n
             [json]: save config and data per actor in a single file\n
@@ -37,34 +40,27 @@ class Config:
             fair (custom BEST market)\n
         - energy_unit: size of energy units to be traded individually [0.01]\n
         - weight_factor: conversion factor from grid fees to power network node weight [0.03]\n
-    [actor]
         - horizon - number of time steps to look ahead for prediction [24]
 
     :param cfg_file: configuration file path with the attributes listed above.
     :type cfg_file: str
+    :param project_dir: project folder path that should contain all in-/output files. [None]
+    :type project_dir: str
     :keyword cfg_file: start
     """
 
-    def __init__(self, cfg_file, project_dir):
+    def __init__(self, cfg_file, project_dir=None):
         global config
         config = self
         global parser
         parser = ConfigParser()
-        # ToDo: probably change this to an error, because default values will not be used
         if not cfg_file:
-            warnings.warn("No Configuration file path was provided. Default values will be used.")
+            # An empty string cannot be a valid filename and is evaluated as no file
+            print("No Configuration file path was provided. Default values will be used.")
         elif not Path(cfg_file).is_file():
-            warnings.warn(f"{cfg_file} was provided as Configuration file, but this file does not "
-                          "exist. Default values will be used.")
-
-        if not project_dir:
-            warnings.warn("No project_dir was provided. Default project_dir ./projects/"
-                          "example_projects/example_project is used")
-            project_dir = "projects/example_projects/example_project"
-        elif not Path(project_dir):
-            warnings.warn(f"{project_dir} was provided as directory, but this directory does not "
-                          f"exist. Default project_dir ./projects/example_project will be used.")
-            project_dir = "projects/example_projects/example_project"
+            warnings.warn(
+                f"{cfg_file} was provided as Configuration file, but this file does not "
+                "exist. Default values will be used.")
 
         try:
             parser.read(cfg_file)
@@ -78,10 +74,11 @@ class Config:
         # --------------------------
         # scenario
         # --------------------------
-        self.project_path = Path(project_dir)
-        self.scenario_path = parser.get("default", "scenario_path", fallback=str(self.project_path /
-                                                                                 "scenario"))
-        self.scenario_path = Path(self.scenario_path)
+        if project_dir:
+            self.project_path = Path(project_dir)
+            self.scenario_path = parser.get("default", "scenario_path",
+                                            fallback=str(self.project_path / "scenario"))
+            self.scenario_path = Path(self.scenario_path)
         self.data_format = parser.get("default", "data_format", fallback="json")
         self.buy_sell_lin_param = json.loads(
             parser.get("default", "buy_sell_lin_param", fallback="[0, 1]"))
@@ -150,6 +147,10 @@ class Config:
         self.show_prints = parser.getboolean("default", "show_prints", fallback=False)
         # save orders and matching results to csv files
         self.save_csv = parser.getboolean("default", "save_csv", fallback=False)
-        self.results_path = parser.get("default", "results_path", fallback=str(self.project_path /
-                                                                               "market_results"))
-        self.results_path = Path(self.results_path)
+        if project_dir:
+            self.results_path = parser.get("default", "results_path",
+                                           fallback=str(self.project_path / "market_results"))
+            self.results_path = Path(self.results_path)
+        else:
+            assert not self.save_csv, "Config marks save_csv as true, " \
+                                      "but not project_dir is given. "

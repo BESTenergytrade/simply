@@ -8,11 +8,16 @@ from simply.scenario import Scenario
 from simply.market import MARKET_MAKER_THRESHOLD
 
 
+@pytest.fixture
+def reset_config():
+    return cfg.Config("")
+
+
 class TestTwoSidedPayAsClear:
     cfg.Config("", "")
     scenario = Scenario(None, None, [])
 
-    def test_basic(self):
+    def test_basic(self, reset_config):
         """Tests the basic functionality of the TwoSidedPayAsClear object to accept bids and asks
         via the accept_order method and correctly match asks and bids when the match method
         is called."""
@@ -37,7 +42,7 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["energy"] == 1
         assert matches[0]["price"] == 1
 
-    def test_prices(self):
+    def test_prices(self, reset_config):
         """Tests that the highest bids are matched with the lowest asks and that all bids and
         asks above the crossover (when the bidding price becomes lower than the asking price)
         are matched on the clearing price."""
@@ -59,7 +64,7 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["energy"] == 1
         assert matches[0]["price"] == 2
 
-    def test_energy(self):
+    def test_energy(self, reset_config):
         """Tests that matches can be made when the amount of energy requested by the bid
         differs from the total amount of energy being offered by the ask."""
         # different energies
@@ -91,7 +96,7 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["energy"] == 1
         assert matches[0]["price"] == 1
 
-    def test_setting_order_id(self):
+    def test_setting_order_id(self, reset_config):
         # Check if matched orders retain original ID
         m = TwoSidedPayAsClear(time_step=0, grid_fee_matrix=0)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
@@ -102,7 +107,7 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["bid_id"] == "ID1"
         assert matches[0]["ask_id"] == "ID2"
 
-    def test_multiple(self):
+    def test_multiple(self, reset_config):
         """Tests that multiple bids can be matched with one ask while there is available energy
         within the order."""
         # multiple bids to satisfy one ask
@@ -130,7 +135,7 @@ class TestTwoSidedPayAsClear:
         assert matches[2]["energy"] == 30
         assert matches[3]["energy"] == 40  # only 100 in bid
 
-    def test_market_maker(self):
+    def test_market_maker(self, reset_config):
         # Test if inserting market_maker order works
         # example: cost 1 all trades
         m = TwoSidedPayAsClear(grid_fee_matrix=1, time_step=0)
@@ -180,7 +185,7 @@ class TestTwoSidedPayAsClear:
         # 1 bid gets matched, MM doesn't match with itself
         assert len(matches) == 1
 
-    def test_prices_matrix(self):
+    def test_prices_matrix(self, reset_config):
         # test prices with a given grid fee matrix
         # "Assertion Error because grid_fee_matrix"
         with pytest.raises(AssertionError, ):

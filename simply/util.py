@@ -7,6 +7,10 @@ def round_price(price):
     return round(price, cfg.config.round_decimal)
 
 
+def round_prices_array(prices):
+    return np.round(prices, cfg.config.round_decimal)
+
+
 def gaussian_pv(ts_hour, std):
     # One day (24h) time series with peak at noon (12h)
     # and a gaussian curve defined by standard deviation
