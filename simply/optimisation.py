@@ -32,16 +32,25 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
 
     # PYOMO OPTIMISATION MODEL
     model = pyo.ConcreteModel()
+    # Stationary Battery
     model.charging_power = pyo.Var(t, bounds=(0, capacity * max_c_rate))
     model.discharging_power = pyo.Var(t, bounds=(0, capacity * max_c_rate))
     model.stored_energy = pyo.Var(t, bounds=(0, capacity))
+    # EV
+    model.ev_charging_power = pyo.Var(t, bounds=(0, ev_capacity * ev_max_c_rate))
+    model.ev_discharging_power = pyo.Var(t, bounds=(0, ev_capacity * ev_max_c_rate))
+    model.ev_stored_energy = pyo.Var(t, bounds=(0, ev_capacity))
     # 0/ 1 for distinguishing between charging / discharging
     model.bi_charge = pyo.Var(t, within=pyo.Binary)
+    model.ev_bi_charge = pyo.Var(t, within=pyo.Binary)
+    # Exchange with grid
     model.power_from_grid = pyo.Var(t, bounds=(0, grid_connection_capacity))
     model.power_to_grid = pyo.Var(t, bounds=(0, grid_connection_capacity))
     model.cash_flow = pyo.Var(t)
 
-    # energy balance for the system
+    #################################
+    # energy balance for the system #
+    #################################
     model.energy_balance_system = pyo.ConstraintList()
     for i in range(len(t) - 1):
         model.energy_balance_system.add(
@@ -49,7 +58,9 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
             model.power_from_grid[i] + pv[i] + model.discharging_power[i]
             - load[i] - model.power_to_grid[i] - model.charging_power[i])
 
-    # component energy storage
+    ############################
+    # component energy storage #
+    ############################
     model.energy_balance_storage = pyo.ConstraintList()
     for i in range(len(t) - 1):
         # constraint
@@ -81,7 +92,9 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
         model.binary_discharge_storage.add(
             model.discharging_power[i] <= (1 - model.bi_charge[i]) * capacity * max_c_rate)
 
-    # costs to be used in objective function
+    ##########################################
+    # costs to be used in objective function #
+    ##########################################
     model.cash_flow_equation = pyo.ConstraintList()
     for i in t:
         model.cash_flow_equation.add(
