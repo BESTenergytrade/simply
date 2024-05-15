@@ -10,6 +10,7 @@ from pytest import approx
 from simply.battery import Battery, VariableBattery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
+from simply.optimisation import optimize_schedule
 
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
@@ -157,6 +158,7 @@ class Actor:
             self.csv_file = csv
         else:
             self.csv_file = f'actor_{id}.csv'
+
         # ToDo remove schedule from input or only allow either (load and pv) OR (schedule)
         for column, scale in [("load", ls), ("pv", ps), ("schedule", 1)]:
             self.data[column] = scale * df[column]
@@ -187,6 +189,16 @@ class Actor:
         self.traded = {}
         self.args = {"id": id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
+
+    def strategy_with_optimisation(self):
+        # Use the optimization library to implement the new strategy
+        objective, df_results = optimize_schedule(
+            self.pred, self.mm_buy_prices, self.mm_sell_prices)
+        # Process the results as needed
+        self.market_schedule = df_results["to_grid"]
+        self.bank += objective  # Update the bank balance with the optimization result
+
+        return self.market_schedule
 
     def set_var_battery(self, capacity, soc_initial, df, available=0, max_c_rate=4,
                         refresh=True):
@@ -257,7 +269,7 @@ class Actor:
         :type strategy: int
         :return: market_schedule with planed amounts of energy buying/selling per time step
         """
-        possible_choices = [0, 1, 2, 3]
+        possible_choices = [0, 1, 2, 3, 4]
         if strategy is None:
             strategy = self.strategy
         if strategy not in possible_choices:
@@ -273,6 +285,10 @@ class Actor:
                     f"the battery capacity is 0 or no battery exists. Using default strategy "
                     f"without planning instead.")
                 strategy = self.strategy
+
+        if strategy == 4:
+            self.market_schedule = self.strategy_with_optimisation()
+            return self.market_schedule
 
         if strategy == 0:
             self.market_schedule = self.get_default_market_schedule()

@@ -6,7 +6,7 @@ import pyomo.environ as pyo
 import pandas as pd
 
 
-def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initial=0.5):
+def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate=1, soc_initial=0.5):
     # parametrisation of battery specified in simply/battery.py
     # capacity=10, max_c_rate=1, soc_initial=0.5
     # TODO battery-efficiency ?
@@ -16,11 +16,12 @@ def optimize_schedule(df_actor, df_prices, capacity=10, max_c_rate=1, soc_initia
     t = list(range(len(df_actor)))
     load = df_actor.loc[:, "load"].to_list()
     pv = df_actor.loc[:, "pv"].to_list()
-    buy_prices = df_prices.loc[:, "all_buy_prices"].to_list()
-    sell_prices = df_prices.loc[:, "all_sell_prices"].to_list()
+    buy_prices = buy_prices.to_list()
+    sell_prices = sell_prices.to_list()
+
     # TODO add electric vehicle
-    ev_avail = [1] * len(df_prices)
-    ev_demand = [0] * len(df_prices)
+    ev_avail = [1] * len(buy_prices)
+    ev_demand = [0] * len(buy_prices)
 
     # other parameters
     # TODO minutes per time step can be obtained using datetime functions from input csv-files
@@ -127,8 +128,10 @@ if __name__ == "__main__":
         '../projects/example_projects/example_project/scenario/actor_residential_1.csv')
     df_input_data_prices = pd.read_csv(
         '../projects/example_projects/example_project/scenario/MarketMaker.csv')
+    buy_prices = df_input_data_prices.loc[:, "all_buy_prices"]
+    sell_prices = df_input_data_prices.loc[:, "all_sell_prices"]
+    objective, df_results = optimize_schedule(df_input_data_actor, buy_prices, sell_prices)
 
-    objective, df_results = optimize_schedule(df_input_data_actor, df_input_data_prices)
     # PRINTS
     print("RESULTS:")
     print("Objective:", objective)
