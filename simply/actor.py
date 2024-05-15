@@ -11,6 +11,8 @@ from simply.battery import Battery, VariableBattery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
+from simply.optimisation import optimize_schedule
+
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
 Struct to hold order
@@ -156,7 +158,13 @@ class Actor:
         if csv is not None:
             self.csv_file = csv
         else:
-            self.csv_file = f'actor_{id}.csv'
+            self.csv_file = f'actor_{id}.csv' 
+        
+        
+        self.df = df
+        self.df_load = df.loc[:, "load"]
+        self.df_pv = df.loc[:, "pv"]
+        
         # ToDo remove schedule from input or only allow either (load and pv) OR (schedule)
         for column, scale in [("load", ls), ("pv", ps), ("schedule", 1)]:
             self.data[column] = scale * df[column]
@@ -187,6 +195,20 @@ class Actor:
         self.traded = {}
         self.args = {"id": id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
+
+    def new_strategy(self):#change the name of the func
+        # Use the optimization library to implement the new strategy
+        
+        objective, df_results = optimize_schedule(self.df, self.df_load, self.df_pv, self.mm_buy_prices, self.mm_sell_prices)
+        
+        # Process the results as needed
+        # For example:
+        print("Optimization objective:", objective)
+        print("Optimization results:")
+        print(df_results)
+
+        market_schedule = df_results["to_grid"] 
+        return market_schedule
 
     def set_var_battery(self, capacity, soc_initial, df, available=0, max_c_rate=4,
                         refresh=True):
@@ -290,6 +312,11 @@ class Actor:
         self.market_schedule = self.plan_selling_strategy()
         if strategy == 2:
             return self.market_schedule
+
+        if strategy == 3:
+            self.market_schedule = self.new_strategy()
+            return self.market_schedule
+
         self.market_schedule = self.plan_global_trading()
         return self.market_schedule
 
