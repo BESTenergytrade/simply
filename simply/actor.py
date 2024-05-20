@@ -192,7 +192,7 @@ class Actor:
         self.args = {"id": id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
 
-    def new_strategy(self):#change the name of the func
+    def strategy_with_optimisation(self):#change the name of the func
         # Use the optimization library to implement the new strategy
         
         objective, df_results = optimize_schedule(self.pred, self.mm_buy_prices, self.mm_sell_prices)
@@ -293,7 +293,7 @@ class Actor:
                 strategy = self.strategy
 
         if strategy == 4:
-            self.market_schedule = self.new_strategy()
+            self.market_schedule = self.strategy_with_optimisation()
             return self.market_schedule
         
         if strategy == 0:
