@@ -161,10 +161,6 @@ class Actor:
             self.csv_file = f'actor_{id}.csv' 
         
         
-        self.df = df
-        self.df_load = df.loc[:, "load"]
-        self.df_pv = df.loc[:, "pv"]
-        
         # ToDo remove schedule from input or only allow either (load and pv) OR (schedule)
         for column, scale in [("load", ls), ("pv", ps), ("schedule", 1)]:
             self.data[column] = scale * df[column]
@@ -199,7 +195,7 @@ class Actor:
     def new_strategy(self):#change the name of the func
         # Use the optimization library to implement the new strategy
         
-        objective, df_results = optimize_schedule(self.df, self.df_load, self.df_pv, self.mm_buy_prices, self.mm_sell_prices)
+        objective, df_results = optimize_schedule(self.pred, self.mm_buy_prices, self.mm_sell_prices)
         
         # Process the results as needed
         # For example:
@@ -296,6 +292,10 @@ class Actor:
                     f"without planning instead.")
                 strategy = self.strategy
 
+        if strategy == 4:
+            self.market_schedule = self.new_strategy()
+            return self.market_schedule
+        
         if strategy == 0:
             self.market_schedule = self.get_default_market_schedule()
             # overwrite the current value of the market schedule if the soc would surpass 1
@@ -312,11 +312,6 @@ class Actor:
         self.market_schedule = self.plan_selling_strategy()
         if strategy == 2:
             return self.market_schedule
-
-        if strategy == 3:
-            self.market_schedule = self.new_strategy()
-            return self.market_schedule
-
         self.market_schedule = self.plan_global_trading()
         return self.market_schedule
 

@@ -6,21 +6,17 @@ import pyomo.environ as pyo
 import pandas as pd
 
 
-def optimize_schedule(df,load, pv, buy_prices, sell_prices, capacity=10, max_c_rate=1, soc_initial=0.5):
+def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate=1, soc_initial=0.5):
     # parametrisation of battery specified in simply/battery.py
     # capacity=10, max_c_rate=1, soc_initial=0.5
     # TODO battery-efficiency ?
     # TODO electric vehicle parameter
 
     # single time series vectors
-    t = list(range(len(df)))
-    #load = df.loc[:, "load"].to_list()
-    load = load.to_list()
-    #pv = df.loc[:, "pv"].to_list()
-    pv = pv.to_list()
-    #buy_prices = df_prices.loc[:, "all_buy_prices"].to_list() 
+    t = list(range(len(df_actor)))
+    load = df_actor[["load"]].to_list()
+    pv = df_actor[["pv"]].to_list()
     buy_prices = buy_prices.to_list() 
-    #sell_prices = df_prices.loc[:, "all_sell_prices"].to_list()
     sell_prices = sell_prices.to_list() 
     
     # TODO add electric vehicle
@@ -111,7 +107,7 @@ def optimize_schedule(df,load, pv, buy_prices, sell_prices, capacity=10, max_c_r
     # calculate objective for result output
     objective = sum(model.cash_flow[i].value for i in t)
     return objective, pd.DataFrame({
-        "Time": [df.iat[i, 0] for i in t],
+        "Time": [df_actor.iat[i, 0] for i in t],
         "load": load,
         "pv": pv,
         "sell_prices": sell_prices,
