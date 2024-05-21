@@ -1,6 +1,16 @@
 import numpy as np
 import pandas as pd
+import datetime
+
 import simply.config as cfg
+
+
+def dates_to_datetime(start_date="2016-01-01", nb_ts=None, horizon=24, ts_hour=1):
+    """Converts string dates to datetime dtype and calculates end date from timesteps parameter."""
+    start_date = pd.to_datetime(start_date)
+    time_change = datetime.timedelta(minutes=(nb_ts + horizon - 1) * (60 / ts_hour))
+    end_date = start_date + time_change
+    return start_date, end_date
 
 
 def round_price(price):

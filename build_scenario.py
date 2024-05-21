@@ -1,17 +1,17 @@
-import datetime
 import os
 import json
 import shutil
 import warnings
-
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import argparse
+
 from simply.actor import Actor
 from simply.scenario import Scenario
 from simply.power_network import create_power_network_from_config
 from simply.config import Config
+from simply.util import dates_to_datetime
 
 """
 This script creates a simulation scenario from a config JSON file, network JSON file,
@@ -66,14 +66,6 @@ def remove_existing_dir(path):
     """Deletes existing repository stored in scenario save location. """
     if path.is_dir():
         shutil.rmtree(path)
-
-
-def dates_to_datetime(start_date="2016-01-01", nb_ts=None, horizon=24, ts_hour=1):
-    """Converts string dates to datetime dtype and calculates end date from timesteps parameter."""
-    start_date = pd.to_datetime(start_date)
-    time_change = datetime.timedelta(minutes=(nb_ts + horizon - 1) * (60 / ts_hour))
-    end_date = start_date + time_change
-    return start_date, end_date
 
 
 def basic_strategy(df, csv_peak, ps, ls):
@@ -192,7 +184,7 @@ def create_scenario_from_config(
         config_json, network_path, loads_dir_path, data_dirpath=None,
         buy_sell_function=None,
         weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
-        start_date=None, plot_network=False,
+        start_date="2016-01-01", plot_network=False,
         price_filename="basic_prices.csv", mm_buy_col="buy_prices", mm_sell_col="sell_prices",
         ps=None, ls=None):
     """
@@ -240,7 +232,6 @@ def create_scenario_from_config(
         pn.plot()
 
     if start_date is None:
-        start_date = "2016-01-01"
         warnings.warn(f"No start date was given, use default date {start_date}.")
     start_date, end_date = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
     try:
