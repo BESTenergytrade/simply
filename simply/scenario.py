@@ -6,7 +6,11 @@ from networkx.readwrite import json_graph
 import pandas as pd
 import numpy as np
 import random
+#import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
 import simply.config as cfg
 from simply import actor, market_maker
 from simply import power_network
