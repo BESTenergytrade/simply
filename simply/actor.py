@@ -11,6 +11,8 @@ from simply.battery import Battery, VariableBattery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 
+from simply.optimisation import optimize_schedule
+
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
 Struct to hold order
@@ -188,6 +190,20 @@ class Actor:
         self.args = {"id": id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
 
+    def strategy_with_optimisation(self):#change the name of the func
+        # Use the optimization library to implement the new strategy
+        
+        objective, df_results = optimize_schedule(self.pred, self.mm_buy_prices, self.mm_sell_prices)
+        
+        # Process the results as needed
+        # For example:
+        print("Optimization objective:", objective)
+        print("Optimization results:")
+        print(df_results)
+
+        market_schedule = df_results["to_grid"] 
+        return market_schedule
+    
     def set_var_battery(self, capacity, soc_initial, df, available=0, max_c_rate=4,
                         refresh=True):
         """
@@ -274,6 +290,10 @@ class Actor:
                     f"without planning instead.")
                 strategy = self.strategy
 
+        if strategy == 4:
+            self.market_schedule = self.strategy_with_optimisation()
+            return self.market_schedule
+        
         if strategy == 0:
             self.market_schedule = self.get_default_market_schedule()
             # overwrite the current value of the market schedule if the soc would surpass 1
