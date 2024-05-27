@@ -29,6 +29,7 @@ class Market:
         self.cleared_volume = {}
         self.matches = []
         self.t_step = time_step
+        self.step = cfg.config.start
         self.actor_callback = {}
         self.network = network
         self.save_csv = cfg.config.save_csv
@@ -153,7 +154,8 @@ class Market:
         matches = self.match(show=cfg.config.show_prints)
         self.matches.append(matches)
         self.cleared_volume[self.t_step] = sum([m["energy"] for m in matches])
-        print(f"Market cleared for time {self.t_step}/{cfg.config.start + cfg.config.nb_ts - 1}:")
+        print(f"Market cleared for time {self.t_step}"
+              f" ({self.step}/{cfg.config.start + cfg.config.nb_ts - 1}):")
 
         for match in matches:
             bid_actor_callback = self.actor_callback[match["bid_actor"]]
