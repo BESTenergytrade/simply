@@ -161,10 +161,12 @@ class MarketMaker:
         # ask  i.e. wanting to sell
         # bid  i.e. wanting to buy
         # Therefore the sign is the negative of the sign of the energy
+        # set time to data index at current time step
+        time = self.environment.time_range[self.t_step]
         mm_sell_order = Order(
-            ASK, self.t_step, self.id, self.cluster, energy, self.current_sell_price)
+            ASK, time, self.id, self.cluster, energy, self.current_sell_price)
         mm_buy_order = Order(
-            BID, self.t_step, self.id, self.cluster, energy, self.current_buy_price)
+            BID, time, self.id, self.cluster, energy, self.current_buy_price)
         orders = [mm_sell_order, mm_buy_order]
         return orders
 

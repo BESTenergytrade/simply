@@ -129,7 +129,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
     :return: Actor object
     """
     df = pd.DataFrame([], columns=cols)
-    start_date, end_date = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
+    start_date, end_date, _ = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
     # Read csv files for each asset
     csv_peak = {}
     battery_cap = 0
@@ -233,7 +233,7 @@ def create_scenario_from_config(
 
     if start_date is None:
         warnings.warn(f"No start date was given, use default date {start_date}.")
-    start_date, end_date = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
+    start_date, end_date, _ = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
     try:
         buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
                                    mm_buy_col, required=True)

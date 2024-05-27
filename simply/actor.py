@@ -145,6 +145,7 @@ class Actor:
             self.battery = Battery(capacity=max(battery_cap, 2 * cfg.config.energy_unit),
                                    soc_initial=battery_initial_soc)
         self.var_battery = None
+        df.index.name = "Time"
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
         self.pm = pd.DataFrame()
@@ -185,7 +186,7 @@ class Actor:
 
         self.orders = []
         self.traded = {}
-        self.args = {"id": id, "df": df.to_json(), "csv": csv, "ls": ls, "ps": ps,
+        self.args = {"id": id, "df": df.reset_index().to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
 
     def set_var_battery(self, capacity, soc_initial, df, available=0, max_c_rate=4,
@@ -241,6 +242,7 @@ class Actor:
     def get_t_step(self):
         return self.environment.time_step
     # creating a property object
+    # TODO refactor t_step to step consistently
     t_step = property(get_t_step)
 
     # getter
@@ -753,7 +755,9 @@ class Actor:
         # +1 as sign --> ask  i.e. wanting to sell
         # -1 as sign --> bid  i.e. wanting to buy
         # Therefore the sign is the negative of the sign of the energy
-        new = Order(np.sign(-energy), self.t_step, self.id, self.cluster, abs(energy), price)
+        # set time to data index at current time step
+        new = Order(np.sign(-energy), self.data.index[self.t_step], self.id, self.cluster,
+                    abs(energy), price)
         self.orders.append(new)
         return [new]
 
@@ -876,7 +880,7 @@ class Actor:
         """
 
         # order time and actor time have to be in sync
-        assert time == self.t_step
+        assert time == self.data.index[self.t_step]
         # sign can only take two values
         assert sign in [-1, 1]
         # append traded energy and price to actor's trades
@@ -935,7 +939,9 @@ class Actor:
         else:
             # since data is already scaled by ls and ps, both of these values are set to 1, so
             # they don't get applied twice
-            args.update({"df": self.data.to_json(), "pm": {}, "ls": 1, "ps": 1})
+            save_df = self.data.reset_index()
+            save_df["Time"] = save_df["Time"].dt.strftime('%Y-%m-%d %H:%M:%S')
+            args.update({"df": save_df.to_json(), "pm": {}, "ls": 1, "ps": 1})
         # Add battery and strategy parameter
         args.update(
             {"battery_cap": self.battery.capacity, "battery_initial_soc": self.battery.soc,
@@ -1006,7 +1012,7 @@ class Actor:
         return save_df
 
 
-def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_hour=1):
+def create_random(actor_id, start_date="2016-01-01", nb_ts=24, horizon=24, ts_hour=1):
     """
     Create actor instance with random asset time series and random scaling factors
 
@@ -1027,6 +1033,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_ho
     cols = ["load", "pv", "schedule", "price"]
     values = np.random.rand(len(time_idx), len(cols))
     df = pd.DataFrame(values, columns=cols, index=time_idx)
+    df.index.name = "Time"
 
     # Multiply random generation signal with gaussian/PV-like characteristic
     for day in daily(df, 24 * ts_hour):
@@ -1055,7 +1062,7 @@ def create_random(actor_id, start_date="2021-01-01", nb_ts=24, horizon=24, ts_ho
     return Actor(actor_id, df, battery=Battery(capacity=bat_capacity), ls=ls, ps=ps)
 
 
-def create_from_csv(actor_id, asset_dict={}, start_date="2021-01-01", nb_ts=None, horizon=24,
+def create_from_csv(actor_id, asset_dict={}, start_date="2016-01-01", nb_ts=None, horizon=24,
                     ts_hour=1, override_scaling=False, capacity=0):
     """
     Create actor instance with random asset time series and random scaling factors. Replace
