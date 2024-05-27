@@ -16,8 +16,7 @@ def time_it(function, timers={}):
     :param timers: storage for cumulated time and call number
     :type timers: dict
     :return: decorated function or timer if given function is None
-    :rtype function or dict
-
+    :rtype: function or dict
     """
     if function == "flush":
         keys = [key for key in timers.keys()]
@@ -457,7 +456,7 @@ class BestMarket(Market):
     def match_new(self, show=False):
         asks = self.get_asks()
         bids = self.get_bids()
-        bids.loc[:, "price"] = bids["price"].apply(lambda x: x.round(cfg.config.round_decimal))
+        bids.loc[:, "price"] = bids["price"].apply(lambda x: round(x, cfg.config.round_decimal))
 
         # filter out market makers (infinite bus) and really large orders
         asks, asks_mm, bids, bids_mm, _, _ = self.filter_orders(asks, bids)
@@ -546,7 +545,8 @@ class BestMarket(Market):
             # - correct floating point errors by rounding
             cluster.asks["adjusted_price"] = cluster.asks.apply(
                 lambda row: row["price"] + self.get_grid_fee(bid_cluster=cluster.idx,
-                                                             ask_cluster=row["cluster"]),
+                                                             ask_cluster=row["cluster"])
+                if pd.notnull(row["price"]) else pd.NA,
                 axis=1
             ).round(cfg.config.round_decimal)
 

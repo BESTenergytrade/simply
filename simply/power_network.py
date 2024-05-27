@@ -119,8 +119,8 @@ class PowerNetwork:
         # plot_hierarchical(self.network)
         try:
             plot_topology_graphvis(self.network)
-        except ImportError:
-            # In case dot is not installed
+        except (ImportError, FileNotFoundError):
+            # In case dot/Graphviz is not installed
             nx.draw(self.network, with_labels=True, font_weight="bold", node_size=50)
 
         if show:

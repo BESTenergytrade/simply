@@ -40,6 +40,11 @@ class Market:
         except (FileNotFoundError, TypeError) as e:
             raise FileNotFoundError(f"Market is unable to save_csv to path: "
                                     f"{cfg.config.results_path}: {e}")
+        except AttributeError as e:
+            # A missing path is only problematic, if files should be saved
+            if self.save_csv:
+                raise FileNotFoundError(f"Market is unable to save_csv to path: "
+                                        f"{cfg.config.results_path}: {e}")
         self.grid_fee_matrix = grid_fee_matrix
         if grid_fee_matrix is None:
             warnings.warn("Pay-As-Bid market was generated without a grid_fee_matrix "
