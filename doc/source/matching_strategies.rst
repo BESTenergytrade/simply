@@ -24,6 +24,12 @@ There are two types of orders (see :class:`simply.actor.Order`) that can be plac
 Besides the energy and price rate, an `Order` further holds the next time slot, the association to
 the cluster in the grid and the actor's ID.
 
+In case an Order has an energy of greater than maxint, i.e. :code:`2**63-1`, it is identified as
+a Market Maker order to be understood as an infinite source and sink for electrical energy. Consequently, all actors
+meeting the price criteria (potentially including grid fees) are guaranteed to be matched.
+In contrast to a prosumer Actor the Market Maker does not have a schedule
+and is not restricted by e.g. a battery capacity or a strategy.
+
 .. _example_scenario:
 
 Example Scenario
@@ -43,7 +49,7 @@ Network
 
    Figure 1: a basic network consisting of 5 actors across 2 clusters.
 
-Grid-Free Matrix
+Grid-Fee Matrix
 ----------------
 
 Grid-fees are calculated for each order using the following grid fee matrix:
