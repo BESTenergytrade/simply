@@ -132,7 +132,7 @@ class Config:
         # Horizon up to which energy management is considered and predictions are made
         self.horizon = parser.getint("default", "horizon", fallback=24)
         # [unused] strategy that every actor uses if not specified
-        self.actor_strategy = parser.getint("default", "actor_strategy", fallback=0)
+        self.actor_strategy = parser.getint("default", "actor_strategy", fallback=None)
 
         # --------------------------
         # output
