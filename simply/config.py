@@ -99,7 +99,7 @@ class Config:
         # market
         # --------------------------
         # market type to be use
-        self.market_type = parser.get("default", "market_type", fallback="default").lower()
+        self.market_type = parser.get("default", "market_type", fallback="pab").lower()
         self.disputed_matching = parser.get("default", "disputed_matching",
                                             fallback="grid_fee").lower()
         # reset market after each interval (discard unmatched orders)
@@ -131,8 +131,8 @@ class Config:
         # --------------------------
         # Horizon up to which energy management is considered and predictions are made
         self.horizon = parser.getint("default", "horizon", fallback=24)
-        # strategy that every actor uses
-        self.actor_strategy = parser.getint("default", "actor_strategy", fallback=0)
+        # [unused] strategy that every actor uses if not specified
+        self.actor_strategy = parser.getint("default", "actor_strategy", fallback=None)
 
         # --------------------------
         # output
