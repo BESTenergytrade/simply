@@ -47,15 +47,13 @@ After cloning the repository, a virtual environment is created (e.g. using virtu
 
 Then there are two options to use simply:
 
-#.
- Use the cloned repository directly and install the necessary dependencies using:
+1. Use the cloned repository directly and install the necessary dependencies using:
 
  .. code:: bash
 
     pip install -r requirements.txt
 
-#.
- Or install the package in editable mode using:
+2. Or install the package in editable mode using:
 
  .. code:: bash
 
