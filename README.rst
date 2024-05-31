@@ -67,154 +67,25 @@ such as `matplotlib <https://matplotlib.org/>`_, `pandas <https://pandas.pydata.
 
 Using Simply
 ============
-The core of simply is the market matching algorithms. To be able to use the market matching algorithms, a
-scenario is required as an input. The scenario can either be built from own data or randomly generated
-by simply.
+The core of simply is the market :ref:`matching_algorithms`. To be able to use the market matching algorithms, a
+:ref:`scenarios` is required as an input. The scenario can either be built from own data or randomly generated
+and simulated by simply as described below.
 
-**Configuration file**
+In all cases for using simply, a :ref:`config` (`config.cfg`) is required to specify the correct parameters
+of the scenario and simulation.
 
-In all cases for using simply, a configuration file (`config.cfg`) is required to specify the correct parameters
-of the scenario and simulation. If a parameter is not specified in `config.cfg` and there is a default option,
-this will be chosen. The file is split into the sections `scenario`, `market` and `outputs`, and
-the parameters for each section are outlined as follows:
+.. _run_build_scenario:
 
-.. csv-table:: Scenario
-   :file: doc/files_to_be_displayed/scenario_params.csv
-   :widths: 30, 70, 30, 30
-   :header-rows: 1
+Create your own scenario
+------------------------
 
-.. csv-table:: Market
-   :file: doc/files_to_be_displayed/market_params.csv
-   :widths: 30, 70, 30, 30
-   :header-rows: 1
-
-.. csv-table:: Output
-   :file: doc/files_to_be_displayed/output_params.csv
-   :widths: 30, 70, 30, 30
-   :header-rows: 1
-
-Building your own scenario
---------------------------
-
-A scenario is built from a number of required inputs: data (load, pricing, production, load directory), information on each
-actor, information on the network and a configuration file. The structure to build a scenario can be set up
-as shown below. Note that the directory containing your data timeseries (scenario inputs) can be located elsewhere if you
-specify in the command line. However, actors_config, config and network_config must all be stored in your project
-directory:
-
-::
-
-    |-- projects
-        |-- your_project_name
-            |-- scenario_inputs
-                |-- load
-                    |-- your load timeseries
-                |-- price
-                    |-- your price timeseries
-                |-- production
-                    |-- your production timeseries
-                |-- loads_dir.csv
-            |-- actors_config.json
-            |-- config.cfg
-            |-- network_config.json
-
-**Scenario inputs**
-
-The input timeseries data can be in either csv or json format. Below shows the generic format of the input timeseries.
-The `Time` column contains entries for each interval in the format `YYYY-MM-DD hh:mm:ss`, where the interval time is
-specified in `config.cfg`. The number of entries must be equal to the number of timesteps
-(also specified in `config.cfg`). The second column contains the values for each interval for either load, production or
-pricing, and `col_name` will change based on which data is represented.
-
-::
-
-    +---------------------+------------+
-    |        Time         | col_name   |
-    +=====================+============+
-    | 2020-01-01 00:00:00 |    0.02    |
-    +---------------------+------------+
-    | 2020-01-01 00:00:15 |    0.05    |
-    +---------------------+------------+
-    |        ...          |    ...     |
-    +---------------------+------------+
-
-.. note:: There are no units set in simply, so all input files must be consistent with their units!
-
-**Actors configuration**
-
-The `actors_config.json` file represents a template for setting up a market community consisting of the market maker
-and other market participants. For each market actor, the following must be specified, analogous to the example file:
-
-#. The name of the market actor, e.g. "residential_1".
-#. The market actor type, i.e. "market_maker", "residential", "industrial" or "business".
-#. The location of the actor in the community network, i.e. the network node at which the prosumer is located.
-#. The information about power consumption and power devices (if any):
-
-- The device type, i.e. "load", "solar" or "battery".
-- The device ID: here is the name of a file (.json or .csv), which is to be stored under /sample and contains the load curve for the respective power consumption or the respective power device.
-
-Each actor is represented with the following structure:
-
-::
-
-  {
-        "comment": "An example of a residential prosumer with load and pv data specifed by their 'deviceID'",
-        "prosumerName": "residential_1",
-        "prosumerType": "residential",
-        "gridLocation": "N04",
-        "devices": [
-            {
-                "deviceType": "load",
-                "deviceID": "CHH10_sample.csv"
-            },
-            {
-                "deviceType": "solar",
-                "deviceID": "generated_pv.csv"
-            }
-        ]
-    }
-
-
-**Network configuration**
-
-The file `network_config.json` represents a template for the construction of a market community network. Under "nodes"
-the names of the individual nodes are listed (e.g. N01, N02). The market maker represents a separate node.
-Under "links" the network charge is defined for each combination of two nodes. Nodes between which there is a network
-charge of 0 represent a common cluster (see BEST Matching Algorithm). The general structure is shown below:
-
-::
-
-    {
-      "example_network": {
-        "directed": false,
-        "multigraph": false,
-        "graph": {},
-        "nodes": [
-          {
-            "id":  "N01"
-          },
-          {
-            ... :  ...
-          }
-        ],
-        "links": [
-          {
-            "weight": 0,
-            "source": "N01",
-            "target": "N02"
-          },
-          {
-            ... : ...,
-            ... : ...,
-            ... : ...
-          }
-        ]
-      }
-    }
+In order to build a scenario in a format that simply understands please prepare the data
+as described by :ref:`build_scenario` (in :ref:`scenarios`), to define which data is associated
+to which actor of the community and how they are connected by the network.
 
 **Running build_scenario**
 
-After the network and the community have been created, `build_scenario.py` can be executed. This is done by:
+After the network and the community definitions have been set up, `build_scenario.py` can be executed. This is done by:
 
  .. code:: bash
 
@@ -231,8 +102,8 @@ time series for each actor with power generation, power consumption, and market 
 
 An example of a scenario can be found in `projects/example_projects/example_project`.
 
-Generating a random scenario
-----------------------------
+**Generating a randomized scenario**
+
 There is also the option of generating a random scenario right before matching using `match_market.py`
 (as explained in the section below). In this case, the parameters `nb_actors`,
 `nb_nodes` and `weight_factor` should be specified in `config.cfg`, otherwise the default parameters are used. The only
@@ -245,10 +116,14 @@ input required before running the main simply function is the `config.cfg` file 
             |-- config.cfg
 
 An example of config file and a generated random scenario can be found in `projects/example_projects/random_scenario`.
+For more details please also see :ref:`scenarios`.
 
-Running the match market function
----------------------------------
-The match market function is executed by:
+.. _run_simulation:
+
+Running the simulation
+----------------------
+
+A simulation is executed by running the `match_market.py` script:
 
  .. code:: bash
 
@@ -259,7 +134,8 @@ scenario - here is where time series for each actor with power generation, power
 (including bid price) can be found.
 
 For both instances, once you run `match_market.py` the results will be stored in path/to/your/project/dir/market_results.
-Here you can see the results for the matches and orders in the network.
+Here you can see the results in csv-format for the matches and orders of actors in the network
+as well as individual results per actor.
 
 License
 =======

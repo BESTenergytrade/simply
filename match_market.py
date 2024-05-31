@@ -79,9 +79,12 @@ def main(cfg: Config):
     elif "fair" in cfg.market_type:
         m = market_fair.BestMarket(network=sc.power_network,
                                    disputed_matching=cfg.disputed_matching)
-    else:
-        # default
+    elif "pab" in cfg.market_type:
+        # default pay-as-bid
         m = market.Market()
+    else:
+        raise NotImplementedError(
+            "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair']")
 
     sc.add_market(m)
     exec_start = time()

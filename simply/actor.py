@@ -18,6 +18,7 @@ Struct to hold order
 :param type: sign of order, representing bid (-1) or ask (+1)
 :param time: timestamp when order was created
 :param actor_id: ID of ordering actor
+:param cluster: cluster of ordering actor
 :param energy: amount of energy the actor wants to trade. Will be rounded down(asks)/up(bids)
     according to the market's energy unit
 :param price: bidding/asking price for one unit of energy
