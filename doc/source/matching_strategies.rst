@@ -24,6 +24,17 @@ There are two types of orders (see :class:`simply.actor.Order`) that can be plac
 Besides the energy and price rate, an `Order` further holds the next time slot, the association to
 the cluster in the grid and the actor's ID.
 
+.. _market_maker:
+
+Market Maker
+============
+
+In addition to the Actors (:class:`simply.actor.Actor`) a Market Maker ((:class:`simply.market_maker.MarketMaker`) can be defined, which
+does not have to be assigned to any cluster.
+The Market Maker has a specific price time series and acts as an infinite source and sink for electrical energy. Consequently, all actors
+meeting the price criteria (potentially including grid fees) can be matched. In contrast to a prosumer Actor the Market Maker does not have a schedule
+and is not restricted by e.g. a battery capacity or a strategy.
+
 .. _example_scenario:
 
 Example Scenario
@@ -34,11 +45,6 @@ used across the simply matching algorithms. The scenario consists of a basic net
 across 2 clusters. Actors 0 and 4 are in Cluster 0 and Actors 1, 2, and 3 are in Cluster 1. There
 is a +1 grid-fee in-between the Cluster 0 and 1. Matches made between clusters, therefore, incur an
 additional cost of +1.
-
-In addition to the five actors there is a Market Market maker which is not assigned to any cluster. The Market Maker has
-a specific price time series and acts as an infinite source and sink for electrical energy. Consequently, all actors
-meeting the price criteria can be matched. In contrast to an ordinary actor the Market Maker does not have a schedule
-and is not restricted by a battery capacity or a strategy.
 
 Network
 -------
