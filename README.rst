@@ -11,17 +11,17 @@ Getting started
 
 Introduction
 ===============
-Simply is an electricity market simulation frame work consisting of scripts for
+Simply is an electricity market simulation package consisting of modules and scripts for
 
 * scenario generation,
 * market simulation and
 * results visualisation and analysis.
 
 Simply is an agent-based market simulation tool with market actors sending bids and asks to a
-market, that can be cleared using different periodic `Matching Algorithms <https://simply.readthedocs.io/en/latest/matching_strategies.html>`_.
-The algorithms take grid fees into account, which can be based on clusters defined by the agent's
+market, that can be periodically cleared using different `Matching Algorithms <https://simply.readthedocs.io/en/latest/matching_strategies.html>`_.
+The algorithms take grid fees into account, which can be based on locally differentiated clusters defined by the agent's
 location in the network.
-The matching algorithms can also be used individually via a wrapper using a json format for order
+The matching algorithms can also be used individually as a module or via a wrapper using a json formatted order
 definition.
 
 Documentation
