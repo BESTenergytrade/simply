@@ -7,8 +7,8 @@ from abc import ABC, abstractmethod
 
 from simply.config import Config
 
-# default config
-Config('')
+# default config without paths
+Config("")
 
 ENERGY_UNIT_CONVERSION_FACTOR = 1  # simply: kW
 

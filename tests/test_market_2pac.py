@@ -1,5 +1,6 @@
 from simply.actor import Order
 from simply.market_2pac import TwoSidedPayAsClear
+import simply.config as cfg
 
 import pytest
 
@@ -7,14 +8,20 @@ from simply.scenario import Scenario
 from simply.market import MARKET_MAKER_THRESHOLD
 
 
+@pytest.fixture
+def reset_config():
+    return cfg.Config("")
+
+
 class TestTwoSidedPayAsClear:
+    cfg.Config("", "")
     scenario = Scenario(None, None, [])
 
-    def test_basic(self):
+    def test_basic(self, reset_config):
         """Tests the basic functionality of the TwoSidedPayAsClear object to accept bids and asks
         via the accept_order method and correctly match asks and bids when the match method
         is called."""
-        m = TwoSidedPayAsClear(time_step=0)
+        m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
         # no orders: no matches
         matches = m.match()
         assert len(matches) == 0
@@ -35,12 +42,12 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["energy"] == 1
         assert matches[0]["price"] == 1
 
-    def test_prices(self):
+    def test_prices(self, reset_config):
         """Tests that the highest bids are matched with the lowest asks and that all bids and
         asks above the crossover (when the bidding price becomes lower than the asking price)
         are matched on the clearing price."""
         # different prices
-        m = TwoSidedPayAsClear(time_step=0)
+        m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
         # ask above bid: no match
         m.accept_order(Order(-1, 0, 0, None, 1, 2))
         m.accept_order(Order(1, 0, 1, None, 1, 2.5))
@@ -57,11 +64,11 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["energy"] == 1
         assert matches[0]["price"] == 2
 
-    def test_energy(self):
+    def test_energy(self, reset_config):
         """Tests that matches can be made when the amount of energy requested by the bid
         differs from the total amount of energy being offered by the ask."""
         # different energies
-        m = TwoSidedPayAsClear(time_step=0)
+        m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
         m.accept_order(Order(-1, 0, 0, None, .1, 1))
         m.accept_order(Order(1, 0, 1, None, 1, 1))
         matches = m.match()
@@ -89,7 +96,7 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["energy"] == 1
         assert matches[0]["price"] == 1
 
-    def test_setting_order_id(self):
+    def test_setting_order_id(self, reset_config):
         # Check if matched orders retain original ID
         m = TwoSidedPayAsClear(time_step=0, grid_fee_matrix=0)
         m.accept_order(Order(-1, 0, 2, None, .2, 1), "ID1")
@@ -100,7 +107,7 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["bid_id"] == "ID1"
         assert matches[0]["ask_id"] == "ID2"
 
-    def test_multiple(self):
+    def test_multiple(self, reset_config):
         """Tests that multiple bids can be matched with one ask while there is available energy
         within the order."""
         # multiple bids to satisfy one ask
@@ -128,14 +135,14 @@ class TestTwoSidedPayAsClear:
         assert matches[2]["energy"] == 30
         assert matches[3]["energy"] == 40  # only 100 in bid
 
-    def test_market_maker(self):
+    def test_market_maker(self, reset_config):
         # Test if inserting market_maker order works
         # example: cost 1 all trades
         m = TwoSidedPayAsClear(grid_fee_matrix=1, time_step=0)
         # Market Maker
         mm_price = 5
-        m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
-        m.accept_order(Order(1, 0, "MarketMaker", 1, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(-1, 0, "MarketMaker", None, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(1, 0, "MarketMaker", None, MARKET_MAKER_THRESHOLD, mm_price))
 
         # grid-fees between nodes only allow for partial matching
         # Bids
@@ -154,33 +161,31 @@ class TestTwoSidedPayAsClear:
             assert m["ask_actor"] in [4, 5, "MarketMaker"]
             assert m["price"] == mm_price + 1
 
-        # Without a grid fee MarketMaker could match with itself
-        # this should not happen
+        # Test, that MarketMaker does not match with itself, even if price would allow it
         m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
         # Market Maker
         mm_price = 1
-        m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
-        m.accept_order(Order(1, 0, "MarketMaker", 1, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(-1, 0, "MarketMaker", "MM", MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(1, 0, "MarketMaker", "MM", MARKET_MAKER_THRESHOLD, mm_price))
 
         matches = m.match()
-        # 1 bid gets matched, MM doesn't match with itself
+        # MM doesn't match with itself
         assert len(matches) == 0
 
         # but market maker should still match with other orders
         m = TwoSidedPayAsClear(grid_fee_matrix=0, time_step=0)
         # Market Maker
         mm_price = 1
-        m.accept_order(Order(-1, 0, "MarketMaker", 0, MARKET_MAKER_THRESHOLD, mm_price))
-        m.accept_order(Order(1, 0, "MarketMaker", 1, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(-1, 0, "MarketMaker", None, MARKET_MAKER_THRESHOLD, mm_price))
+        m.accept_order(Order(1, 0, "MarketMaker", None, MARKET_MAKER_THRESHOLD, mm_price))
 
-        # grid-fees between nodes only allow for partial matching
         # Bids
         m.accept_order(Order(-1, 0, 2, 0, 3, mm_price * 3))
         matches = m.match()
         # 1 bid gets matched, MM doesn't match with itself
         assert len(matches) == 1
 
-    def test_prices_matrix(self):
+    def test_prices_matrix(self, reset_config):
         # test prices with a given grid fee matrix
         # "Assertion Error because grid_fee_matrix"
         with pytest.raises(AssertionError, ):
@@ -200,7 +205,7 @@ class TestTwoSidedPayAsClear:
         assert matches[0]["included_grid_fee"] == 1
 
         # default grid fee should only be applied once
-        # example: cost 1 for trade between clusters
+        # example: cost 1 for trade between all actors
         m = TwoSidedPayAsClear(grid_fee_matrix=1, time_step=0)
 
         # grid-fees only allow for partial matching

@@ -2,3 +2,6 @@ networkx
 matplotlib
 pandas
 pytest
+pathlib
+numpy
+pydot

@@ -1,0 +1,9 @@
+name,description,type,default
+load_scenario,"if True, loads existing scenario (path required); if False, a random scenario is generated",bool,True
+results_path,path to where results are saved,str,your_project_name/market_results
+scenario_path,path to where the scenario is stored,str,your_project_name/scenario
+data_format,data format of inputs and results,str,csv
+nb_actors,number of actors in the simulation,int,5
+nb_nodes,number of nodes in the simulation,int,4
+weight_factor,network charges to power network weight,num,0.1
+EPS,"tolerance value for assertions, comparisons etc.",num,1.00E-06

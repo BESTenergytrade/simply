@@ -10,9 +10,11 @@ Welcome to simply's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   getting_started
+   readme
+   scenarios
    matching_strategies
    pricing_strategies
+   actor_strategies
    modules
    glossary
 

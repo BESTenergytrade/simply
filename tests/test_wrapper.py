@@ -1,16 +1,24 @@
 from simply.market_wrapper import (BestPayAsBidMatchingAlgorithm,
                                    BestPayAsClearMatchingAlgorithm,
                                    BestClusterPayAsClearMatchingAlgorithm)
+from simply.market import MARKET_MAKER_THRESHOLD
+from simply.config import Config
+
 import pytest
 
 FLOATING_POINT_TOLERANCE = 0.00001
+
+
+@pytest.fixture
+def reset_config():
+    return Config("")
 
 
 class TestPayAsBidMatchingAlgorithm:
     """Test the pay-as-bid matching algorithm"""
 
     @staticmethod
-    def test_perform_simple_pay_as_bid_match():
+    def test_perform_simple_pay_as_bid_match(reset_config):
         """
         Test whether the matches from a list of offers and bids are the expected ones.
         Single bid and single offer with floating point tolerance
@@ -39,7 +47,7 @@ class TestPayAsBidMatchingAlgorithm:
         assert recommendations == expected_recommendations
 
     @staticmethod
-    def test_buyer_seller_same_no_pay_as_bid_match():
+    def test_buyer_seller_same_no_pay_as_bid_match(reset_config):
         """
         Test whether the matches from a list of offers and bids are the expected ones.
         If seller and buyer have the same ID they should not be matched
@@ -61,7 +69,7 @@ class TestPayAsBidMatchingAlgorithm:
         assert recommendations == expected_recommendations
 
     @staticmethod
-    def test_perform_pay_as_bid_match_multiple_offers_bids_price_ordered():
+    def test_perform_pay_as_bid_match_multiple_offers_bids_price_ordered(reset_config):
         """
         Test whether the matches from a list of offers and bids are the expected ones.
         The orders are matched in the order of decreasing and increasing energy_rate
@@ -105,7 +113,7 @@ class TestPayAsBidMatchingAlgorithm:
         assert [i for i in recommendations if i not in expected_recommendations] == []
 
     @staticmethod
-    def test_perform_pay_as_bid_match_multiple_offers_bids():
+    def test_perform_pay_as_bid_match_multiple_offers_bids(reset_config):
         """
         Test whether the matches from a list of offers and bids are the expected ones.
         The orders are matched in the order of decreasing and increasing energy_rate
@@ -193,7 +201,7 @@ class TestPayAsBidMatchingAlgorithm:
         assert [i for i in recommendations if i not in expected_recommendations] == []
 
     @staticmethod
-    def test_energy_unit():
+    def test_energy_unit(reset_config):
         """
         Test the granularity of energy is matched.
         """
@@ -220,7 +228,7 @@ class TestPayAsBidMatchingAlgorithm:
         compare_dicts(expected_recommendations, recommendations)
 
     @staticmethod
-    def test_energy_unit_bigger():
+    def test_energy_unit_bigger(reset_config):
         """
         Test the granularity of energy is matched.
         """
@@ -247,7 +255,7 @@ class TestPayAsBidMatchingAlgorithm:
         compare_dicts(expected_recommendations, recommendations)
 
     @staticmethod
-    def test_perform_pay_as_bid_match_single_offer_bid():
+    def test_perform_pay_as_bid_match_single_offer_bid(reset_config):
         """
         Test whether a single offer can match with a bid.
         """
@@ -274,7 +282,7 @@ class TestPayAsBidMatchingAlgorithm:
         assert recommendations == expected_recommendations
 
     @staticmethod
-    def test_perform_pay_as_bid_match_single_offer_multiple_bids():
+    def test_perform_pay_as_bid_match_single_offer_multiple_bids(reset_config):
         """
         Test whether a single offer can match with multiple bids.
         """
@@ -308,7 +316,7 @@ class TestPayAsBidMatchingAlgorithm:
         assert [i for i in recommendations if i not in expected_recommendations] == []
 
     @staticmethod
-    def test_perform_pay_as_bid_match_single_bid_multiple_offers():
+    def test_perform_pay_as_bid_match_single_bid_multiple_offers(reset_config):
         """
         Test whether a single bid can match with multiple offers.
         """
@@ -346,7 +354,7 @@ class TestPayAsClearMatchingAlgorithm:
     """Test the pay-as-bid matching algorithm"""
 
     @staticmethod
-    def test_perform_simple_merit_order_match():
+    def test_perform_simple_merit_order_match(reset_config):
         """
         Test whether the matches from a list of offers and bids are the expected ones.
         Single bid and single offer with floating point tolerance
@@ -381,7 +389,7 @@ class TestBestClusterPayAsClearMatchingAlgorithm:
     """Test the pay-as-bid matching algorithm"""
 
     @staticmethod
-    def test_perform_simple_best_match():
+    def test_perform_simple_best_match(reset_config):
         """
         Test whether the matches from a list of offers and bids are the expected ones.
         Single bid and single offer with floating point tolerance
@@ -408,6 +416,45 @@ class TestBestClusterPayAsClearMatchingAlgorithm:
              "bid": {"id": 3, "buyer": "C", "energy_rate": 5, "energy": 0.2, 'cluster': 0},
              "offer": {"id": 4, "seller": "A", "energy_rate": 3, "energy": 0.3, 'cluster': 1},
              "selected_energy": 0.2, "trade_rate": 4, "matching_requirements": None},
+        ]
+        compare_dicts(expected_recommendations, recommendations)
+
+    @staticmethod
+    def test_perform_simple_best_match_with_marketmaker(reset_config):
+        """
+        Test whether the matches from a list of offers and bids are the expected ones.
+        Single market maker bid and single prosumer offer
+        """
+        grid_fee_matrix = [[0, 0], [1, 0]]
+        mm_cluster = 0
+        data = {
+            "market1": {
+                "2021-10-06T12:00": {
+                    "bids": [
+                        {"id": 3, "buyer": "MM", "energy_rate": 0.05,
+                         "energy": MARKET_MAKER_THRESHOLD, 'cluster': mm_cluster}
+                    ],
+                    "offers": [
+                        {"id": 4, "seller": "A", "energy_rate": 0.03,
+                         "energy": 0.3, 'cluster': 1},
+                        {"id": 5, "seller": "MM", "energy_rate": 0.04,
+                         "energy": MARKET_MAKER_THRESHOLD, 'cluster': mm_cluster}
+                    ],
+                }
+            }
+        }
+        recommendations = BestClusterPayAsClearMatchingAlgorithm.get_matches_recommendations(
+            data, grid_fee_matrix)
+        print(recommendations)
+        expected_recommendations = [
+            {"market_id": "market1",
+             "time_slot": "2021-10-06T12:00",
+             "bid": {
+                 "id": 3, "buyer": "MM", "energy_rate": 0.05,
+                 "energy": MARKET_MAKER_THRESHOLD, 'cluster': mm_cluster
+             },
+             "offer": {"id": 4, "seller": "A", "energy_rate": 0.03, "energy": 0.3, 'cluster': 1},
+             "selected_energy": 0.3, "trade_rate": 0.03, "matching_requirements": None},
         ]
         compare_dicts(expected_recommendations, recommendations)
 
