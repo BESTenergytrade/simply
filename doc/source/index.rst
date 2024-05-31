@@ -11,8 +11,10 @@ Welcome to simply's documentation!
    :caption: Contents:
 
    readme
+   scenarios
    matching_strategies
    pricing_strategies
+   actor_strategies
    modules
    glossary
 

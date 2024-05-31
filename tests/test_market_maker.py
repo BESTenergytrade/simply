@@ -8,9 +8,15 @@ from simply.scenario import Scenario
 from simply.actor import create_random
 
 
+@pytest.fixture
+def reset_config():
+    return cfg.Config("")
+
+
 class TestMarketMaker:
     cfg.Config("", "")
     buy_prices = np.arange(1, 100, 1)
+    cfg.config.nb_ts = 100
     scenario = Scenario(None, None, None)
     env = scenario.environment
 
@@ -53,6 +59,7 @@ class TestMarketMaker:
         assert sum(market_maker.energy_sold) == 0
         assert sum(market_maker.energy_bought) == 0
         NR_TIME_STEPS = 10
+        # cfg.config.nb_ts = NR_TIME_STEPS
         self.add_actor_w_constant_schedule("buy_actor", -1)
         self.run_simply(NR_TIME_STEPS)
         assert sum(market_maker.energy_sold) == 10
@@ -71,6 +78,7 @@ class TestMarketMaker:
 
     def add_actor_w_constant_schedule(self, name, schedule_value):
         actor = create_random(name)
+        actor.data = actor.data.reset_index(drop=True)
         actor.data.load[:] = 0 + (schedule_value < 0) * abs(schedule_value)
         actor.data.schedule[:] = schedule_value
         actor.data.pv[:] = 0 + (schedule_value > 0) * schedule_value

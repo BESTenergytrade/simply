@@ -545,7 +545,8 @@ class BestMarket(Market):
             # - correct floating point errors by rounding
             cluster.asks["adjusted_price"] = cluster.asks.apply(
                 lambda row: row["price"] + self.get_grid_fee(bid_cluster=cluster.idx,
-                                                             ask_cluster=row["cluster"]),
+                                                             ask_cluster=row["cluster"])
+                if pd.notnull(row["price"]) else pd.NA,
                 axis=1
             ).round(cfg.config.round_decimal)
 
