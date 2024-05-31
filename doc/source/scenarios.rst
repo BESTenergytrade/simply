@@ -8,10 +8,15 @@ When running simply as a stand-alone simulation tool the `match_market.py` scrip
 can be used to load, generate and save a scenario and run it for the configured
 parameters (e.g. the number of simulations steps or :ref:`matching_algorithms`).
 
+A scenario consists of
+- **market participants** (Actors and Market Maker) including individual data on which
+orders are generated during a simulation
+- **network** and **grid fee** definition regarding the location of Actors
+
 .. _config:
 
-**Configuration File**
-----------------------
+Configuration File
+------------------
 
 In all cases for using simply, a configuration file (`config.cfg`) is required to specify the correct parameters
 of the scenario and simulation. If a parameter is not specified in `config.cfg` and there is a default option,
@@ -98,7 +103,8 @@ pricing, and `col_name` will change based on which data is represented.
 **Actors configuration**
 
 The `actors_config.json` file represents a template for setting up a market community consisting of the market maker
-and other market participants. For each market actor, the following must be specified, analogous to the example file:
+(:class:`simply.market_maker.MarketMaker`) and other market participants.
+For each market actor (:class:`simply.actor.Actor`), the following must be specified, analogous to the example file:
 
 #. The name of the market actor, e.g. "residential_1".
 #. The market actor type, i.e. "market_maker", "residential", "industrial" or "business".
@@ -135,8 +141,8 @@ Each actor is represented with the following structure:
 The file `network_config.json` represents a template for the construction of a market community network in a
 common Graph output format with nodes and links.
 
-Under **"nodes"** the names of the individual nodes are listed (e.g. N01, N02). The market maker as
-a special market participant does not have to be represented.
+Under **"nodes"** the names of the individual nodes are listed (e.g. N01, N02). The Market Maker as
+a special market participant does not have to be represented in the network.
 
 Under **"links"** the network charge is defined for each combination of two nodes. Nodes between which there is a network
 charge of 0 represent a common cluster (see :ref:`best_matching`). The general structure is shown below:

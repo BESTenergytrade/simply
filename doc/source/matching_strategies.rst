@@ -24,15 +24,10 @@ There are two types of orders (see :class:`simply.actor.Order`) that can be plac
 Besides the energy and price rate, an `Order` further holds the next time slot, the association to
 the cluster in the grid and the actor's ID.
 
-.. _market_maker:
-
-Market Maker
-============
-
-In addition to the Actors (:class:`simply.actor.Actor`) a Market Maker ((:class:`simply.market_maker.MarketMaker`) can be defined, which
-does not have to be assigned to any cluster.
-The Market Maker has a specific price time series and acts as an infinite source and sink for electrical energy. Consequently, all actors
-meeting the price criteria (potentially including grid fees) can be matched. In contrast to a prosumer Actor the Market Maker does not have a schedule
+In case an Order has an energy of greater than maxint, i.e. :code:`2**63-1`, it is identified as
+a Market Maker order to be understood as an infinite source and sink for electrical energy. Consequently, all actors
+meeting the price criteria (potentially including grid fees) are guaranteed to be matched.
+In contrast to a prosumer Actor the Market Maker does not have a schedule
 and is not restricted by e.g. a battery capacity or a strategy.
 
 .. _example_scenario:
