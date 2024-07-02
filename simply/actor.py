@@ -191,14 +191,22 @@ class Actor:
                      "pm": pm}
 
     def strategy_with_optimisation(self):
+        """ Return the optimized market schedule
+
+        An energy need with negative sign in the
+        schedule is met with buying energy in the market_schedule which has a positive sign
+
+        :return: default market schedule
+        """
+
         # Use the optimization library to implement the new strategy
         objective, df_results = optimize_schedule(
             self.pred, self.mm_buy_prices, self.mm_sell_prices)
         # Process the results as needed
-        self.market_schedule = df_results["to_grid"]
+        market_schedule = df_results["from_grid"] - df_results["to_grid"]
         self.bank += objective  # Update the bank balance with the optimization result
 
-        return self.market_schedule
+        return market_schedule
 
     def set_var_battery(self, capacity, soc_initial, df, available=0, max_c_rate=4,
                         refresh=True):
@@ -306,6 +314,8 @@ class Actor:
         self.market_schedule = self.plan_selling_strategy()
         if strategy == 2:
             return self.market_schedule
+
+        # implicit strategy == 3
         self.market_schedule = self.plan_global_trading()
         return self.market_schedule
 
