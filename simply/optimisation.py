@@ -6,7 +6,8 @@ import pyomo.environ as pyo
 import pandas as pd
 
 
-def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate=1, soc_initial=0.5):
+def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate=1, soc_initial=0.5,
+                      ev_capacity=0, ev_max_c_rate=1, ev_soc_initial=0):
     # parametrisation of battery specified in simply/battery.py
     # capacity=10, max_c_rate=1, soc_initial=0.5
     # TODO battery-efficiency ?
@@ -20,8 +21,12 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
     sell_prices = sell_prices.to_list()
 
     # TODO add electric vehicle
-    ev_avail = [1] * len(buy_prices)
-    ev_demand = [0] * len(buy_prices)
+    if ev_capacity != 0:
+        ev_avail = df_actor.loc[:, "ev_avail"].to_list()
+        ev_demand = df_actor.loc[:, "ev_demand"].to_list()
+    else:
+        ev_avail = [1] * len(df_actor)
+        ev_demand = [0] * len(df_actor)
 
     # other parameters
     # TODO minutes per time step can be obtained using datetime functions from input csv-files
@@ -33,24 +38,36 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
 
     # PYOMO OPTIMISATION MODEL
     model = pyo.ConcreteModel()
+    # Stationary Battery
     model.charging_power = pyo.Var(t, bounds=(0, capacity * max_c_rate))
     model.discharging_power = pyo.Var(t, bounds=(0, capacity * max_c_rate))
     model.stored_energy = pyo.Var(t, bounds=(0, capacity))
+    # EV
+    model.ev_charging_power = pyo.Var(t, bounds=(0, ev_capacity * ev_max_c_rate))
+    model.ev_discharging_power = pyo.Var(t, bounds=(0, ev_capacity * ev_max_c_rate))
+    model.ev_stored_energy = pyo.Var(t, bounds=(0, ev_capacity))
     # 0/ 1 for distinguishing between charging / discharging
     model.bi_charge = pyo.Var(t, within=pyo.Binary)
+    model.ev_bi_charge = pyo.Var(t, within=pyo.Binary)
+    # Exchange with grid
     model.power_from_grid = pyo.Var(t, bounds=(0, grid_connection_capacity))
     model.power_to_grid = pyo.Var(t, bounds=(0, grid_connection_capacity))
     model.cash_flow = pyo.Var(t)
 
-    # energy balance for the system
+    #################################
+    # energy balance for the system #
+    #################################
     model.energy_balance_system = pyo.ConstraintList()
     for i in range(len(t) - 1):
         model.energy_balance_system.add(
             0 ==
-            model.power_from_grid[i] + pv[i] + model.discharging_power[i]
-            - load[i] - model.power_to_grid[i] - model.charging_power[i])
+            model.power_from_grid[i] + pv[i] + model.discharging_power[i] + model.ev_discharging_power[i]
+            - load[i] - model.power_to_grid[i] - model.charging_power[i] - model.ev_charging_power[i]
+            - ev_demand[i])
 
-    # component energy storage
+    ############################
+    # component energy storage #
+    ############################
     model.energy_balance_storage = pyo.ConstraintList()
     for i in range(len(t) - 1):
         # constraint
@@ -82,7 +99,54 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
         model.binary_discharge_storage.add(
             model.discharging_power[i] <= (1 - model.bi_charge[i]) * capacity * max_c_rate)
 
-    # costs to be used in objective function
+    ############################
+    # component mobile storage #
+    ############################
+    model.ev_energy_balance_storage = pyo.ConstraintList()
+    for i in range(len(t) - 1):
+        # constraint
+        # ev demand directly incorporated in ev internal balance
+        model.ev_energy_balance_storage.add(
+            model.ev_stored_energy[i + 1] - model.ev_stored_energy[i] ==
+            (model.ev_charging_power[i] - model.ev_discharging_power[i])
+            * time_interval / 60)
+
+        model.ev_energy_balance_storage.add(
+            model.ev_stored_energy[i] >= ev_demand[i + 1])
+
+    model.ev_start_storage = pyo.Constraint(
+        expr=model.ev_stored_energy[0] ==
+             ev_soc_initial * ev_capacity)
+
+    # optional: equal soc at first and last time step
+    model.ev_start_end_storage = pyo.Constraint(
+        expr=model.ev_stored_energy[0] == model.ev_stored_energy[len(t) - 1])
+
+    # needed in order to not have a discharge that affects the timestep after the last considered
+    model.ev_end_no_discharge_storage = pyo.Constraint(
+        expr=0 == model.ev_discharging_power[len(t) - 1])
+
+    # binary variable to separate charging and discharging timesteps in order to
+    # exclude having both at the same time
+    model.ev_binary_charge_storage = pyo.ConstraintList()
+    model.ev_binary_discharge_storage = pyo.ConstraintList()
+    for i in t:
+        model.ev_binary_charge_storage.add(
+            model.ev_charging_power[i] <= model.ev_bi_charge[i] * ev_capacity * ev_max_c_rate)
+        # Only discharging possible during away-time (not availability)
+        if ev_avail[i] == 0:
+            # no local charging possible
+            model.ev_binary_charge_storage.add(model.ev_charging_power[i] == 0)
+            model.ev_binary_discharge_storage.add(
+                model.ev_discharging_power[i] == ev_demand[i]/ (time_interval / 60))
+
+    for i in t:
+        model.ev_binary_discharge_storage.add(
+            model.ev_discharging_power[i] <= (1 - model.ev_bi_charge[i]) * ev_capacity * ev_max_c_rate)
+
+    ##########################################
+    # costs to be used in objective function #
+    ##########################################
     model.cash_flow_equation = pyo.ConstraintList()
     for i in t:
         model.cash_flow_equation.add(
@@ -117,6 +181,12 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
         "charge": [model.charging_power[i].value for i in t],
         "discharge": [model.discharging_power[i].value for i in t],
         "soc": [model.stored_energy[i].value / capacity for i in t],
+        "ev_charge": [model.ev_charging_power[i].value for i in t],
+        "ev_discharge": [model.ev_discharging_power[i].value for i in t],
+        "ev_availability": [ev_avail[i] for i in t],
+        "ev_demand": [ev_demand[i] for i in t],
+        "ev_soc": [0 if ev_capacity == 0 else model.ev_stored_energy[i].value / ev_capacity
+                   for i in t],
     })
 
 
