@@ -256,6 +256,11 @@ class Actor:
         when to buy or sell energy. At the current time step the actor will always buy/ or sell
         this amount even at market maker price.
 
+        If strategy value is not specified, the actors attribute strategy is used and a warning is
+        signaled.
+        If the resulting strategy is not implemented or no flexibility exists, the strategy 0 is
+        chosen that trades all energy instantly and a warning is signaled.
+
         :param strategy: Number representing the actor strategy from 0 to 3
         :type strategy: int
         :return: market_schedule with planed amounts of energy buying/selling per time step
@@ -268,7 +273,7 @@ class Actor:
                 f"Strategy choice: {strategy} was not found in the list of possible "
                 f"strategies: {possible_choices}. Using default strategy 0 without "
                 "planning instead.")
-            strategy = self.strategy
+            strategy = 0
         elif strategy != 0:
             if self.battery is None or self.battery.capacity == 0:
                 warnings.warn(
