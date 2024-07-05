@@ -907,7 +907,7 @@ class Actor:
         # received energy
         delta_energy = sign*energy
         i = -1
-        while np.sign(delta_energy) == sign and delta_energy != 0:
+        while np.sign(delta_energy) == sign and abs(delta_energy) > cfg.config.energy_unit:
             i += 1
             if i == len(self.market_schedule):
                 # energy amount of match was not found inside of the market schedule. Testing,
