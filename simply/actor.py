@@ -201,10 +201,22 @@ class Actor:
 
         # Use the optimization library to implement the new strategy
         objective, df_results = optimize_schedule(
-            self.pred, self.mm_buy_prices, self.mm_sell_prices)
+            df_actor=self.pred,
+            buy_prices=self.mm_sell_prices,  # buy at MarketMaker sell prices incl. grid fee
+            sell_prices=self.mm_buy_prices,
+            capacity=self.battery.capacity,
+            max_c_rate=self.battery.max_c_rate,
+            soc_initial=self.battery.soc,
+            ev_capacity=self.var_battery.capacity,
+            ev_max_c_rate=self.var_battery.max_c_rate,
+            ev_soc_initial=self.var_battery.soc,
+            ts_per_hour=cfg.config.ts_per_hour
+        )
+        if cfg.config.debug:
+            from simply.optimisation import plot_optimization_results
+            plot_optimization_results(df_results)
         # Process the results as needed
-        market_schedule = df_results["from_grid"] - df_results["to_grid"]
-        self.bank += objective  # Update the bank balance with the optimization result
+        market_schedule = (df_results["from_grid"] - df_results["to_grid"]) / cfg.config.ts_per_hour
 
         return market_schedule
 
@@ -855,6 +867,10 @@ class Actor:
         if energy > 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
+            # Enforce: floor divided bought energy > Current battery energy + scheduled energy + EPS
+            #  - floor division e.g. for energy = 1.09 and energy_unit = 0.1:
+            #    yields 1.09 // 0.1 * 0.1 = 1
+            #    hence raise bought enrgy by + 1
             if (self.battery.energy() + self.pred.schedule[0:index].sum() +
                     ((energy + cfg.config.EPS) // cfg.config.energy_unit *
                      cfg.config.energy_unit) < 0):
@@ -864,6 +880,10 @@ class Actor:
         elif energy < 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or over 1 socs.
             # In these cases decrease the order by one energy unit, i.e. sell more energy
+            # Enforce: sold energy > Free battery energy volume - scheduled energy + EPS
+            #  - floor division e.g. for energy = 1 and energy_unit = 0.1:
+            #    yields 1 // 0.1 = 9
+            #    hence the + 1
             if self.battery.energy() + self.pred.schedule[0:index].sum() + (
                     ((energy+cfg.config.EPS) // cfg.config.energy_unit+1) *
                     cfg.config.energy_unit) > self.battery.capacity:
@@ -930,8 +950,9 @@ class Actor:
                 # unexpected behaviour or self defined orders might be the reason. In this case give
                 # warning and do not adjust market_schedule
                 warnings.warn("Matched energy does not match planned energy.")
-                print(f"Actor {self.id}' last order {self.orders[-1]}")
-                print(f"Actor {self.id}' last order {self.orders[-1]}")
+                if cfg.config.verbose:
+                    print(f"Actor {self.id}': planned: {self.market_schedule[i]};"
+                          f" delta energy {delta_energy}")
                 return
             planned_energy = self.market_schedule[i]
             if planned_energy == 0:
@@ -942,6 +963,9 @@ class Actor:
             if (not np.sign(delta_energy) == np.sign(planned_energy)
                     and abs(planned_energy) > 2 * cfg.config.energy_unit):
                 warnings.warn("Matched energy does not match planned energy.")
+                if cfg.config.verbose:
+                    print(f"Actor {self.id}': planned (i={i}): {planned_energy}; "
+                          f"delta energy {delta_energy}")
             self.market_schedule[i] -= sign*min(abs(delta_energy), abs(planned_energy))
             delta_energy -= planned_energy
 
