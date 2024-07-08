@@ -1,14 +1,11 @@
 import json
 import warnings
 from typing import Sized, Iterable
-
 from networkx.readwrite import json_graph
 import pandas as pd
 import numpy as np
 import random
-#import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 import simply.config as cfg
@@ -20,6 +17,7 @@ from simply.market_maker import MarketMaker
 from simply.actor import Actor
 from simply.market import Market
 
+matplotlib.use('TkAgg')
 debug_actor = None  # 'residential_3'
 
 
