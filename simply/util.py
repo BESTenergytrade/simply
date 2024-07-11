@@ -1,6 +1,22 @@
 import numpy as np
 import pandas as pd
+import datetime
+
 import simply.config as cfg
+
+
+def dates_to_datetime(start_date="2016-01-01", nb_ts=1, horizon=24, ts_hour=1):
+    """Converts string dates to datetime dtype and calculates end date from timesteps parameter."""
+    start_date = pd.to_datetime(start_date)
+    # necessary time steps of data including prediction horizon
+    nb_data_ts = nb_ts + horizon
+    time_change = datetime.timedelta(minutes=(nb_data_ts - 1) * (60 / ts_hour))
+    end_date = start_date + time_change
+
+    time_range = pd.date_range(start_date, freq="{}min".format(int(60 / ts_hour)),
+                               periods=nb_data_ts)
+    assert time_range[-1] == end_date
+    return start_date, end_date, time_range
 
 
 def round_price(price):

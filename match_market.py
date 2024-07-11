@@ -2,13 +2,13 @@
 from pathlib import Path
 from argparse import ArgumentParser
 from time import time
+import os
+import glob
 
 from simply import market, market_2pac, market_fair
 from simply.scenario import load, create_random, Scenario
 from simply.config import Config
-from simply.util import summerize_actor_trading
-import os
-import glob
+from simply.util import summerize_actor_trading, dates_to_datetime
 """
 Entry point for standalone functionality.
 
@@ -65,6 +65,9 @@ def main(cfg: Config):
         sc = create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
         sc.save(cfg.scenario_path, cfg.data_format)
 
+    start_date, end_date, time_range = dates_to_datetime(cfg.start_date, cfg.nb_ts + 1, cfg.horizon,
+                                                         cfg.ts_per_hour)
+
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_participant_data()
@@ -76,13 +79,17 @@ def main(cfg: Config):
     elif "fair" in cfg.market_type:
         m = market_fair.BestMarket(network=sc.power_network,
                                    disputed_matching=cfg.disputed_matching)
-    else:
-        # default
+    elif "pab" in cfg.market_type:
+        # default pay-as-bid
         m = market.Market()
+    else:
+        raise NotImplementedError(
+            "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair']")
 
     sc.add_market(m)
     exec_start = time()
-    for t in range(cfg.nb_ts):
+
+    for i, t in enumerate(time_range[cfg.start:cfg.nb_ts]):
         # actors calculate strategy based market interaction with the market maker
         sc.create_strategies()
         print("Actors finished scheduling created")
@@ -95,10 +102,10 @@ def main(cfg: Config):
         sc.next_time_step()
 
         if cfg.show_prints:
-            print(f"Cleared Volume: {round(m.cleared_volume[cfg.start + t], cfg.round_decimal)}")
+            print(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)}")
 
         # save/update additional actor results every at least 10 time steps
-        if cfg.save_csv and t % 10 == 0:
+        if cfg.save_csv and i % 10 == 0:
             sc.save_additional_results(sc.market.csv_path)
 
     print(f"Execution time was: {time()-exec_start} s")

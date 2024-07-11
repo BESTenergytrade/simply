@@ -50,6 +50,8 @@ simply.market\_fair module
    :undoc-members:
    :show-inheritance:
 
+.. _wrapper:
+
 simply.market\_wrapper module
 -----------------------------
 

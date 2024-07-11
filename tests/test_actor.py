@@ -42,6 +42,7 @@ class TestActor:
                        0.087,
                        0.08]
 
+        cfg.config.nb_ts = NR_STEPS
         scenario = Scenario(pn, None, buy_prices=np.tile(test_prices, 10), steps_per_hour=4,
                             sell_prices=round_prices_array(np.tile(test_prices, 10)*SELL_MULT))
         scenario.add_market(Market(pn))

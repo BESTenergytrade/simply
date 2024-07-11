@@ -8,6 +8,28 @@ The core of simply is the different matching algorithms. They decide which bids 
 matched together and at what price. Currently, simply has three matching algorithms: Pay-as-bid,
 Two-Sided Pay-as-clear and BEST matching.
 
+They can be applied by using the
+
+- standalone simulation script `match_market.py` (see :ref:`run_simulation`) or
+- via the static json-based wrapper functions (see :ref:`wrapper`).
+
+Orders
+======
+
+There are two types of orders (see :class:`simply.actor.Order`) that can be placed on the market:
+
+- **bids** (:code:`Order.type=-1`) are placed by actors looking to buy energy and
+- **asks** (:code:`Order.type=+1`) are placed by actors looking to sell energy.
+
+Besides the energy and price rate, an `Order` further holds the next time slot, the association to
+the cluster in the grid and the actor's ID.
+
+In case an Order has an energy of greater than maxint, i.e. :code:`2**63-1`, it is identified as
+a Market Maker order to be understood as an infinite source and sink for electrical energy. Consequently, all actors
+meeting the price criteria (potentially including grid fees) are guaranteed to be matched.
+In contrast to a prosumer Actor the Market Maker does not have a schedule
+and is not restricted by e.g. a battery capacity or a strategy.
+
 .. _example_scenario:
 
 Example Scenario
@@ -27,7 +49,7 @@ Network
 
    Figure 1: a basic network consisting of 5 actors across 2 clusters.
 
-Grid-Free Matrix
+Grid-Fee Matrix
 ----------------
 
 Grid-fees are calculated for each order using the following grid fee matrix:
@@ -41,27 +63,27 @@ Grid-fees are calculated for each order using the following grid fee matrix:
 +--------------------+--------------------------+-------------------------+
 
 Bids and Asks
----------------
+-------------
 
-Bids are placed by actors looking to buy energy and asks are placed by actors looking to sell
-energy. For this example, using the network depicted above, 5 orders consisting of 3 bids and 2 asks are
+For this example, using the network depicted above, 5 orders consisting of 3 bids and 2 asks are
 added into the market.
 
-**The Bids**
+**The Bids (buying energy)**
 
 Two bids, i.e. type=-1, each for 0.1 energy have been placed by Actor 1 in Cluster 1, of which one
 bid is set at the price of 10 and the other at the price of 7. The third bid is placed by Actor
 0 in Cluster 0 and is for 0.1 energy at price 10.
 
-**The Asks**
+**The Asks (selling energy)**
 
 Both asks, i.e. type=1, added into the market are placed by Actor 3 in Cluster 1. Both are for 0.1
 energy with one set at the price of 6 and the other at the price of 4.
 
-The code below shows the syntax for inputting the bids and asks:
+The code below shows how a bids and asks can be set without the use of simulation script:
 
 .. code:: python
 
+    # from simply.actor import Order
     Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 
     # Add bids
@@ -72,6 +94,8 @@ The code below shows the syntax for inputting the bids and asks:
     # Add asks
     m.accept_order(Order(1, 0, 3, 1, 0.1, 6))
     m.accept_order(Order(1, 0, 3, 1, 0.1, 4))
+
+.. _pab_matching:
 
 Pay-as-Bid Algorithm
 ====================
@@ -97,6 +121,8 @@ The table below illustrates the matching of the :ref:`example_scenario`:
 | actor 1, order_id 1, price 7   |                               |                |
 +--------------------------------+-------------------------------+----------------+
 
+.. _pac_matching:
+
 Two-sided Pay-as-Clear Algorithm
 ================================
 
@@ -118,12 +144,12 @@ The table below illustrates the matching of the :ref:`example_scenario` with gri
 | actor 1, order_id 1, price 7   |                               |                |
 +--------------------------------+-------------------------------+----------------+
 
+.. _best_matching:
+
 BEST Matching Algorithm
 =======================
 
-BEST Matching (found here: :ref:`best`)
-
-The BEST matching algorithm takes the network charge into account. In a first step, all clusters 
+The BEST matching algorithm (see :ref:`best`) takes the network charge into account. In a first step, all clusters
 are matched individually. (A cluster contains all nodes between which a network charge of 0 is defined). 
 For this purpose, the bids from the dedicated cluster and the asks from all clusters are considered. 
 If an ask is matched in more than one cluster, the match is only kept in the cluster where the network 
