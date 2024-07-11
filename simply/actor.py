@@ -116,7 +116,7 @@ class Actor:
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
                  cluster=None, strategy: int = 0, pricing_strategy=None,
                  battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
-                 ev_available=0, ev_max_c_rate=1, ev_max_power=11):
+                 ev_available=0, ev_max_c_rate=1, ev_max_power=11, grid_connection_capacity=20):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -124,6 +124,7 @@ class Actor:
         """
         self.id = id
         self.grid_id = None
+        self.grid_connection_capacity = grid_connection_capacity
         self.cluster = cluster
 
         self.horizon = cfg.config.horizon
@@ -210,7 +211,9 @@ class Actor:
             ev_capacity=self.var_battery.capacity,
             ev_max_c_rate=self.var_battery.max_c_rate,
             ev_soc_initial=self.var_battery.soc,
-            ts_per_hour=cfg.config.ts_per_hour
+            ts_per_hour=cfg.config.ts_per_hour,
+            end_min_soc=0.6,
+            grid_connection_capacity=self.grid_connection_capacity
         )
         if cfg.config.debug:
             from simply.optimisation import plot_optimization_results
@@ -225,8 +228,11 @@ class Actor:
         """
         available: initial availability status
         """
-        # TODO: WIP availability changes not working properly
-        available = 1  # TODO remove line when done
+        # If availability does notchanges
+        if self.strategy != 4:
+            # TODO WIP availability not working properly
+            warnings.warn("Set EV always available, as changes only fully working for strategy 4.")
+            available = 1
         self.var_battery = VariableBattery(
             capacity=capacity, soc_initial=soc_initial, available=available, max_c_rate=max_c_rate)
         # If EV should be included expect necessary time series in actor DataFrame
@@ -234,8 +240,9 @@ class Actor:
             for column in ["ev_avail", "ev_demand"]:
                 self.data[column] = df[column]
                 self.pm[column] = 0
-            # TODO: WIP availability not working properly
-            self.data["ev_avail"] = available  # TODO remove line when done
+            if self.strategy != 4:
+                # WIP availability not working properly
+                self.data["ev_avail"] = available
 
             if refresh:
                 self.create_prediction()
@@ -870,10 +877,13 @@ class Actor:
             # Enforce: floor divided bought energy > Current battery energy + scheduled energy + EPS
             #  - floor division e.g. for energy = 1.09 and energy_unit = 0.1:
             #    yields 1.09 // 0.1 * 0.1 = 1
-            #    hence raise bought enrgy by + 1
-            if (self.battery.energy() + self.pred.schedule[0:index].sum() +
-                    ((energy + cfg.config.EPS) // cfg.config.energy_unit *
-                     cfg.config.energy_unit) < 0):
+            #    hence raise bought energy by + energy unit
+            #  - if var_battery has free available battery capacity always round up
+            if (self.var_battery.capacity - self.var_battery.energy() > cfg.config.energy_unit) or (
+                    self.battery.energy() + self.pred.schedule[0:index].sum() +
+                    ((energy + cfg.config.EPS) // cfg.config.energy_unit * cfg.config.energy_unit)
+                    < 0
+            ):
                 energy += cfg.config.energy_unit
 
         # selling energy

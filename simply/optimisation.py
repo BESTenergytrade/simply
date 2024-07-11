@@ -10,14 +10,24 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
                       ev_capacity=0, ev_max_c_rate=1, ev_soc_initial=0,
                       ts_per_hour=1, end_min_soc=0.6, grid_connection_capacity=20):
     """
+    Optimizes load, pv time series with battery and electric vehicle flexibility based on buying and
+    selling price time series.
+
     Parametrisation of battery (no prefix) and electric vehicle (prefix: ev_*).
-    - df energy values (not power)
-    - buy_prices ... including fees
-    - capacity=10, max_c_rate=1, soc_initial=0.5 (parametrisation of battery)
-    - ts_per_hour minutes per time step
-    - end_min_soc: regarding the prediction horizon, the minimal end soc is a fix point
-        in order to promote a tendency to not extremely drain batteries at horizon boundary
-    - grid_connection_capacity: maximum power drawn from or fed into grid (defaults to 20)
+
+    :param df_actor: energy values (not power)
+    :param buy_prices: ... including fees
+    :param sell_prices:
+    :param capacity: (battery parameter) default=10
+    :param max_c_rate: (battery parameter) default=1,
+    :param soc_initial: (battery parameter) default=0.5
+    :param ev_capacity: (electric vehicle parameter) default=10
+    :param ev_max_c_rate: (electric vehicle parameter) default=1,
+    :param ev_soc_initial: (electric vehicle parameter) default=0.5
+    :param ts_per_hour: minutes per time step;  default=1
+    :param end_min_soc: regarding the prediction horizon, the minimal end soc is a fix point
+        in order to promote a tendency to not extremely drain batteries at the end of the horizon
+    :param grid_connection_capacity: maximum power drawn from or fed into grid; default=20)
     """
     # TODO battery-efficiency ?
 
@@ -26,8 +36,9 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
     # convert from dataFrame to lists and from energy to power
     load = df_actor.loc[:, "load"].mul(ts_per_hour).to_list()
     pv = df_actor.loc[:, "pv"].mul(ts_per_hour).to_list()
-    buy_prices = buy_prices.to_list()
-    sell_prices = sell_prices.to_list()
+    if isinstance(buy_prices, pd.Series):
+        buy_prices = buy_prices.to_list()
+        sell_prices = sell_prices.to_list()
 
     # TODO add electric vehicle
     if ev_capacity != 0:
@@ -119,8 +130,15 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
             (model.ev_charging_power[i] - model.ev_discharging_power[i])
             / ts_per_hour)
 
-        model.ev_energy_balance_storage.add(
-            model.ev_stored_energy[i] >= ev_demand[i + 1])
+        # The energy to be consumed during the succeeding time slot (while not available) has to be
+        # stored at the end of the current time slot, i.e. at the beginning of the next time slot
+        # try to keep a minimal soc after trip
+        if ev_demand[i + 1] != 0:
+            model.ev_energy_balance_storage.add(
+                model.ev_stored_energy[i + 1] >=
+                # max(ev_capacity * ev_target_soc, ev_demand[i + 1] + 0.1 * ev_capacity)
+                ev_demand[i + 1] + 0.1 * ev_capacity
+            )
 
     model.ev_start_storage = pyo.Constraint(
         expr=model.ev_stored_energy[0]
@@ -131,12 +149,16 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
     # (1) equal soc at first and last time step:
     #      expr = model.ev_stored_energy[len(t) - 1] == model.ev_stored_energy[0]
     # (2) last time step above specific soc
-    model.ev_start_end_storage = pyo.Constraint(
-        expr=model.ev_stored_energy[len(t) - 1] >= ev_capacity * end_min_soc)
+    #     Infeasible, if last timeslot has availability = 0
+    #     TODO Multiple timeslots might be necessary to get to a specific soc
+    #      or ev_capacity >= max(ev_demand) / (1 - end_min_soc)
+    # model.ev_start_end_storage = pyo.Constraint(
+    #    expr=model.ev_stored_energy[len(t) - 1] >= ev_capacity-max(ev_demand)
+    # )
 
     # needed in order to not have a discharge that affects the timestep after the last considered
     model.ev_end_no_discharge_storage = pyo.Constraint(
-        expr=0 == model.ev_discharging_power[len(t) - 1])
+        expr=0 == model.ev_discharging_power[len(t) - 1] - ev_demand[len(t) - 1])
 
     # binary variable to separate charging and discharging timesteps in order to
     # exclude having both at the same time
@@ -177,8 +199,10 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
     # opt.options['mipgap'] = 1e-3    # solver option for GLPK: relative gap, default: 0.0
     # opt.options['tmlim'] = 60*30    # solver option for GLPK: timelimit in seconds
     opt = pyo.SolverFactory('cbc')
-    opt.options['seconds'] = 60*30   # solver option for CBC: timelimit in seconds
-
+    opt.options['seconds'] = 1   # solver option for CBC: timelimit in seconds
+    # opt.options['tol'] = 0.0001      # solver option for CBC: tolerance
+    opt.options['threads'] = 4
+    # opt.options['ratio'] = 0.01
     # solve the problem
     _ = opt.solve(
         model,
@@ -191,9 +215,22 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
     try:
         objective = sum(model.cash_flow[i].value for i in t)
     except TypeError:
-        from pyomo.util.infeasible import log_infeasible_constraints
-        log_infeasible_constraints(model)
-        print(model)
+        print(f"init soc: {ev_soc_initial}, demand_max: {max(ev_demand)/ev_capacity}")
+        print({
+            "df_actor": df_actor.to_dict(),
+            "buy_prices": buy_prices,
+            "sell_prices": sell_prices,
+            "capacity": capacity,
+            "max_c_rate": max_c_rate,
+            "soc_initial": soc_initial,
+            "ev_capacity": ev_capacity,
+            "ev_max_c_rate": ev_max_c_rate,
+            "ev_soc_initial": ev_soc_initial,
+            "ts_per_hour": ts_per_hour,
+            "end_min_soc": end_min_soc,
+            "grid_connection_capacity": grid_connection_capacity
+        })
+
     return objective, pd.DataFrame({
         "Time": [df_actor.iat[i, 0] for i in t],
         "load": load,
@@ -312,6 +349,16 @@ if __name__ == "__main__":
 
     buy_prices = df_input_data_prices.loc[:, "all_buy_prices"] + grid_fee
     sell_prices = df_input_data_prices.loc[:, "all_sell_prices"]
+
+    """
+    # For debugging:
+    parameter_dict =
+
+    parameter_dict["df_actor"] = pd.DataFrame(parameter_dict["df_actor"])
+    print(parameter_dict["df_actor"])
+    objective, df_results = optimize_schedule(
+        **parameter_dict)
+    #"""
 
     objective, df_results = optimize_schedule(
         df_input_data_actor, buy_prices, sell_prices,
