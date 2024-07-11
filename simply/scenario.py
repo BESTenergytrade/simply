@@ -17,7 +17,10 @@ from simply.market_maker import MarketMaker
 from simply.actor import Actor
 from simply.market import Market
 
-matplotlib.use('TkAgg')
+try:
+    matplotlib.use('TkAgg')
+except ImportError as e:
+    print(e)
 debug_actor = None  # 'residential_3'
 
 
