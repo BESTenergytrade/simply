@@ -1,0 +1,46 @@
+{
+  "example_network": {
+    "directed": false,
+    "multigraph": false,
+    "graph": {},
+    "nodes": [
+      {
+        "id": "N01"
+      },
+      {
+        "id": "N02"
+      },
+      {
+        "id": "residential_1"
+      },
+      {
+        "id": "residential_2"
+      },
+      {
+        "id": "residential_3"
+      }
+    ],
+    "links": [
+      {
+        "weight": 1,
+        "source": "N01",
+        "target": "N02"
+      },
+      {
+        "weight": 0,
+        "source": "N01",
+        "target": "residential_1"
+      },
+      {
+        "weight": 0,
+        "source": "N02",
+        "target": "residential_2"
+      },
+      {
+        "weight": 0,
+        "source": "N02",
+        "target": "residential_3"
+      }
+    ]
+  }
+}
