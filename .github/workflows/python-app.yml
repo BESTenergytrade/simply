@@ -34,3 +34,6 @@ jobs:
     - name: Run match_market.py
       run: |
         python match_market.py projects/example_projects/example_project
+    - name: Run match_market.py EV optimisation
+      run: |
+        python match_market.py projects/example_projects/example_project_ev_opt
