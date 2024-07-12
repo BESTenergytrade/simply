@@ -52,11 +52,20 @@ class Actor:
     :param dict pm: (optional) Prediction multiplier used to manipulate prediction time series based
         on the data time series
     :param int cluster: cluster in which actor is located
-    :param int strategy: Number for strategy [0-3]
+    :param int strategy: Number for strategy [0-4]
     :param float battery_cap: Battery capacity used to create battery object.
         Only applied, if battery parameter is None (default: 0)
-    :param float battery_initial_soc: Initial state of charge of newly created battery object,
+    :param float battery_initial_soc: Initial state of charge of newly created Battery object,
         Only applied, if battery parameter is None (default: 0.5)
+    :param float ev_cap: Variable Battery capacity used to create VariableBattery object
+        (default: 0)
+    :param float ev_initial_soc: Initial state of charge of newly created variable battery object,
+        (default: 0.5)
+    :param float ev_available: initial availability status and if not strategy 4 override
+        availability series and send a warning (default: 0)
+    :param float ev_max_c_rate: maximum c-rate (default: 1)
+    :param float ev_max_power: maximum ev charger power (default: 11)
+    :param float grid_connection_capacity: maximum in/out flowing power at grid connection
 
     Members:
 
@@ -228,12 +237,25 @@ class Actor:
     def set_var_battery(self, capacity, soc_initial, df, available=0, max_c_rate=4,
                         refresh=True):
         """
-        available: initial availability status
+        Set a VariableBattery with a capacity and initial state of charge, availability to the
+        local actor energy system, and a c-rate.
+
+        Changing availability only applicable for strategy 4, otherwise warning is printed.
+
+        :param capacity: capacity of variable battery if available
+        :param soc_initial: initial state of charge
+        :param df: pd.DataFrame containing columns 'ev_demand' and 'ev_avail'
+            for driving energy consumption and availability time series
+        :param available: initial availability status and if not strategy 4 override availability
+            series and send a warning (default 0)
+        :param max_c_rate: c-rate of variable battery (default 4)
+        :param refresh: update prediction (default True)
         """
-        # If availability does notchanges
-        if self.strategy != 4:
-            # TODO WIP availability not working properly
-            warnings.warn("Set EV always available, as changes only fully working for strategy 4.")
+        if self.strategy != 4 and capacity != 0:
+            # TODO Implement changing availability for strategy 0-3
+            warnings.warn(
+                f"Actor {self.id} with strategy {self.strategy}: Set EV always available, "
+                f"as changes only fully working for strategy 4.")
             available = 1
         self.var_battery = VariableBattery(
             capacity=capacity, soc_initial=soc_initial, available=available, max_c_rate=max_c_rate)
@@ -1060,7 +1082,7 @@ class Actor:
         order_iter = iter(self.orders)
         o = next(order_iter, None)
         for i in range(len(self.traded_energy)):
-            if o is not None and i == o.time:
+            if o is not None and simulated_range_ts[i] == o.time:
                 save_df.loc[simulated_range_ts[i], "ordered_energy"] = o.energy * o.type
                 save_df.loc[simulated_range_ts[i], "ordered_price"] = o.price
                 o = next(order_iter, None)
