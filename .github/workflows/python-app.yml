@@ -16,6 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Install CBC solver
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y coinor-cbc
     - name: Set up Python 3.8
       uses: actions/setup-python@v3
       with:
