@@ -260,7 +260,7 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
             "ev_capacity": ev_capacity,
             "ev_max_c_rate": ev_max_c_rate,
             "ev_soc_initial": ev_soc_initial,
-            "ev_max_charger": ev_max_charger,
+            "charger_max_power": charger_max_power,
             "ts_per_hour": ts_per_hour,
             "end_min_soc": end_min_soc,
             "grid_connection_capacity": grid_connection_capacity

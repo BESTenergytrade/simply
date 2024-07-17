@@ -235,7 +235,7 @@ class Actor:
         return market_schedule
 
     def set_var_battery(self, capacity, soc_initial, df, available=0, max_c_rate=4,
-                        refresh=True):
+                        refresh=True, min_soc=0.1):
         """
         Set a VariableBattery with a capacity and initial state of charge, availability to the
         local actor energy system, and a c-rate.
@@ -250,6 +250,7 @@ class Actor:
             series and send a warning (default 0)
         :param max_c_rate: c-rate of variable battery (default 4)
         :param refresh: update prediction (default True)
+        :param min_soc: minimal soc attribute of battery, which is not automatically enforced
         """
         if self.strategy != 4 and capacity != 0:
             # TODO Implement changing availability for strategy 0-3
@@ -258,7 +259,9 @@ class Actor:
                 f"as changes only fully working for strategy 4.")
             available = 1
         self.var_battery = VariableBattery(
-            capacity=capacity, soc_initial=soc_initial, available=available, max_c_rate=max_c_rate)
+            capacity=capacity, soc_initial=soc_initial, available=available,
+            max_c_rate=max_c_rate, min_soc=min_soc
+        )
         # If EV should be included expect necessary time series in actor DataFrame
         if capacity > 0:
             for column in ["ev_avail", "ev_demand"]:
@@ -755,12 +758,17 @@ class Actor:
 
         if self.var_battery.capacity > 0:
             # EV demand consumption is possible while not available (other than `charge`)
-            self.var_battery.consume(self.pred.ev_demand[0], constrain=True)
-
-            missing = self.pred.ev_demand[1] + self.var_battery.min_soc * self.var_battery.capacity\
+            self.var_battery.consume(self.pred.ev_demand[0], constrain=False)
+            missing = max(self.pred.ev_demand[:])\
+                + self.var_battery.min_soc * self.var_battery.capacity\
                 - self.var_battery.energy()
-            # Favor charging into variable battery if necessary soc for the subsequent drive is not
+            # Favor charging into variable battery if necessary soc for the subsequent trips are not
             # reached yet.
+            # - First try to charge the missing driving energy plus buffer energy
+            # - If traded energy does not suffice use stationary battery to balance as much as
+            #   possible
+            # - ultimately undo charged energy in variable battery as scheduled energy and
+            #   stationary battery could not provide it
             if missing > 0:
                 diff, _, _ = self.var_battery.charge(missing, constrain=True)
                 if cfg.config.debug:
@@ -772,8 +780,9 @@ class Actor:
         diff, _, _ = self.battery.charge(charge_energy, constrain=True)
         if cfg.config.debug:
             print(f"Bat: charge {charge_energy} / diff {diff}")
-        # If stationary battery is full, try to charge the variable battery further
-        if self.var_battery.capacity > 0 and diff > missing:
+        # If stationary battery cannot fulfill the update,
+        # try to balance the difference with it with the variable battery further
+        if self.var_battery.capacity > 0:
             charge_energy = diff
             diff, _, _ = self.var_battery.charge(charge_energy, constrain=True)
             if cfg.config.debug:
