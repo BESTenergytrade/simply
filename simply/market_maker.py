@@ -145,8 +145,10 @@ class MarketMaker:
     buy_prices = property(get_buy_prices)
 
     def create_prediction(self):
-        """Adjust predicted prices to the current time step"""
-        self.pred["buy_prices"] = self.all_buy_prices[self.t_step: self.t_step + self.horizon]
+        """Adjust predicted prices to the current time step and
+         add grid fee for orders and actor information"""
+        self.pred["buy_prices"] = self.all_buy_prices[self.t_step: self.t_step + self.horizon] + \
+            cfg.config.default_grid_fee
         self.pred["sell_prices"] = self.all_sell_prices[self.t_step: self.t_step + self.horizon]
 
     def generate_orders(self):
