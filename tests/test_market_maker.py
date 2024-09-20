@@ -94,22 +94,27 @@ class TestMarketMaker:
         grid_fee = 0.5
         cfg.config.default_grid_fee = grid_fee
         market_maker = MarketMaker(buy_prices=self.buy_prices, environment=self.env)
+        self.scenario.add_market(Market())
 
         ask_order, bid_order = self.generate_mm_order(market_maker)
         # Is the market_maker using the correct data
         assert self.buy_prices[env.time_step] == market_maker.all_sell_prices[env.time_step]
-        assert self.buy_prices[env.time_step] == market_maker.all_sell_prices[env.time_step]
+        assert self.buy_prices[env.time_step] == market_maker.all_buy_prices[env.time_step]
 
         # Do the orders use the correct market_maker data ?
-        assert bid_order.price == market_maker.all_buy_prices[env.time_step]
+        # The market maker includes the virtual grid fees in its bids
+        assert bid_order.price == market_maker.all_buy_prices[env.time_step] + grid_fee
         assert ask_order.price == market_maker.all_sell_prices[env.time_step]
 
         # test grid fee adjustment
         actor = create_random("test_actor")
         self.scenario.add_participant(actor)
-        # Actor accessed the market maker prices which differ due to the grid_fee
+        # Actor accessed the market maker prices which differ due to the grid_fee assumptions
+        # - actors are able to sell energy to MM at less then MM bid order price without grid fees
+        # - actors are able to buy energy from MM at more then MM ask order price with grid fees
+        # as selling/ask participants do not have to pay grid fees
         assert actor.get_mm_buy_prices()[0] == bid_order.price - grid_fee
-        assert actor.get_mm_sell_prices()[0] == bid_order.price + grid_fee
+        assert actor.get_mm_sell_prices()[0] == ask_order.price + grid_fee
 
         # test if the energy amount is correct
         assert bid_order.energy == MARKET_MAKER_THRESHOLD
@@ -119,7 +124,7 @@ class TestMarketMaker:
         env.time_step = 5
         market_maker.create_prediction()
         ask_order, bid_order = self.generate_mm_order(market_maker)
-        assert bid_order.price == self.buy_prices[env.time_step]
+        assert bid_order.price == self.buy_prices[env.time_step] + grid_fee
         assert ask_order.price == self.buy_prices[env.time_step]
 
         assert actor.get_mm_buy_prices()[0] == bid_order.price - grid_fee
@@ -143,7 +148,7 @@ class TestMarketMaker:
             env.time_step = 0
             market_maker.create_prediction()
             ask_order, bid_order = self.generate_mm_order(market_maker)
-            assert bid_order.price * 2 == ask_order.price
+            assert (bid_order.price - grid_fee) * 2 == ask_order.price, kw
 
         # if only function is given, function is used
         kwarg = dict(buy_to_sell_function=lambda x: x + 1.5)
@@ -151,7 +156,7 @@ class TestMarketMaker:
         env.time_step = 0
         market_maker.create_prediction()
         ask_order, bid_order = self.generate_mm_order(market_maker)
-        assert bid_order.price + 1.5 == ask_order.price
+        assert (bid_order.price - grid_fee) + 1.5 == ask_order.price
 
     def generate_mm_order(self, market_maker):
         orders = market_maker.generate_orders()
