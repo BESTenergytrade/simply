@@ -11,8 +11,8 @@ actor corresponds to the price of the market maker at the time of electricity tr
 constraints, energy has to be drawn from or fed into the grid, the actor sends an order with a price that corresponds to the
 market maker prices (incl. grid fees). This way a successful trade is guaranteed.
 
-There are four different actor strategies. Strategy 0 represents the simplest case, which is only based on the market maker's
-electricity price of the current time slot. The other three strategies represent forecast-based,
+There are five different actor strategies. Strategy 0 represents the simplest case, which is only based on the market maker's
+electricity price of the current time slot. The other four strategies represent forecast-based,
 market-oriented alternatives: The market maker's price time series as well as the actor's demand and supply of
 electrical energy are considered for the near future given the configured horizon. Thus, the timing of
 electricity trading based on future market maker prices permits the actor to
@@ -23,21 +23,21 @@ the selected matching algorithm, applied grid fees and additional pricing strate
 (cf. :ref:`pricing_strategies` and :ref:`matching_algorithms`). As a result, this allows the actor - within its constraints - to
 purchase energy at a lower price or sell energy at a higher price with respect to the guaranteed trading with the market maker.
 
-The four actor strategies build on each other and are characterized by different features:
+The first four actor strategies (0-3) build on each other and are characterized by different features:
 
-+--------------------------+--------------+--------------+--------------+--------------+
-|                          | Strategy 0   | Strategy 1   | Strategy 2   | Strategy 3   |
-+==========================+==============+==============+==============+==============+
-| Forecast based purchase  |              | x            | x            | x            |
-+--------------------------+--------------+--------------+--------------+--------------+
-| Forecast based sale      |              |              | x            | x            |
-+--------------------------+--------------+--------------+--------------+--------------+
-| Time arbitrage           |              |              |              | x            |
-+--------------------------+--------------+--------------+--------------+--------------+
++--------------------------+--------------+--------------+--------------+--------------+--------------+
+|                          | Strategy 0   | Strategy 1   | Strategy 2   | Strategy 3   | Strategy 4   |
++==========================+==============+==============+==============+==============+==============+
+| Forecast based purchase  |              | x            | x            | x            | x            |
++--------------------------+--------------+--------------+--------------+--------------+--------------+
+| Forecast based sale      |              |              | x            | x            | x            |
++--------------------------+--------------+--------------+--------------+--------------+--------------+
+| Time arbitrage           |              |              |              | x            | x            |
++--------------------------+--------------+--------------+--------------+--------------+--------------+
 
 From left to right, the strategies gain in economic advantage for the actor, but also in complexity. While an actor in
-strategy 0 can only directly use or feed in energy from its own generation, in strategies 1 - 3 an actor can also have a
-battery storage system, which enables it to temporarily store energy that is not used by the household or, for example,
+strategy 0 can only directly use or feed in energy from its own generation, in strategies 1 - 4 an actor can also use a
+battery storage system, which enables it to temporarily store energy that is not used by the household loads or, for example,
 an electric vehicle. In this way, the strategies serve self-consumption. By also selling electrical energy from the battery
 in strategy 2 und 3 the economic efficiency of the generator and the battery storage system is increased.
 
@@ -70,13 +70,20 @@ causes the positive deviation from the SOC of 1 can be sold the optimal time for
 energy can be sold it is checked if later time windows with a SOC > 1 can be served and if that would lead to maximum
 profit.
 
-
 Strategy 3
 ==========
 
 Strategy 3 uses strategy 2 and considers time arbitrage to better exploit the market maker's dynamic prices.
 If price fluctuations are strong enough to make it profitable to buy and later sell, the remaining capacity of the
 battery is used to conduct this trade.
+
+Strategy 4
+==========
+
+Strategy 4 is independent of strategies 0-3 and optimizes for the prediction horizon a mathematical optimization
+problem to profit from the market maker's dynamic prices, while considering the constraints of the local system, e.g.
+the availability of an electric vehicle, power constraints or the capacity of the stationary battery.
+Comparable to strategy 3 price for strong fluctuations energy can be actively bought to be sold at a higher price later.
 
 
 

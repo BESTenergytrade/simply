@@ -44,6 +44,9 @@ After cloning the repository, a virtual environment is created (e.g. using virtu
     # create virtual environment
     virtualenv venv --python=python3.8
     source venv/bin/activate
+    # install cbc-solver to be able to use optimization with pyomo
+    sudo apt-get update
+    sudo apt-get install -y coinor-cbc
 
 Then there are two options to use simply:
 

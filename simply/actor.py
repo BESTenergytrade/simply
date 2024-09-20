@@ -10,6 +10,7 @@ from pytest import approx
 from simply.battery import Battery, VariableBattery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
+from simply.optimisation import optimize_schedule
 
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
@@ -51,11 +52,20 @@ class Actor:
     :param dict pm: (optional) Prediction multiplier used to manipulate prediction time series based
         on the data time series
     :param int cluster: cluster in which actor is located
-    :param int strategy: Number for strategy [0-3]
+    :param int strategy: Number for strategy [0-4]
     :param float battery_cap: Battery capacity used to create battery object.
         Only applied, if battery parameter is None (default: 0)
-    :param float battery_initial_soc: Initial state of charge of newly created battery object,
+    :param float battery_initial_soc: Initial state of charge of newly created Battery object,
         Only applied, if battery parameter is None (default: 0.5)
+    :param float ev_cap: Variable Battery capacity used to create VariableBattery object
+        (default: 0)
+    :param float ev_initial_soc: Initial state of charge of newly created variable battery object,
+        (default: 0.5)
+    :param float ev_available: initial availability status and if not strategy 4 override
+        availability series and send a warning (default: 0)
+    :param float ev_max_c_rate: maximum c-rate (default: 1)
+    :param float ev_max_power: maximum ev charger power (default: 11)
+    :param float grid_connection_capacity: maximum in/out flowing power at grid connection
 
     Members:
 
@@ -116,7 +126,7 @@ class Actor:
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
                  cluster=None, strategy: int = 0, pricing_strategy=None,
                  battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
-                 ev_available=0, ev_max_c_rate=1, ev_max_power=11):
+                 ev_available=0, ev_max_c_rate=1, ev_max_power=11, grid_connection_capacity=20):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
          DataFrame scaled by respective factors as well as the schedule on which basis orders
@@ -124,6 +134,7 @@ class Actor:
         """
         self.id = id
         self.grid_id = None
+        self.grid_connection_capacity = grid_connection_capacity
         self.cluster = cluster
 
         self.horizon = cfg.config.horizon
@@ -159,6 +170,7 @@ class Actor:
             self.csv_file = csv
         else:
             self.csv_file = f'actor_{id}.csv'
+
         # ToDo remove schedule from input or only allow either (load and pv) OR (schedule)
         for column, scale in [("load", ls), ("pv", ps), ("schedule", 1)]:
             self.data[column] = scale * df[column]
@@ -190,22 +202,74 @@ class Actor:
         self.args = {"id": id, "df": df.reset_index().to_json(), "csv": csv, "ls": ls, "ps": ps,
                      "pm": pm}
 
+    def strategy_with_optimisation(self):
+        """ Return the optimized market schedule
+
+        An energy need with negative sign in the
+        schedule is met with buying energy in the market_schedule which has a positive sign
+
+        :return: default market schedule
+        """
+
+        # Use the optimization library to implement the new strategy
+        objective, df_results = optimize_schedule(
+            df_actor=self.pred,
+            buy_prices=self.mm_sell_prices,  # buy at MarketMaker sell prices incl. grid fee
+            sell_prices=self.mm_buy_prices,
+            capacity=self.battery.capacity,
+            max_c_rate=self.battery.max_c_rate,
+            soc_initial=self.battery.soc,
+            ev_capacity=self.var_battery.capacity,
+            ev_max_c_rate=self.var_battery.max_c_rate,
+            ev_soc_initial=self.var_battery.soc,
+            ts_per_hour=cfg.config.ts_per_hour,
+            end_min_soc=0.6,
+            grid_connection_capacity=self.grid_connection_capacity
+        )
+        if cfg.config.debug:
+            from simply.optimisation import plot_optimization_results
+            plot_optimization_results(df_results)
+        # Process the results as needed
+        market_schedule = (df_results["from_grid"] - df_results["to_grid"]) / cfg.config.ts_per_hour
+
+        return market_schedule
+
     def set_var_battery(self, capacity, soc_initial, df, available=0, max_c_rate=4,
-                        refresh=True):
+                        refresh=True, min_soc=0.1):
         """
-        available: initial availability status
+        Set a VariableBattery with a capacity and initial state of charge, availability to the
+        local actor energy system, and a c-rate.
+
+        Changing availability only applicable for strategy 4, otherwise warning is printed.
+
+        :param capacity: capacity of variable battery if available
+        :param soc_initial: initial state of charge
+        :param df: pd.DataFrame containing columns 'ev_demand' and 'ev_avail'
+            for driving energy consumption and availability time series
+        :param available: initial availability status and if not strategy 4 override availability
+            series and send a warning (default 0)
+        :param max_c_rate: c-rate of variable battery (default 4)
+        :param refresh: update prediction (default True)
+        :param min_soc: minimal soc attribute of battery, which is not automatically enforced
         """
-        # TODO: WIP availability changes not working properly
-        available = 1  # TODO remove line when done
+        if self.strategy != 4 and capacity != 0:
+            # TODO Implement changing availability for strategy 0-3
+            warnings.warn(
+                f"Actor {self.id} with strategy {self.strategy}: Set EV always available, "
+                f"as changes only fully working for strategy 4.")
+            available = 1
         self.var_battery = VariableBattery(
-            capacity=capacity, soc_initial=soc_initial, available=available, max_c_rate=max_c_rate)
+            capacity=capacity, soc_initial=soc_initial, available=available,
+            max_c_rate=max_c_rate, min_soc=min_soc
+        )
         # If EV should be included expect necessary time series in actor DataFrame
         if capacity > 0:
             for column in ["ev_avail", "ev_demand"]:
                 self.data[column] = df[column]
                 self.pm[column] = 0
-            # TODO: WIP availability not working properly
-            self.data["ev_avail"] = available  # TODO remove line when done
+            if self.strategy != 4:
+                # WIP availability not working properly
+                self.data["ev_avail"] = available
 
             if refresh:
                 self.create_prediction()
@@ -265,7 +329,7 @@ class Actor:
         :type strategy: int
         :return: market_schedule with planed amounts of energy buying/selling per time step
         """
-        possible_choices = [0, 1, 2, 3]
+        possible_choices = [0, 1, 2, 3, 4]
         if strategy is None:
             strategy = self.strategy
         if strategy not in possible_choices:
@@ -281,6 +345,10 @@ class Actor:
                     f"the battery capacity is 0 or no battery exists. Using default strategy "
                     f"without planning instead.")
                 strategy = self.strategy
+
+        if strategy == 4:
+            self.market_schedule = self.strategy_with_optimisation()
+            return self.market_schedule
 
         if strategy == 0:
             self.market_schedule = self.get_default_market_schedule()
@@ -298,6 +366,8 @@ class Actor:
         self.market_schedule = self.plan_selling_strategy()
         if strategy == 2:
             return self.market_schedule
+
+        # implicit strategy == 3
         self.market_schedule = self.plan_global_trading()
         return self.market_schedule
 
@@ -688,12 +758,17 @@ class Actor:
 
         if self.var_battery.capacity > 0:
             # EV demand consumption is possible while not available (other than `charge`)
-            self.var_battery.consume(self.pred.ev_demand[0], constrain=True)
-
-            missing = self.pred.ev_demand[1] + self.var_battery.min_soc * self.var_battery.capacity\
+            self.var_battery.consume(self.pred.ev_demand[0], constrain=False)
+            missing = max(self.pred.ev_demand[:])\
+                + self.var_battery.min_soc * self.var_battery.capacity\
                 - self.var_battery.energy()
-            # Favor charging into variable battery if necessary soc for the subsequent drive is not
+            # Favor charging into variable battery if necessary soc for the subsequent trips are not
             # reached yet.
+            # - First try to charge the missing driving energy plus buffer energy
+            # - If traded energy does not suffice use stationary battery to balance as much as
+            #   possible
+            # - ultimately undo charged energy in variable battery as scheduled energy and
+            #   stationary battery could not provide it
             if missing > 0:
                 diff, _, _ = self.var_battery.charge(missing, constrain=True)
                 if cfg.config.debug:
@@ -705,8 +780,9 @@ class Actor:
         diff, _, _ = self.battery.charge(charge_energy, constrain=True)
         if cfg.config.debug:
             print(f"Bat: charge {charge_energy} / diff {diff}")
-        # If stationary battery is full, try to charge the variable battery further
-        if self.var_battery.capacity > 0 and diff > missing:
+        # If stationary battery cannot fulfill the update,
+        # try to balance the difference with it with the variable battery further
+        if self.var_battery.capacity > 0:
             charge_energy = diff
             diff, _, _ = self.var_battery.charge(charge_energy, constrain=True)
             if cfg.config.debug:
@@ -839,15 +915,26 @@ class Actor:
         if energy > 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or below 0 socs.
             # In these cases increase the order by one energy unit, i.e. buy more energy
-            if (self.battery.energy() + self.pred.schedule[0:index].sum() +
-                    ((energy + cfg.config.EPS) // cfg.config.energy_unit *
-                     cfg.config.energy_unit) < 0):
+            # Enforce: floor divided bought energy > Current battery energy + scheduled energy + EPS
+            #  - floor division e.g. for energy = 1.09 and energy_unit = 0.1:
+            #    yields 1.09 // 0.1 * 0.1 = 1
+            #    hence raise bought energy by + energy unit
+            #  - if var_battery has free available battery capacity always round up
+            if (self.var_battery.capacity - self.var_battery.energy() > cfg.config.energy_unit) or (
+                    self.battery.energy() + self.pred.schedule[0:index].sum() +
+                    ((energy + cfg.config.EPS) // cfg.config.energy_unit * cfg.config.energy_unit)
+                    < 0
+            ):
                 energy += cfg.config.energy_unit
 
         # selling energy
         elif energy < 0:
             # rounding to the next energy unit can lead to unfulfilled schedules or over 1 socs.
             # In these cases decrease the order by one energy unit, i.e. sell more energy
+            # Enforce: sold energy > Free battery energy volume - scheduled energy + EPS
+            #  - floor division e.g. for energy = 1 and energy_unit = 0.1:
+            #    yields 1 // 0.1 = 9
+            #    hence the + 1
             if self.battery.energy() + self.pred.schedule[0:index].sum() + (
                     ((energy+cfg.config.EPS) // cfg.config.energy_unit+1) *
                     cfg.config.energy_unit) > self.battery.capacity:
@@ -914,8 +1001,9 @@ class Actor:
                 # unexpected behaviour or self defined orders might be the reason. In this case give
                 # warning and do not adjust market_schedule
                 warnings.warn("Matched energy does not match planned energy.")
-                print(f"Actor {self.id}' last order {self.orders[-1]}")
-                print(f"Actor {self.id}' last order {self.orders[-1]}")
+                if cfg.config.verbose:
+                    print(f"Actor {self.id}': planned: {self.market_schedule[i]};"
+                          f" delta energy {delta_energy}")
                 return
             planned_energy = self.market_schedule[i]
             if planned_energy == 0:
@@ -926,6 +1014,9 @@ class Actor:
             if (not np.sign(delta_energy) == np.sign(planned_energy)
                     and abs(planned_energy) > 2 * cfg.config.energy_unit):
                 warnings.warn("Matched energy does not match planned energy.")
+                if cfg.config.verbose:
+                    print(f"Actor {self.id}': planned (i={i}): {planned_energy}; "
+                          f"delta energy {delta_energy}")
             self.market_schedule[i] -= sign*min(abs(delta_energy), abs(planned_energy))
             delta_energy -= planned_energy
 
@@ -1000,7 +1091,7 @@ class Actor:
         order_iter = iter(self.orders)
         o = next(order_iter, None)
         for i in range(len(self.traded_energy)):
-            if o is not None and i == o.time:
+            if o is not None and simulated_range_ts[i] == o.time:
                 save_df.loc[simulated_range_ts[i], "ordered_energy"] = o.energy * o.type
                 save_df.loc[simulated_range_ts[i], "ordered_price"] = o.price
                 o = next(order_iter, None)

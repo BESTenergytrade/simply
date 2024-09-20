@@ -1,12 +1,13 @@
 import json
 import warnings
 from typing import Sized, Iterable
-
 from networkx.readwrite import json_graph
 import pandas as pd
 import numpy as np
 import random
+import matplotlib
 import matplotlib.pyplot as plt
+
 import simply.config as cfg
 from simply import actor, market_maker
 from simply import power_network
@@ -16,6 +17,10 @@ from simply.market_maker import MarketMaker
 from simply.actor import Actor
 from simply.market import Market
 
+try:
+    matplotlib.use('TkAgg')
+except ImportError as e:
+    print(e)
 debug_actor = None  # 'residential_3'
 
 
@@ -51,16 +56,18 @@ class Environment:
         self.steps_per_hour = steps_per_hour
         if time_range is None:
             self.time_range = range(cfg.config.start + cfg.config.nb_ts + 1)
-        else:
+        elif isinstance(time_range, pd.DatetimeIndex):
             # Check for correct datetime frequency
             if time_range.freq is None:
                 time_range.freq = pd.infer_freq(time_range)
-            if isinstance(time_range, pd.DatetimeIndex) and time_range.freq != "{}T".format(
-                    60 / steps_per_hour):
+            print(f"Found date time index starting at {time_range[0]} "
+                  f"with freq {time_range.freq}")
+            if time_range.freq != "{}T".format(60 / steps_per_hour):
                 warnings.warn(f"Time Index of data frequency {str(time_range.freq)} "
                               f"does not match the configured steps_per_hour: {steps_per_hour}")
             self.time_range = time_range
-        print(f"Time range {time_range}")
+        else:
+            self.time_range = time_range
         self.add_actor_to_scenario = add_actor_to_scenario
         # Get grid fee method of market to make grid fees accessible for actors. Will be overwritten
         # when market is added to scenario
