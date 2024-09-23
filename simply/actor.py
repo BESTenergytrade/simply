@@ -220,7 +220,7 @@ class Actor:
             sell_prices=self.mm_buy_prices,
             capacity=self.battery.capacity,
             max_c_rate=self.battery.max_c_rate,
-            soc_initial=min(max(self.battery.soc, 0),1),  # optimizer cannot handle negative EPS
+            soc_initial=min(max(self.battery.soc, 0), 1),  # optimizer cannot handle negative EPS
             ev_capacity=self.var_battery.capacity,
             ev_max_c_rate=self.var_battery.max_c_rate,
             ev_soc_initial=self.var_battery.soc,
