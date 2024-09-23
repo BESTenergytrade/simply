@@ -66,6 +66,7 @@ class Actor:
     :param float ev_max_c_rate: maximum c-rate (default: 1)
     :param float ev_max_power: maximum ev charger power (default: 11)
     :param float grid_connection_capacity: maximum in/out flowing power at grid connection
+        (default: 20)
 
     Members:
 
@@ -208,9 +209,10 @@ class Actor:
         An energy need with negative sign in the
         schedule is met with buying energy in the market_schedule which has a positive sign
 
-        :return: default market schedule
+        :return: optimized market schedule
         """
 
+        assert 1 + cfg.config.EPS >= self.battery.soc >= 0 - cfg.config.EPS
         # Use the optimization library to implement the new strategy
         objective, df_results = optimize_schedule(
             df_actor=self.pred,
@@ -218,7 +220,7 @@ class Actor:
             sell_prices=self.mm_buy_prices,
             capacity=self.battery.capacity,
             max_c_rate=self.battery.max_c_rate,
-            soc_initial=self.battery.soc,
+            soc_initial=min(max(self.battery.soc, 0), 1),  # optimizer cannot handle negative EPS
             ev_capacity=self.var_battery.capacity,
             ev_max_c_rate=self.var_battery.max_c_rate,
             ev_soc_initial=self.var_battery.soc,

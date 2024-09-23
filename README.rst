@@ -96,7 +96,7 @@ with the option of specifying a path for your scenario inputs if you want to sto
 
  .. code:: bash
 
-    python build_scenario.py path/to/your/project/dir -- data_dir path/to/your/scenario/inputs
+    python build_scenario.py path/to/your/project/dir --data_dir path/to/your/scenario/inputs
 
 The scenario is then created and automatically saved to `path/to/your/project/dir/scenario`. The scenario contains a
 time series for each actor with power generation, power consumption, and market demand or supply (including bid price).
