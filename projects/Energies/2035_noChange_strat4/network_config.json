@@ -1,0 +1,46 @@
+{
+    "abm4energy_network": {
+        "directed": false,
+        "multigraph": false,
+        "graph": {},
+        "nodes": [
+            {
+                "id": "N01"
+            },
+            {
+                "id": "N02"
+            },
+            {
+                "id": "N03"
+            },
+            {
+                "id": "N04"
+            },
+            {
+                "id": "MS"
+            }
+        ],
+        "links": [
+            {
+                "source": "N01",
+                "target": "MS",
+                "weight": 0.5
+            },
+            {
+                "source": "N02",
+                "target": "MS",
+                "weight": 0.5
+            },
+            {
+                "source": "N03",
+                "target": "MS",
+                "weight": 0.5
+            },
+            {
+                "source": "N04",
+                "target": "MS",
+                "weight": 0.5
+            }
+        ]
+    }
+}

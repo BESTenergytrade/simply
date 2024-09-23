@@ -1,0 +1,2301 @@
+[
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277593",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_6_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277617",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_9_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1009200004_pv_rooftop_401.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0001.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277621",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_10_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277631",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_14_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1009200004_pv_rooftop_552.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 4.2,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0002.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277633",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_16_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1009200004_pv_rooftop_797.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 6.0,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0003.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277658",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_21_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2277658.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0004.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277661",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_22_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277694",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_39_residential.csv"
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0005.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277720",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_47_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277736",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_51_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2277736.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0006.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277770",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_56_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277893",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_68_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2277893.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0007.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277896",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_69_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277901",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_70_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2277918",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_76_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2277918.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0008.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11931775",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_81_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1009200004_pv_rooftop_686.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 12.312,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0009.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11931814",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_85_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11931820",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_87_residential.csv"
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0010.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11931884",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_91_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11932453",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_103_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11932458",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_104_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1009200004_pv_rooftop_431.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 8.5,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0011.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11931672",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_107_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_11931672.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0012.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11931835",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_112_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1009200004_pv_rooftop_747.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 15.0,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0013.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11931840",
+    "gridLocation": "N01",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1009200004_113_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280189",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_7_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2280189.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0014.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280202",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_11_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280204",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_12_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280235",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_25_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280237",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_27_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280241",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_31_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280250",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_36_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280552",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_46_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280568",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_53_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2280568.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0015.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280619",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_54_residential.csv"
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0016.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280637",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_55_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280788",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_60_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2280788.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0017.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280761",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_70_residential.csv"
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0018.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280578",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_72_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280762",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_79_residential.csv"
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0019.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280767",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_82_residential.csv"
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0020.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280787",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_87_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2280787.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0021.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280808",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_92_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2280808.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0022.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280815",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_94_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280894",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_103_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280910",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_106_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2280910.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0023.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2280918",
+    "gridLocation": "N02",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1143000002_107_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2280918.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0024.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275985",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_2_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2275985.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0025.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275993",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_4_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276020",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_7_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1153600002_pv_rooftop_217.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0026.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276166",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_15_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276171",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_17_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276211",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_30_residential.csv"
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0027.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276214",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_31_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275822",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_40_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275857",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_49_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275860",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_51_residential.csv"
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0028.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275873",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_55_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2275873.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0029.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275874",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_56_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275906",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_76_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275915",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_78_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275916",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_79_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275923",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_81_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2275929",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_82_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276056",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_87_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1153600002_pv_rooftop_476.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 10.647,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0030.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276086",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_97_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276088",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_98_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276089",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_99_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_2276089.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0031.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276118",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_114_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276145",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_123_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276261",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_128_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276289",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_129_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1153600002_pv_rooftop_659.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 7.3709999999999996,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0032.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_2276291",
+    "gridLocation": "N03",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1153600002_130_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11934524",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_1_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11934531",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_4_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971767",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_18_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971434",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_23_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971444",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_28_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_11971444.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0033.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971446",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_29_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971454",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_33_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971461",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_36_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1166200002_pv_rooftop_755.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 9.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0034.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971463",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_37_residential.csv"
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0035.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971470",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_42_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971472",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_44_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971486",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_45_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971592",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_47_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_11971592.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0036.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971594",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_48_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_mvgd_32866_lvgd_1166200002_pv_rooftop_198.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 4.6,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0037.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971651",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_66_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_11971651.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0038.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971667",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_69_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971774",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_76_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_11971774.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0039.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971800",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_79_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971818",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_86_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971848",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_94_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_11971848.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0040.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971852",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_95_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11972159",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_96_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971702",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_111_residential.csv"
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0041.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971727",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_114_residential.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  },
+  {
+    "comment": "",
+    "prosumerType": "residential",
+    "prosumerName": "building_11971751",
+    "gridLocation": "N04",
+    "strategy": 4,
+    "devices": [
+      {
+        "deviceType": "load",
+        "deviceID": "Load_mvgd_32866_lvgd_1166200002_116_residential.csv"
+      },
+      {
+        "deviceType": "solar",
+        "deviceID": "Generator_pv_rooftop_11971751.csv"
+      },
+      {
+        "deviceType": "battery",
+        "capacityKwh": 5.9,
+        "initialSOC": 0.5
+      },
+      {
+        "deviceType": "ev",
+        "deviceID": "ev_0042.csv"
+      }
+    ],
+    "pricing_strategy": {
+      "name": "linear",
+      "param": [
+        0.002
+      ]
+    }
+  }
+]
