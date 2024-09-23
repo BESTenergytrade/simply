@@ -13,7 +13,7 @@ python build_scenario.py projects/Energies/2035_dynPrice_strat4 --data_dir proje
 python build_scenario.py projects/Energies/2035_AU_strat4_pricing0-002 --data_dir projects/Energies/scenario_inputs
 ```
 
-- **Remark:** As stardard workflow we recommend to include the scenario_inputs folder into the individual project folders in order to ensure reproducibility in case the scenario_inputs at given dataset at `--data` path is expected to change. If `--data` argument is not set, it defaults to the project folder with subfolder `scenario_inputs`.
+- **Remark:** As stardard workflow we recommend to include the scenario_inputs folder into the individual project folders in order to ensure reproducibility in case the scenario_inputs at given dataset at `--data_dir` path is expected to change. If `--data_dir` argument is not set, it defaults to the project folder with subfolder `scenario_inputs`.
 
 **Run scenarios (simulates the simply scenarios):**
 
