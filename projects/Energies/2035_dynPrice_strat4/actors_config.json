@@ -4,7 +4,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277593",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -17,7 +17,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277617",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -43,7 +43,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277621",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -56,7 +56,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277631",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -82,7 +82,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277633",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -108,7 +108,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277658",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -134,7 +134,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277661",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -147,7 +147,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277694",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -164,7 +164,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277720",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -177,7 +177,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277736",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -203,7 +203,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277770",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -216,7 +216,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277893",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -242,7 +242,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277896",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -255,7 +255,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277901",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -268,7 +268,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2277918",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -294,7 +294,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11931775",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -320,7 +320,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11931814",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -333,7 +333,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11931820",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -350,7 +350,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11931884",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -363,7 +363,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11932453",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -376,7 +376,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11932458",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -402,7 +402,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11931672",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -428,7 +428,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11931835",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -454,7 +454,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11931840",
     "gridLocation": "N01",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -467,7 +467,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280189",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -493,7 +493,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280202",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -506,7 +506,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280204",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -519,7 +519,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280235",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -532,7 +532,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280237",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -545,7 +545,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280241",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -558,7 +558,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280250",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -571,7 +571,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280552",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -584,7 +584,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280568",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -610,7 +610,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280619",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -627,7 +627,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280637",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -640,7 +640,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280788",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -666,7 +666,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280761",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -683,7 +683,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280578",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -696,7 +696,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280762",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -713,7 +713,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280767",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -730,7 +730,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280787",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -756,7 +756,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280808",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -782,7 +782,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280815",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -795,7 +795,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280894",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -808,7 +808,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280910",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -834,7 +834,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2280918",
     "gridLocation": "N02",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -860,7 +860,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275985",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -886,7 +886,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275993",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -899,7 +899,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276020",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -925,7 +925,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276166",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -938,7 +938,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276171",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -951,7 +951,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276211",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -968,7 +968,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276214",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -981,7 +981,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275822",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -994,7 +994,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275857",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1007,7 +1007,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275860",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1024,7 +1024,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275873",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1050,7 +1050,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275874",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1063,7 +1063,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275906",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1076,7 +1076,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275915",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1089,7 +1089,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275916",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1102,7 +1102,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275923",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1115,7 +1115,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2275929",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1128,7 +1128,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276056",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1154,7 +1154,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276086",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1167,7 +1167,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276088",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1180,7 +1180,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276089",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1206,7 +1206,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276118",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1219,7 +1219,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276145",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1232,7 +1232,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276261",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1245,7 +1245,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276289",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1271,7 +1271,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_2276291",
     "gridLocation": "N03",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1284,7 +1284,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11934524",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1297,7 +1297,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11934531",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1310,7 +1310,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971767",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1323,7 +1323,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971434",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1336,7 +1336,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971444",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1362,7 +1362,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971446",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1375,7 +1375,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971454",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1388,7 +1388,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971461",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1414,7 +1414,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971463",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1431,7 +1431,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971470",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1444,7 +1444,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971472",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1457,7 +1457,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971486",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1470,7 +1470,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971592",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1496,7 +1496,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971594",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1522,7 +1522,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971651",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1548,7 +1548,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971667",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1561,7 +1561,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971774",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1587,7 +1587,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971800",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1600,7 +1600,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971818",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1613,7 +1613,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971848",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1639,7 +1639,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971852",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1652,7 +1652,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11972159",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1665,7 +1665,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971702",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1682,7 +1682,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971727",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
@@ -1695,7 +1695,7 @@
     "prosumerType": "residential",
     "prosumerName": "building_11971751",
     "gridLocation": "N04",
-    "strategy": 0,
+    "strategy": 4,
     "devices": [
       {
         "deviceType": "load",
