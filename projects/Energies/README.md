@@ -1,4 +1,4 @@
-# Energies project data
+# Energy Economics project data
 
 The energy data used for these scenarios stems from the eGon Project: https://ego-n.org/
 - the raw data can be downloaded from the Open Energy Platform (OEP): https://openenergyplatform.org/
@@ -8,9 +8,9 @@ The energy data used for these scenarios stems from the eGon Project: https://eg
 **Build scenarios (creating the simply scenario folders):**
 
 ```
-python build_scenario.py projects/Energies/2035_noChange_strat4 --data_dir projects/Energies/scenario_inputs
-python build_scenario.py projects/Energies/2035_dynPrice_strat4 --data_dir projects/Energies/scenario_inputs
-python build_scenario.py projects/Energies/2035_AU_strat4_pricing0-002 --data_dir projects/Energies/scenario_inputs
+python build_scenario.py projects/EnergyEconomics/2035_noChange_strat4 --data_dir projects/EnergyEconomics/scenario_inputs
+python build_scenario.py projects/EnergyEconomics/2035_dynPrice_strat4 --data_dir projects/EnergyEconomics/scenario_inputs
+python build_scenario.py projects/EnergyEconomics/2035_AU_strat4_pricing0-002 --data_dir projects/EnergyEconomics/scenario_inputs
 ```
 
 - **Remark:** As stardard workflow we recommend to include the scenario_inputs folder into the individual project folders in order to ensure reproducibility in case the scenario_inputs at given dataset at `--data_dir` path is expected to change. If `--data_dir` argument is not set, it defaults to the project folder with subfolder `scenario_inputs`.
@@ -18,7 +18,7 @@ python build_scenario.py projects/Energies/2035_AU_strat4_pricing0-002 --data_di
 **Run scenarios (simulates the simply scenarios):**
 
 ```
-python match_market.py projects/Energies/2035_noChange_strat4
-python match_market.py projects/Energies/2035_dynPrice_strat4
-python match_market.py projects/Energies/2035_AU_strat4_pricing0-002
+python match_market.py projects/EnergyEconomics/2035_noChange_strat4
+python match_market.py projects/EnergyEconomics/2035_dynPrice_strat4
+python match_market.py projects/EnergyEconomics/2035_AU_strat4_pricing0-002
 ```
