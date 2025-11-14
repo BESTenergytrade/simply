@@ -343,9 +343,6 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
         data["ev_avail"] = [1] * len(df_actor)
         data["ev_demand"] = [0] * len(df_actor)
 
-    #ev_avail = data["ev_avail"]
-    #ev_demand = data["ev_demand"]
-
     # PYOMO OPTIMISATION MODEL
     if model == None:
         model = init_base_model(t_len)
