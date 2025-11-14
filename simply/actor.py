@@ -158,6 +158,7 @@ class Actor:
             self.battery = Battery(capacity=max(battery_cap, 2 * cfg.config.energy_unit),
                                    soc_initial=battery_initial_soc)
         self.var_battery = None
+        self.model = None
         df.index.name = "Time"
         self.data = pd.DataFrame()
         self.pred = pd.DataFrame()
@@ -214,7 +215,7 @@ class Actor:
 
         assert 1 + cfg.config.EPS >= self.battery.soc >= 0 - cfg.config.EPS
         # Use the optimization library to implement the new strategy
-        objective, df_results = optimize_schedule(
+        self.model, objective, df_results = optimize_schedule(
             df_actor=self.pred,
             buy_prices=self.mm_sell_prices,  # buy at MarketMaker sell prices incl. grid fee
             sell_prices=self.mm_buy_prices,
@@ -226,7 +227,8 @@ class Actor:
             ev_soc_initial=self.var_battery.soc,
             ts_per_hour=cfg.config.ts_per_hour,
             end_min_soc=0.6,
-            grid_connection_capacity=self.grid_connection_capacity
+            grid_connection_capacity=self.grid_connection_capacity,
+            model=self.model
         )
         if cfg.config.debug:
             from simply.optimisation import plot_optimization_results
