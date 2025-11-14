@@ -273,10 +273,12 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
     :param ev_max_c_rate: How many times the capacity can be (dis-)charged within an hour
         (electric vehicle parameter) default=1
     :param ev_soc_initial: initial state of charge  (electric vehicle parameter) default=0.5
+    :param ev_min_soc: minimal state of charge  (electric vehicle parameter) default=0.1
     :param ts_per_hour: time steps per hour;  default=1
     :param end_min_soc: regarding the prediction horizon, the minimal end soc is a fix point
         in order to promote a tendency to not extremely drain batteries at the end of the horizon
     :param grid_connection_capacity: maximum power drawn from or fed into grid; default=20)
+    :param model: pyomo optimization model default=None
     """
     # TODO battery-efficiency ?
 
