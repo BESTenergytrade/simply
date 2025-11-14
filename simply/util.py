@@ -100,3 +100,9 @@ def actor_print(actor, header=False, _header=dict()):
           f"{round(actor.bank,4)},"
           f"{round(actor.pred.price[0],4)},"
           f"{round(actor.matched_energy_current_step,4)}")
+
+
+def run_obj_method(obj, method_name, *args, **kwargs):
+    method = getattr(obj, method_name)
+    return method(*args, **kwargs)
+
