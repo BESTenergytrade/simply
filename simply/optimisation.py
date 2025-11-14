@@ -252,102 +252,102 @@ def init_base_model(t_len,
     return m
 
 
-    def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate=1, soc_initial=0.5,
-                          ev_capacity=0, ev_max_c_rate=1, ev_soc_initial=0, ev_min_soc=0.1, charger_max_power=11,
-                          ts_per_hour=1, end_min_soc=0.6, grid_connection_capacity=20, model=None):
-        """
-        Optimizes load, pv time series with battery and electric vehicle flexibility based on buying and
-        selling price time series.
+def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate=1, soc_initial=0.5,
+                      ev_capacity=0, ev_max_c_rate=1, ev_soc_initial=0, ev_min_soc=0.1, charger_max_power=11,
+                      ts_per_hour=1, end_min_soc=0.6, grid_connection_capacity=20, model=None):
+    """
+    Optimizes load, pv time series with battery and electric vehicle flexibility based on buying and
+    selling price time series.
 
-        Parametrisation of battery (no prefix) and electric vehicle (prefix: ev_*).
+    Parametrisation of battery (no prefix) and electric vehicle (prefix: ev_*).
 
-        :param df_actor: pd.DataFrame with energy values (not power) with columns 'load', 'pv'
-            and optionally 'ev_avail' and 'ev_demand'
-        :param buy_prices: price series at which energy can be bought including fees
-        :param sell_prices: price series at which energy can be sold
-        :param capacity: maximum energy that can be stored (battery parameter) default=10
-        :param max_c_rate: How many times the capacity can be (dis-)charged within an hour
-            (battery parameter) default=1
-        :param soc_initial: initial state of charge (battery parameter) default=0.5
-        :param ev_capacity: maximum energy that can be stored (electric vehicle parameter) default=10
-        :param ev_max_c_rate: How many times the capacity can be (dis-)charged within an hour
-            (electric vehicle parameter) default=1
-        :param ev_soc_initial: initial state of charge  (electric vehicle parameter) default=0.5
-        :param ts_per_hour: time steps per hour;  default=1
-        :param end_min_soc: regarding the prediction horizon, the minimal end soc is a fix point
-            in order to promote a tendency to not extremely drain batteries at the end of the horizon
-        :param grid_connection_capacity: maximum power drawn from or fed into grid; default=20)
-        """
-        # TODO battery-efficiency ?
+    :param df_actor: pd.DataFrame with energy values (not power) with columns 'load', 'pv'
+        and optionally 'ev_avail' and 'ev_demand'
+    :param buy_prices: price series at which energy can be bought including fees
+    :param sell_prices: price series at which energy can be sold
+    :param capacity: maximum energy that can be stored (battery parameter) default=10
+    :param max_c_rate: How many times the capacity can be (dis-)charged within an hour
+        (battery parameter) default=1
+    :param soc_initial: initial state of charge (battery parameter) default=0.5
+    :param ev_capacity: maximum energy that can be stored (electric vehicle parameter) default=10
+    :param ev_max_c_rate: How many times the capacity can be (dis-)charged within an hour
+        (electric vehicle parameter) default=1
+    :param ev_soc_initial: initial state of charge  (electric vehicle parameter) default=0.5
+    :param ts_per_hour: time steps per hour;  default=1
+    :param end_min_soc: regarding the prediction horizon, the minimal end soc is a fix point
+        in order to promote a tendency to not extremely drain batteries at the end of the horizon
+    :param grid_connection_capacity: maximum power drawn from or fed into grid; default=20)
+    """
+    # TODO battery-efficiency ?
 
-        # single time series vectors
-        t_len = len(df_actor)
-        t = list(range(t_len))
+    # single time series vectors
+    t_len = len(df_actor)
+    t = list(range(t_len))
 
-        # translate to data dictionary
-        data = {}
+    # translate to data dictionary
+    data = {}
 
-        # time series values
-        data["capacity"] = capacity
-        data["max_c_rate"] = max_c_rate
-        data["ev_capacity"] = ev_capacity
-        data["ev_min_soc"] = ev_min_soc
-        data["grid_connection_capacity"] = grid_connection_capacity
-        data["ts_per_hour"] = ts_per_hour
-        data["soc_initial"] = soc_initial
-        data["ev_soc_initial"] = ev_soc_initial
-        data["end_min_soc"] = end_min_soc
-        # convert from dataFrame to lists and from energy to power
-        data["load"] = df_actor.loc[:, "load"].mul(ts_per_hour).to_list()
-        data["pv"] = df_actor.loc[:, "pv"].mul(ts_per_hour).to_list()
-        if isinstance(buy_prices, pd.Series):
-            data["buy_prices"] = buy_prices.to_list()
-            data["sell_prices"] = sell_prices.to_list()
-        else:
-            # already list
-            data["buy_prices"] = buy_prices
-            data["sell_prices"] = sell_prices
+    # time series values
+    data["capacity"] = capacity
+    data["max_c_rate"] = max_c_rate
+    data["ev_capacity"] = ev_capacity
+    data["ev_min_soc"] = ev_min_soc
+    data["grid_connection_capacity"] = grid_connection_capacity
+    data["ts_per_hour"] = ts_per_hour
+    data["soc_initial"] = soc_initial
+    data["ev_soc_initial"] = ev_soc_initial
+    data["end_min_soc"] = end_min_soc
+    # convert from dataFrame to lists and from energy to power
+    data["load"] = df_actor.loc[:, "load"].mul(ts_per_hour).to_list()
+    data["pv"] = df_actor.loc[:, "pv"].mul(ts_per_hour).to_list()
+    if isinstance(buy_prices, pd.Series):
+        data["buy_prices"] = buy_prices.to_list()
+        data["sell_prices"] = sell_prices.to_list()
+    else:
+        # already list
+        data["buy_prices"] = buy_prices
+        data["sell_prices"] = sell_prices
 
-        # Add electric vehicle
-        # ev charging/discharing is limited by either the charger or the battery c-rate
-        ev_max_power = ev_capacity * ev_max_c_rate
-        ev_max_charger = min(charger_max_power, ev_max_power)
-        # store these scalars too
-        data["ev_max_power"] = ev_max_power
-        data["ev_max_charger"] = ev_max_charger
+    # Add electric vehicle
+    # ev charging/discharing is limited by either the charger or the battery c-rate
+    ev_max_power = ev_capacity * ev_max_c_rate
+    ev_max_charger = min(charger_max_power, ev_max_power)
+    # store these scalars too
+    data["ev_max_power"] = ev_max_power
+    data["ev_max_charger"] = ev_max_charger
 
-        if ev_capacity != 0:
-            data["ev_avail"] = df_actor.loc[:, "ev_avail"].to_list()
-            data["ev_demand"] = df_actor.loc[:, "ev_demand"].mul(ts_per_hour).to_list()
+    if ev_capacity != 0:
+        data["ev_avail"] = df_actor.loc[:, "ev_avail"].to_list()
+        data["ev_demand"] = df_actor.loc[:, "ev_demand"].mul(ts_per_hour).to_list()
 
-            consumption = 0
-            for i in range(len(data["ev_demand"])):
-                if data["ev_avail"][i] == 0:
-                    if data["ev_demand"][i] != 0:
-                        # save consumption energy and discharge with max power
-                        # until the consumption energy left is below max power
-                        consumption = consumption + data["ev_demand"][i] / ts_per_hour
-                    if consumption > 0:
-                        # consumption cannot exceed maximum battery power
-                        dischargable = min(consumption * ts_per_hour, ev_max_power)
-                        # update demand and carry along the rest
-                        data["ev_demand"][i] = dischargable
-                        consumption -= dischargable / ts_per_hour
-                else:
-                    # If consumption variable is not 0 => the availability ended to be 0 (driving)
-                    # before it was possible to discharge with max power according to c-rate
-                    assert consumption == 0, (
-                        "EV consumed more energy than c-rate allows it during non-availability"
-                    )
-        else:
-            data["ev_avail"] = [1] * len(df_actor)
-            data["ev_demand"] = [0] * len(df_actor)
+        consumption = 0
+        for i in range(len(data["ev_demand"])):
+            if data["ev_avail"][i] == 0:
+                if data["ev_demand"][i] != 0:
+                    # save consumption energy and discharge with max power
+                    # until the consumption energy left is below max power
+                    consumption = consumption + data["ev_demand"][i] / ts_per_hour
+                if consumption > 0:
+                    # consumption cannot exceed maximum battery power
+                    dischargable = min(consumption * ts_per_hour, ev_max_power)
+                    # update demand and carry along the rest
+                    data["ev_demand"][i] = dischargable
+                    consumption -= dischargable / ts_per_hour
+            else:
+                # If consumption variable is not 0 => the availability ended to be 0 (driving)
+                # before it was possible to discharge with max power according to c-rate
+                assert consumption == 0, (
+                    "EV consumed more energy than c-rate allows it during non-availability"
+                )
+    else:
+        data["ev_avail"] = [1] * len(df_actor)
+        data["ev_demand"] = [0] * len(df_actor)
 
-        ev_avail = data["ev_avail"]
-        ev_demand = data["ev_demand"]
+    #ev_avail = data["ev_avail"]
+    #ev_demand = data["ev_demand"]
 
-        # PYOMO OPTIMISATION MODEL
-        if model == None:
+    # PYOMO OPTIMISATION MODEL
+    if model == None:
         model = init_base_model(t_len)
 
     fill_model(model, data)
