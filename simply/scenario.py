@@ -8,7 +8,7 @@ import numpy as np
 import random
 import matplotlib
 import matplotlib.pyplot as plt
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import simply.config as cfg
 from simply import actor, market_maker
@@ -219,7 +219,6 @@ class Scenario:
         participant.environment = self.environment
         participant.create_prediction()
 
-
     @timeit
     def create_strategies(self, max_workers=None):
         # only actors create strategies (in parallel)
@@ -232,7 +231,8 @@ class Scenario:
 
         # Parallel: create schedule per actor and update object in main process
         # - cbc is running as external program which is why ThreadPoolExecutor is sufficient
-        # (the use of ProcessPoolExecutor even leads to longer execution time due to pickling overhead)
+        # (the use of ProcessPoolExecutor even leads to longer execution time due to pickling
+        #  overhead)
         # if process pool is used the values have to be updated due to separate memory
         process_execution = False
         with ThreadPoolExecutor(max_workers=max_workers) as ex:
@@ -242,10 +242,10 @@ class Scenario:
                 for fut in as_completed(futs):
                     actor = futs[fut]
                     market_schedule = fut.result()
-                    # writing back the result due to mutability (only necessary for Process Execution)
+                    # writing back the result due to mutability
+                    # (only necessary for Process Execution)
                     # TODO check for missing updates other than market_schedule
                     actor.market_schedule = market_schedule
-
 
     @timeit
     def create_strategies_sequential(self):
