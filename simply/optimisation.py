@@ -32,9 +32,7 @@ def fill_model(model, data):
         model.ev_demand[i] = data["ev_demand"][i]
 
 
-def init_base_model(t_len,
-        capacity=10, max_c_rate=1, soc_initial=0.5,
-        ev_capacity=0, ev_max_power=0, grid_connection_capacity=20):
+def init_base_model(t_len):
     # PYOMO OPTIMISATION MODEL
     m = pyo.ConcreteModel()
 
@@ -113,7 +111,7 @@ def init_base_model(t_len,
 
     m.start_storage = pyo.Constraint(
         expr=m.stored_energy[0] ==
-             m.soc_initial * m.capacity)
+        m.soc_initial * m.capacity)
 
     # optional: equal soc at first and last time step
     # (0) no constraint for last time step
@@ -155,7 +153,7 @@ def init_base_model(t_len,
         # stored at the end of the current time slot, i.e. at the beginning of the next time slot
         # try to keep a minimal soc after trip
         # - ev_demand was converted to a power above
-        #if ev_demand[i + 1] != 0: # without condition now not the whole capacity is usable all the time
+        # if ev_demand[i + 1] != 0: #without condition not the whole capacity is usable
         m.ev_energy_balance_storage.add(
             m.ev_stored_energy[i + 1] >=
             m.ev_demand[i + 1] / m.ts_per_hour + m.ev_min_soc * m.ev_capacity
@@ -163,7 +161,7 @@ def init_base_model(t_len,
 
     m.ev_start_storage = pyo.Constraint(
         expr=m.ev_stored_energy[0]
-             == m.ev_soc_initial * m.ev_capacity)
+        == m.ev_soc_initial * m.ev_capacity)
 
     # optional:
     # (0) no constraint for last time step
@@ -225,8 +223,8 @@ def init_base_model(t_len,
         m.ev_binary_discharge_storage.add(
             m.ev_discharging_power[i] <=
             (1 - m.ev_bi_charge[i]) *
-            (m.ev_max_charger * m.ev_avail[i] +  # when available below charger power 
-             m.ev_demand[i] * (1 - m.ev_avail[i]))  # when not available below/equal demand 
+            (m.ev_max_charger * m.ev_avail[i] +  # when available below charger power
+             m.ev_demand[i] * (1 - m.ev_avail[i]))  # when not available below/equal demand
         )
 
         # when not available (above/)equal demand (see above)
@@ -252,9 +250,11 @@ def init_base_model(t_len,
     return m
 
 
-def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate=1, soc_initial=0.5,
-                      ev_capacity=0, ev_max_c_rate=1, ev_soc_initial=0, ev_min_soc=0.1, charger_max_power=11,
-                      ts_per_hour=1, end_min_soc=0.6, grid_connection_capacity=20, model=None):
+def optimize_schedule(
+        df_actor, buy_prices, sell_prices, capacity=10, max_c_rate=1, soc_initial=0.5,
+        ev_capacity=0, ev_max_c_rate=1, ev_soc_initial=0, ev_min_soc=0.1,
+        charger_max_power=11, end_min_soc=0.6, grid_connection_capacity=20,
+        ts_per_hour=1, model=None):
     """
     Optimizes load, pv time series with battery and electric vehicle flexibility based on buying and
     selling price time series.
@@ -274,10 +274,12 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
         (electric vehicle parameter) default=1
     :param ev_soc_initial: initial state of charge  (electric vehicle parameter) default=0.5
     :param ev_min_soc: minimal state of charge  (electric vehicle parameter) default=0.1
-    :param ts_per_hour: time steps per hour;  default=1
+    :param charger_max_power: maximum power of charger for ev (electric vehicle parameter)
+        default=11
     :param end_min_soc: regarding the prediction horizon, the minimal end soc is a fix point
         in order to promote a tendency to not extremely drain batteries at the end of the horizon
     :param grid_connection_capacity: maximum power drawn from or fed into grid; default=20)
+    :param ts_per_hour: time steps per hour;  default=1
     :param model: pyomo optimization model default=None
     """
     # TODO battery-efficiency ?
@@ -346,7 +348,7 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
         data["ev_demand"] = [0] * len(df_actor)
 
     # PYOMO OPTIMISATION MODEL
-    if model == None:
+    if model is None:
         model = init_base_model(t_len)
 
     fill_model(model, data)
@@ -372,7 +374,8 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
             "end_min_soc": end_min_soc,
             "grid_connection_capacity": grid_connection_capacity
         })
-        print(f"init soc: {ev_soc_initial}, demand_max: {max(ev_demand)/ts_per_hour/ev_capacity}")
+        print(f"init soc: {ev_soc_initial}, demand_max: "
+              f"{max(data['ev_demand'])/ts_per_hour/ev_capacity}")
         raise TypeError
 
     return model, objective, pd.DataFrame({
@@ -395,7 +398,7 @@ def optimize_schedule(df_actor, buy_prices, sell_prices, capacity=10, max_c_rate
     })
 
 
-def optimize_run(model, solver_name='cbc', options={'threads': 4}):#'appsi_highs'):
+def optimize_run(model, solver_name='cbc', options={'threads': 4}):
     # chose solver and solver-specific options
     # opt = pyo.SolverFactory('glpk')
     # opt.options['mipgap'] = 1e-3    # solver option for GLPK: relative gap, default: 0.0
