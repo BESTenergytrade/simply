@@ -4,11 +4,17 @@ from argparse import ArgumentParser
 from time import time
 import os
 import glob
+import logging
 
 from simply import market, market_2pac, market_fair
 from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading, dates_to_datetime
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 """
 Entry point for standalone functionality.
 
@@ -31,7 +37,7 @@ def main(cfg: Config):
 
     print("Current directory:", current_path)
     files_in_path = list_files_in_path(cfg.scenario_path)
-    print(f"Files in {cfg.scenario_path}:  {files_in_path}")
+    print(f"Files in {cfg.scenario_path}:  {len(files_in_path)}")
     print("data_format: ", cfg.data_format)
     # --------------------------------
 
@@ -92,7 +98,7 @@ def main(cfg: Config):
     for i, t in enumerate(time_range[cfg.start:cfg.nb_ts]):
         # actors calculate strategy based market interaction with the market maker
         sc.create_strategies()
-        print("Actors finished scheduling created")
+        logging.info("Actors finished scheduling created")
 
         # orders are generated based on the flexibility towards the planned market interaction
         # and a pricing scheme. Orders are matched at the end
@@ -101,14 +107,13 @@ def main(cfg: Config):
         # actors are prepared for the next time step by changing socs, banks and predictions
         sc.next_time_step()
 
-        if cfg.show_prints:
-            print(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)}")
+        logging.info(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)}")
 
         # save/update additional actor results every at least 10 time steps
         if cfg.save_csv and i % 10 == 0:
             sc.save_additional_results(sc.market.csv_path)
 
-    print(f"Execution time was: {time()-exec_start} s")
+    print(f"Total execution time was: {time()-exec_start} s")
 
     if cfg.show_prints:
         print("Matches of bid/ask ids: {}".format(m.matches))
