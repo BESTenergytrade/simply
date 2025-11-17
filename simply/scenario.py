@@ -14,7 +14,7 @@ import simply.config as cfg
 from simply import actor, market_maker
 from simply import power_network
 # from simply.battery import Battery
-from simply.util import get_all_data
+from simply.util import get_all_data, timeit
 from simply.market_maker import MarketMaker
 from simply.actor import Actor
 from simply.market import Market
@@ -220,6 +220,7 @@ class Scenario:
         participant.create_prediction()
 
 
+    @timeit
     def create_strategies(self, max_workers=None):
         # only actors create strategies (in parallel)
         actors = [p for p in self.market_participants if isinstance(p, Actor)]
@@ -246,6 +247,7 @@ class Scenario:
                     actor.market_schedule = market_schedule
 
 
+    @timeit
     def create_strategies_sequential(self):
         # sequential execution of market_schedule creation
         for participant in self.market_participants:
@@ -260,6 +262,7 @@ class Scenario:
         self.market.t_step = self.environment.time_range[self.environment.time_step]
         self.market.step = self.environment.time_step
 
+    @timeit
     def market_step(self):
         for participant in self.market_participants:
             orders = participant.generate_orders()
