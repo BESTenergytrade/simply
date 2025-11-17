@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import datetime
+from time import perf_counter
+import logging
 
 import simply.config as cfg
 
@@ -100,3 +102,18 @@ def actor_print(actor, header=False, _header=dict()):
           f"{round(actor.bank,4)},"
           f"{round(actor.pred.price[0],4)},"
           f"{round(actor.matched_energy_current_step,4)}")
+
+
+def run_obj_method(obj, method_name, *args, **kwargs):
+    method = getattr(obj, method_name)
+    return method(*args, **kwargs)
+
+
+def timeit(func):
+    def wrapper(*args, **kwargs):
+        start = perf_counter()
+        result = func(*args, **kwargs)
+        end = perf_counter()
+        logging.info(f"{func.__name__} executed in {end - start:.4f} seconds")
+        return result
+    return wrapper

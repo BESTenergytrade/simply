@@ -1,3 +1,4 @@
+import os
 import json
 import warnings
 from typing import Sized, Iterable
@@ -7,15 +8,17 @@ import numpy as np
 import random
 import matplotlib
 import matplotlib.pyplot as plt
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import simply.config as cfg
 from simply import actor, market_maker
 from simply import power_network
 # from simply.battery import Battery
-from simply.util import get_all_data
+from simply.util import get_all_data, timeit
 from simply.market_maker import MarketMaker
 from simply.actor import Actor
 from simply.market import Market
+from simply.util import run_obj_method
 
 try:
     matplotlib.use('TkAgg')
@@ -216,7 +219,37 @@ class Scenario:
         participant.environment = self.environment
         participant.create_prediction()
 
-    def create_strategies(self):
+    @timeit
+    def create_strategies(self, max_workers=None):
+        # only actors create strategies (in parallel)
+        actors = [p for p in self.market_participants if isinstance(p, Actor)]
+        if not actors:
+            return
+
+        if max_workers is None:
+            max_workers = os.cpu_count() or 1
+
+        # Parallel: create schedule per actor and update object in main process
+        # - cbc is running as external program which is why ThreadPoolExecutor is sufficient
+        # (the use of ProcessPoolExecutor even leads to longer execution time due to pickling
+        #  overhead)
+        # if process pool is used the values have to be updated due to separate memory
+        process_execution = False
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futs = {ex.submit(run_obj_method, a, "get_market_schedule"): a for a in actors}
+            if process_execution:
+                raise NotImplementedError
+                for fut in as_completed(futs):
+                    actor = futs[fut]
+                    market_schedule = fut.result()
+                    # writing back the result due to mutability
+                    # (only necessary for Process Execution)
+                    # TODO check for missing updates other than market_schedule
+                    actor.market_schedule = market_schedule
+
+    @timeit
+    def create_strategies_sequential(self):
+        # sequential execution of market_schedule creation
         for participant in self.market_participants:
             if isinstance(participant, Actor):
                 participant.get_market_schedule()
@@ -229,6 +262,7 @@ class Scenario:
         self.market.t_step = self.environment.time_range[self.environment.time_step]
         self.market.step = self.environment.time_step
 
+    @timeit
     def market_step(self):
         for participant in self.market_participants:
             orders = participant.generate_orders()
