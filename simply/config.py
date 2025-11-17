@@ -121,7 +121,7 @@ class Config:
         # number of timesteps in simulation
         self.nb_ts = parser.getint("default", "nb_ts", fallback=5)
         # number of timesteps within one hour
-        self.ts_per_hour = parser.getint("default", "ts_per_hour", fallback=4)
+        self.ts_per_hour = parser.getint("default", "ts_per_hour", fallback=1)
         # list of timesteps in simulation
         # not read from file but created from above information
         self.list_ts = linspace(self.start, self.start + self.nb_ts - 1, self.nb_ts)
