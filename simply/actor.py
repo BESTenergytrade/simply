@@ -325,6 +325,10 @@ class Actor:
             test_sched = pd.DataFrame(self.market_schedule_hist)
             test_sched.to_csv(dirpath)
 
+    def shift_market_schedule(self):
+        self.market_schedule = np.roll(self.market_schedule, -1)
+        self.market_schedule[-1] = 0
+
     def get_market_schedule(self, strategy=None):
         """ Generates a market_schedule for the actor which represents the strategy of the actor
         when to buy or sell energy. At the current time step the actor will always buy/ or sell
