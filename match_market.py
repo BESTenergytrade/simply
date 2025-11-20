@@ -97,7 +97,7 @@ def main(cfg: Config):
 
     for i, t in enumerate(time_range[cfg.start:cfg.nb_ts]):
         # actors calculate strategy based market interaction with the market maker
-        sc.create_strategies()
+        sc.create_strategies(update_step=cfg.schedule_update_step)
         logging.info("Actors finished scheduling created")
 
         # orders are generated based on the flexibility towards the planned market interaction
