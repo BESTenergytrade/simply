@@ -520,8 +520,9 @@ if __name__ == "__main__":
     grid_fee = 0.09
     ev_capacity = max(df_input_data_actor.get("ev_demand", [0])) * 1.2
 
-    buy_prices = df_input_data_prices.loc[:, "all_buy_prices"] + grid_fee
-    sell_prices = df_input_data_prices.loc[:, "all_sell_prices"]
+    # market maker buy prices => actor sell prices and vice versa
+    sell_prices = df_input_data_prices.loc[:, "all_buy_prices"]
+    buy_prices = df_input_data_prices.loc[:, "all_sell_prices"] + grid_fee
 
     """
     # For debugging:
