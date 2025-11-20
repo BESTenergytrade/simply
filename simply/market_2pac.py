@@ -142,7 +142,7 @@ def plot_merit_order(bids, asks):
     plt.step(bid_x_sum, bid_y, where="pre", label="bids")
     plt.step(ask_x_sum, ask_y, where="pre", label="asks")
     plt.hlines(mm_bid.price, 0, bid_x_sum[-1], colors='b', ls='dashdot', label="mm_bid")
-    plt.hlines(mm_ask.price, 0, ask_x_sum[-1], colors='y', ls='dashed', label="mm_bid")
+    plt.hlines(mm_ask.price, 0, ask_x_sum[-1], colors='y', ls='dashed', label="mm_ask")
     plt.legend()
     plt.xlabel("volume")
     plt.ylabel("price")
