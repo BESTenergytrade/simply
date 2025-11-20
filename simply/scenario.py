@@ -353,6 +353,13 @@ class Scenario:
             a.save_actor_result(dirpath / f"actor_{a.id}.csv")
         print("Additional actor results saved.")
 
+    def track_actor_schedule(self, dirpath, actor_id):
+        for a in list(filter(lambda x: isinstance(x, Actor), self.market_participants)):
+            if a.id == actor_id:
+                a.save_actor_schedule(dirpath / f"actor_{a.id}_schedule.csv")
+                print(f"Tracking actor {actor_id} schedule (saved)")
+                return
+
     def concat_actors_data(self):
         """
         Create a list of all actor data DataFrames and concatenate them using multi-column keys

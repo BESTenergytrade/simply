@@ -112,6 +112,8 @@ def main(cfg: Config):
         # save/update additional actor results every at least 10 time steps
         if cfg.save_csv and i % 10 == 0:
             sc.save_additional_results(sc.market.csv_path)
+            # currently only debug function (no configuration needed)
+            # sc.track_actor_schedule(sc.market.csv_path, actor_id="building_2275985")
 
     print(f"Total execution time was: {time()-exec_start} s")
 
