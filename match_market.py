@@ -6,7 +6,7 @@ import os
 import glob
 import logging
 
-from simply import market, market_2pac, market_fair
+from simply import market, market_2pac, market_fair, market_tarif
 from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading, dates_to_datetime
@@ -88,6 +88,8 @@ def main(cfg: Config):
     elif "pab" in cfg.market_type:
         # default pay-as-bid
         m = market.Market()
+    elif "tarif" in cfg.market_type:
+        m = market_tarif.MarketMakerDirectTarif(network=sc.power_network)
     else:
         raise NotImplementedError(
             "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair']")
