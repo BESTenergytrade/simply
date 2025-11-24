@@ -60,6 +60,8 @@ def check_data_present(loads_path, pv_path, ev_path, price_path):
     for path in [loads_path, pv_path, price_path]:
         if len(os.listdir(path)) == 0:
             raise Exception(f'{path} is missing data.')
+    if len(os.listdir(ev_path)) == 0:
+        warnings.warn(f'{ev_path} is missing data.')
 
 
 def remove_existing_dir(path):
@@ -181,7 +183,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
 
 def create_scenario_from_config(
-        config_json, network_path, loads_dir_path, data_dirpath=None,
+        config_json, network_path, loads_dir_path, data_dirpath,
         buy_sell_function=None,
         weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
         start_date="2016-01-01", plot_network=False,
@@ -191,6 +193,8 @@ def create_scenario_from_config(
     Create Scenario object while creating Actor objects from config_json referencing to time series
      data in data_path. The Actors are further mapped to a defined network.
 
+    :param buy_sell_function: function | None Defines in Scenario the MarketMaker sell values based on buy
+        values if sell_prices are not defined and this function is defined, defaults to None
     :param config_json: Path object of the configuration json file
     :param network_path: Path object of the network json file
     :param loads_dir_path: Path object of the directory containing loads csv
@@ -234,6 +238,7 @@ def create_scenario_from_config(
     if start_date is None:
         warnings.warn(f"No start date was given, use default date {start_date}.")
     start_date, end_date, _ = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
+    # TODO => list
     try:
         buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
                                    mm_buy_col, required=True)
@@ -247,8 +252,8 @@ def create_scenario_from_config(
 
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
-    scenario = Scenario(None, None, buy_prices=buy_prices, sell_prices=sell_prices,
-                        buy_to_sell_function=buy_sell_function)
+    scenario = Scenario(None, None)
+    scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices, buy_to_sell_function=buy_sell_function)
     for i, actor_row in config_df.iterrows():
         file_dict = {}
         asset_dict = {}
@@ -292,7 +297,7 @@ def create_scenario_from_config(
         # EV
         if 'ev' in file_dict:
             asset_dict['ev'].update({"csv": ev_path.joinpath(file_dict['ev'])})
-
+        # TODO: attribution
         # Prices
         asset_dict['price'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
         # actors are automatically added to the scenario environment
@@ -318,12 +323,13 @@ def create_scenario_from_config(
     return scenario
 
 
-def main(project_dir, data_dir):
+def main(project_dir, data_dir, config_path=None):
     project_dir = Path(project_dir)
     # Set the paths based on the scenario directory
     config_json_path = project_dir / "actors_config.json"
     network_path = project_dir / "network_config.json"
-    config_path = project_dir / "config.cfg"
+    if config_path is None:
+        config_path = project_dir / "config.cfg"
     data_dirpath = Path(data_dir) if data_dir else project_dir / "scenario_inputs"
     loads_dir_path = data_dirpath / "loads_dir.csv"
 
@@ -352,14 +358,17 @@ def main(project_dir, data_dir):
     sc = create_scenario_from_config(
         config_json_path,
         network_path,
-        weight_factor=cfg.weight_factor,
+        loads_dir_path=loads_dir_path,
         data_dirpath=data_dirpath,
+        weight_factor=cfg.weight_factor,
         buy_sell_function=lin_parameter_function(cfg.buy_sell_lin_param),
         start_date=cfg.start_date,
         nb_ts=cfg.nb_ts,
         horizon=cfg.horizon,
         ts_hour=cfg.ts_per_hour,
-        loads_dir_path=loads_dir_path,
+        price_filename="basic_prices.csv",
+        mm_buy_col="buy_prices",
+        mm_sell_col="sell_prices",
         ps=None,
         ls=None
     )

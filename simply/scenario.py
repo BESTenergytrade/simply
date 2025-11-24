@@ -76,6 +76,7 @@ class Environment:
         # when market is added to scenario
         self.get_grid_fee = None  # is instance of Market().get_grid_fee
         self.market_maker: MarketMaker = None
+        self.market_maker_list: list[MarketMaker] = [None]
 
 
 def is_scenario_participant(obj):
