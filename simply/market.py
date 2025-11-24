@@ -312,3 +312,22 @@ class Market:
             # if an actor has none as cluster, e.g. the market maker, a TypeError will be thrown.
             # use default grid fee in this case.
             ask.price += cfg.config.default_grid_fee
+
+def filter_orders(asks, bids):
+    large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
+    large_asks = asks[large_asks_mask]
+    asks_mm = large_asks[large_asks.energy >= MARKET_MAKER_THRESHOLD]
+    if len(asks_mm) > 1:
+        print(f"WARNING! More than one ask market maker:{len(asks_mm)}")
+    asks = asks[~large_asks_mask]
+    if len(large_asks) > len(asks_mm):
+        print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
+    large_bids_mask = bids.energy >= LARGE_ORDER_THRESHOLD
+    large_bids = bids[large_bids_mask]
+    bids_mm = large_bids[large_bids.energy >= MARKET_MAKER_THRESHOLD]
+    if len(bids_mm) > 1:
+        print(f"WARNING! More than one bid market maker: {len(bids_mm)}")
+    bids = bids[~large_bids_mask]
+    if len(large_bids) > len(bids_mm):
+        print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
+    return asks, asks_mm, bids, bids_mm, large_asks, large_bids
