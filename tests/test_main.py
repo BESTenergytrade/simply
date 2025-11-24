@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 
 from simply.config import Config
 from match_market import main
@@ -43,3 +44,22 @@ class TestMain:
         cfg = Config("", tmp_path)
         cfg.save_csv = True
         main(cfg)
+
+
+@pytest.fixture
+def example_project(project_name):
+    return Path(__file__).resolve().parents[1] / "projects/example_projects" / project_name
+
+
+class TestProjects:
+    @pytest.mark.parametrize('project_name', ["example_project", "example_project_ev_opt"])
+    def test_example_scenarios(self, example_project):
+        proj_dir = example_project
+        cfg = Config(proj_dir / "config.cfg", proj_dir)
+        # cfg.save_csv = True is the default value. Therefore, we don't set it
+
+        cfg.load_scenario = True
+        cfg.show_plots = False
+        # tests that example project runs through without errors
+        sc_loaded = main(cfg)
+        # TODO compare results did not change ...
