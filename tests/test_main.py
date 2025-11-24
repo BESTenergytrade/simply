@@ -63,7 +63,10 @@ def _load_csv(path: Path) -> pd.DataFrame:
 
 
 class TestProjects:
-    @pytest.mark.parametrize('project_name', ["example_project", "example_project_ev_opt"])
+    @pytest.mark.parametrize('project_name', [
+        "example_project",
+        "example_project_ev_opt"
+    ])
     def test_example_scenarios(self, example_project):
         proj_dir = example_project
         cfg = Config(proj_dir / "config.cfg", proj_dir)
@@ -72,16 +75,16 @@ class TestProjects:
         cfg.load_scenario = True  # (already configured that way)
         cfg.show_plots = False
         # test results to other folder
-        order_validation = cfg.results_path / f"orders.csv"
-        match_validation = cfg.results_path / f"matches.csv"
+        order_validation = cfg.results_path / "orders.csv"
+        match_validation = cfg.results_path / "matches.csv"
         output_dir = Path() / f"output_{example_project.name}"
         output_dir.mkdir(parents=True, exist_ok=True)
         cfg.results_path = output_dir
         # tests that example project runs through without errors
         main(cfg)
         # TODO compare results did not change ...
-        order_generated = output_dir / f"orders.csv"
-        match_generated = output_dir / f"matches.csv"
+        order_generated = output_dir / "orders.csv"
+        match_generated = output_dir / "matches.csv"
 
         # Load and compare orders
         df_order_gen = _load_csv(order_generated)
