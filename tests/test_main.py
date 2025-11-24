@@ -61,5 +61,5 @@ class TestProjects:
         cfg.load_scenario = True
         cfg.show_plots = False
         # tests that example project runs through without errors
-        sc_loaded = main(cfg)
+        main(cfg)
         # TODO compare results did not change ...
