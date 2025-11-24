@@ -965,7 +965,8 @@ class Actor:
         """
 
         if self.battery and not self.pred.empty:
-            self.market_schedule_hist.append(np.concatenate(([self.matched_energy_current_step], self.market_schedule)))
+            self.market_schedule_hist.append(
+                np.concatenate(([self.matched_energy_current_step], self.market_schedule)))
             self.update_battery()
             self.var_battery.set_available(
                 0 if self.var_battery.capacity == 0 else self.pred.ev_avail[1])
@@ -1009,7 +1010,8 @@ class Actor:
         # received energy
         delta_energy = sign*energy
         i = -1
-        while np.sign(delta_energy) == sign and abs(delta_energy) + cfg.config.EPS > cfg.config.energy_unit:
+        while (np.sign(delta_energy) == sign
+               and abs(delta_energy) + cfg.config.EPS > cfg.config.energy_unit):
             i += 1
             if i == len(self.market_schedule):
                 # energy amount of match was not found inside of the market schedule. Testing,

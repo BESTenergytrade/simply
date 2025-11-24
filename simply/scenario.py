@@ -262,7 +262,7 @@ class Scenario:
             return
         else:
             for a in actors:
-                    a.get_market_schedule()
+                a.get_market_schedule()
 
     def add_market(self, market):
         self.market = market
