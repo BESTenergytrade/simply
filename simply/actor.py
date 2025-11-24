@@ -287,6 +287,7 @@ class Actor:
         self.create_prediction()
         self.market_schedule = np.zeros(self.horizon)
         self.market_schedule[0] = self.get_default_market_schedule()[0]
+        self.market_schedule_hist = []
 
     # creating a property object. This way changing environment also leads to updates
     environment = property(get_environment, set_environment)
@@ -318,6 +319,15 @@ class Actor:
     def get_steps_per_hour(self):
         return self.environment.steps_per_hour
     steps_per_hour = property(get_steps_per_hour)
+
+    def save_actor_schedule(self, dirpath):
+        if dirpath is not None:
+            test_sched = pd.DataFrame(self.market_schedule_hist)
+            test_sched.to_csv(dirpath)
+
+    def shift_market_schedule(self):
+        self.market_schedule = np.roll(self.market_schedule, -1)
+        self.market_schedule[-1] = 0
 
     def get_market_schedule(self, strategy=None):
         """ Generates a market_schedule for the actor which represents the strategy of the actor
@@ -955,6 +965,8 @@ class Actor:
         """
 
         if self.battery and not self.pred.empty:
+            self.market_schedule_hist.append(
+                np.concatenate(([self.matched_energy_current_step], self.market_schedule)))
             self.update_battery()
             self.var_battery.set_available(
                 0 if self.var_battery.capacity == 0 else self.pred.ev_avail[1])
@@ -998,7 +1010,8 @@ class Actor:
         # received energy
         delta_energy = sign*energy
         i = -1
-        while np.sign(delta_energy) == sign and abs(delta_energy) > cfg.config.energy_unit:
+        while (np.sign(delta_energy) == sign
+               and abs(delta_energy) + cfg.config.EPS > cfg.config.energy_unit):
             i += 1
             if i == len(self.market_schedule):
                 # energy amount of match was not found inside of the market schedule. Testing,

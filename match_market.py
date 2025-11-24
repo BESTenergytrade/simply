@@ -95,9 +95,9 @@ def main(cfg: Config):
     sc.add_market(m)
     exec_start = time()
 
-    for i, t in enumerate(time_range[cfg.start:cfg.nb_ts]):
+    for i, t in enumerate(time_range[cfg.start: cfg.start+cfg.nb_ts]):
         # actors calculate strategy based market interaction with the market maker
-        sc.create_strategies()
+        sc.create_strategies(update_step=cfg.schedule_update_step)
         logging.info("Actors finished scheduling created")
 
         # orders are generated based on the flexibility towards the planned market interaction
@@ -112,6 +112,8 @@ def main(cfg: Config):
         # save/update additional actor results every at least 10 time steps
         if cfg.save_csv and i % 10 == 0:
             sc.save_additional_results(sc.market.csv_path)
+            # currently only debug function (no configuration needed)
+            # sc.track_actor_schedule(sc.market.csv_path, actor_id="building_2275985")
 
     print(f"Total execution time was: {time()-exec_start} s")
 

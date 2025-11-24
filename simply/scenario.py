@@ -220,10 +220,15 @@ class Scenario:
         participant.create_prediction()
 
     @timeit
-    def create_strategies(self, max_workers=None):
+    def create_strategies(self, max_workers=None, update_step=1):
         # only actors create strategies (in parallel)
         actors = [p for p in self.market_participants if isinstance(p, Actor)]
         if not actors:
+            return
+
+        if self.environment.time_step % update_step != 0:
+            for a in actors:
+                a.shift_market_schedule()
             return
 
         if max_workers is None:
@@ -248,11 +253,16 @@ class Scenario:
                     actor.market_schedule = market_schedule
 
     @timeit
-    def create_strategies_sequential(self):
+    def create_strategies_sequential(self, update_step=1):
         # sequential execution of market_schedule creation
-        for participant in self.market_participants:
-            if isinstance(participant, Actor):
-                participant.get_market_schedule()
+        actors = [p for p in self.market_participants if isinstance(p, Actor)]
+        if self.environment.time_step % update_step != 0:
+            for a in actors:
+                a.shift_market_schedule()
+            return
+        else:
+            for a in actors:
+                a.get_market_schedule()
 
     def add_market(self, market):
         self.market = market
@@ -352,6 +362,13 @@ class Scenario:
         for a in list(filter(lambda x: isinstance(x, Actor), self.market_participants)):
             a.save_actor_result(dirpath / f"actor_{a.id}.csv")
         print("Additional actor results saved.")
+
+    def track_actor_schedule(self, dirpath, actor_id):
+        for a in list(filter(lambda x: isinstance(x, Actor), self.market_participants)):
+            if a.id == actor_id:
+                a.save_actor_schedule(dirpath / f"actor_{a.id}_schedule.csv")
+                print(f"Tracking actor {actor_id} schedule (saved)")
+                return
 
     def concat_actors_data(self):
         """
