@@ -52,7 +52,7 @@ def example_project(project_name):
     return Path(__file__).resolve().parents[1] / "projects/example_projects" / project_name
 
 
-def _load_and_normalize_csv(path: Path) -> pd.DataFrame:
+def _load_csv(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path)
 
     # round float columns for numeric stability
