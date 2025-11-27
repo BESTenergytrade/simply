@@ -117,14 +117,14 @@ class Scenario:
         if "market" in kwargs.keys():
             self.set_market(kwargs["market"])
 
-    def add_market_maker(self, buy_prices: Sized, **kwargs):
+    def add_market_maker(self, buy_prices: Sized, name="MaketMaker", **kwargs):
         if len(buy_prices) == 0:
             warnings.warn("Environment was created without a market maker since no buy_prices, "
                           "were provided.")
         else:
             # Create the Market maker. Since the environment is passed the MarketMaker automatically
             # adds itself to the environment and also to the scenario participants
-            MarketMaker(buy_prices=buy_prices, environment=self.environment, **kwargs)
+            MarketMaker(buy_prices=buy_prices, environment=self.environment, name=name, **kwargs)
 
     def get_market(self):
         return self._market
@@ -197,22 +197,12 @@ class Scenario:
             if add_to_network:
                 _ = self.power_network.add_actors_map(map_actors)
         self.map_actors.update(map_actors)
-        # Make sure not to have more than 1 MarketMaker
-        error = "Can not add a 2nd MarketMaker to a scenario, which already has one."
-        assert len([x for x in self.market_participants if isinstance(x, MarketMaker)]) <= 1, error
 
     def _add_participant(self, participant):
         assert is_scenario_participant(participant)
         if participant not in self.market_participants:
             if isinstance(participant, MarketMaker):
-                try:
-                    self.market_participants.remove(self.environment.market_maker)
-                    warnings.warn("MarketMaker overwritten")
-                except ValueError or AttributeError:
-                    # No Market Maker in environment or market_participants
-                    # This can be ignored
-                    pass
-                self.environment.market_maker = participant
+                self.environment.market_maker_list.append(participant)
             self.market_participants.append(participant)
         else:
             warnings.warn(f"Participant {participant} is already part of the scenario, and was "

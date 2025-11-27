@@ -24,9 +24,9 @@ class MarketMaker:
     """
 
     def __init__(self, buy_prices: Sized, environment: 'Environment' = None,
-                 sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
+                 sell_prices: np.array = None, buy_to_sell_function=None, name=MARKETMAKERID, **kwargs):
         self.environment = environment
-        self.id = MARKETMAKERID
+        self.id = name
         self.cluster = kwargs.get("market_maker_cluster", None)
         # All prices the market maker is paying to buy energy. Mostly the prediction of these
         # values is used and provided via property
@@ -114,7 +114,7 @@ class MarketMaker:
 
         """
         return {
-            "id": MARKETMAKERID,
+            "id": self.id,
             "sell_prices": list(self.all_sell_prices),
             "buy_prices": list(self.all_buy_prices)
             }

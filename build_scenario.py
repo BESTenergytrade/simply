@@ -98,15 +98,33 @@ def map_actors(config_df):
 def read_config_json(config_json):
     """Builds a pandas dataframe containing values from config json and splits market_maker into
     buy and sell."""
-    try:
-        config_df = pd.read_json(config_json)
-    except ValueError as e:
-        raise ValueError(f"You have to provide a correct json file: {e}")
-    if 'devices' not in config_df:
-        config_df['devices'] = np.nan
+    with open(config_json) as f:
+        d = json.load(f)
+    if type(d) == list:
+        actor_df = pd.DataFrame(d)  # todo: testen auf Value Error?
+        market_maker_df = None
+    elif type(d) == dict:
+        if "actors" in d.keys():
+            actor_df = pd.DataFrame(d["actors"])  # todo: testen auf Value Error?
+        else:
+            raise KeyError # todo: prüfen ob richtige Fehlermeldung
+        if "marketMakers" in d.keys():
+            market_maker_df = pd.DataFrame(d["marketMakers"])  # todo: testen auf Value Error?
+        else:
+            market_maker_df = None
+    else:
+        raise TypeError  # todo: prüfen ob richtige Fehlermeldung
+    if 'devices' not in actor_df:
+        actor_df['devices'] = np.nan
     # Do not include market maker
+    if market_maker_df is None:
+        market_maker_df = pd.DataFrame([{"comment": "MM comment",
+                                         "marketMakerName": "MarketMaker",
+                                         "buyPrices": "basic_prices.csv",
+                                         "sellPrices": "basic_prices.csv"}
+                                        ])  # todo: bessere Art das umzusetzen?
 
-    return config_df
+    return actor_df, market_maker_df
 
 
 def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2016-01-01",
@@ -227,7 +245,7 @@ def create_scenario_from_config(
     check_data_present(loads_path, pv_path, ev_path, price_path)
 
     # Parse json
-    config_df = read_config_json(config_json)
+    actor_df, market_maker_df = read_config_json(config_json)
 
     # Create nodes for power network
     pn = create_power_network_from_config(network_path, weight_factor)
@@ -238,23 +256,27 @@ def create_scenario_from_config(
     if start_date is None:
         warnings.warn(f"No start date was given, use default date {start_date}.")
     start_date, end_date, _ = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
-    # TODO => list
-    try:
-        buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
-                                   mm_buy_col, required=True)
-        sell_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
-                                    mm_sell_col, required=False)
-    except Exception as e:
-        buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
-                                   "prices", required=True)
-        sell_prices = None
-        warnings.warn(f"{e}: ... but found default column 'prices'.")
 
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
     scenario = Scenario(None, None)
-    scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices, buy_to_sell_function=buy_sell_function)
-    for i, actor_row in config_df.iterrows():
+
+    for i, mm_row in market_maker_df.iterrows():
+        try:
+            print(mm_row["buyPrices"])
+            print(mm_row["sellPrices"])
+            buy_prices = get_mm_prices(price_path / mm_row["buyPrices"], start_date, end_date,
+                                       mm_buy_col, required=True)
+            sell_prices = get_mm_prices(price_path / mm_row["sellPrices"], start_date, end_date,
+                                        mm_sell_col, required=False)
+        except Exception as e:
+            buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,  # todo: soll das hier vielleicht als default bleiben?
+                                       "prices", required=True)
+            sell_prices = None
+            warnings.warn(f"{e}: ... but found default column 'prices'.")
+        scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices, buy_to_sell_function=buy_sell_function, name=mm_row["marketMakerName"])
+
+    for i, actor_row in actor_df.iterrows():
         file_dict = {}
         asset_dict = {}
         # If there is no devices use
@@ -297,7 +319,7 @@ def create_scenario_from_config(
         # EV
         if 'ev' in file_dict:
             asset_dict['ev'].update({"csv": ev_path.joinpath(file_dict['ev'])})
-        # TODO: attribution
+        # TODO: attribution - [MZ] zweiter Schritt
         # Prices
         asset_dict['price'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
         # actors are automatically added to the scenario environment
@@ -308,7 +330,7 @@ def create_scenario_from_config(
                                      pricing_strategy=actor_row.get("pricing_strategy"))
         print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{file_dict["load"]}"')
 
-    actor_map = map_actors(config_df)
+    actor_map = map_actors(actor_df)
     actor_map = pn.add_actors_map(actor_map)
 
     if plot_network is True:
