@@ -1,53 +1,72 @@
-[
-    {
-        "comment": "An example of a residential prosumer with load and pv data specified by their 'deviceID'",
-        "prosumerName": "residential_1",
-        "prosumerType": "residential",
-        "gridLocation": "N01",
-        "devices": [
-            {
-                "deviceType": "load",
-                "deviceID": "CHH10_sample.csv"
-            },
-            {
-                "deviceType": "solar",
-                "deviceID": "generated_pv.csv"
-            }
-        ]
-    },
-    {
-        "comment": "An example of a residential prosumer with load data specified by their 'deviceID' but without pv",
-        "prosumerName": "residential_2",
-        "prosumerType": "residential",
-        "gridLocation": "N02",
-        "devices": [
-            {
-                "deviceType": "load",
-                "deviceID": "CHH9_sample.csv"
-            }
-        ]
-    },
-    {
-        "comment": "An example of a residential prosumer with load, pv data specified by their 'deviceID' and a battery",
-        "prosumerName": "residential_3",
-        "prosumerType": "residential",
-        "gridLocation": "N02",
-        "devices": [
-            {
-                "deviceType": "load",
-                "deviceID": "CHH16_sample.csv"
-            },
-	        {
-                "deviceType": "solar",
-                "deviceID": "generated_pv.csv"
-            },
-            {
-                "deviceType": "battery",
-                "capacityKwh": 3,
-                "initialSOC": 0.5
-            }
-        ],
-        "strategy": 3,
-        "pricing_strategy": {"name": "linear", "param": [0.01]}
-    }
-]
+{
+    "actors": [
+        {
+            "comment": "An example of a residential prosumer with load and pv data specified by their 'deviceID'",
+            "prosumerName": "residential_1",
+            "prosumerType": "residential",
+            "gridLocation": "N01",
+            "assignedMarketMaker": "market_maker_1",
+            "devices": [
+                {
+                    "deviceType": "load",
+                    "deviceID": "CHH10_sample.csv"
+                },
+                {
+                    "deviceType": "solar",
+                    "deviceID": "generated_pv.csv"
+                }
+            ]
+        },
+        {
+            "comment": "An example of a residential prosumer with load data specified by their 'deviceID' but without pv",
+            "prosumerName": "residential_2",
+            "prosumerType": "residential",
+            "gridLocation": "N02",
+            "assignedMarketMaker": "market_maker_1",
+            "devices": [
+                {
+                    "deviceType": "load",
+                    "deviceID": "CHH9_sample.csv"
+                }
+            ]
+        },
+        {
+            "comment": "An example of a residential prosumer with load, pv data specified by their 'deviceID' and a battery",
+            "prosumerName": "residential_3",
+            "prosumerType": "residential",
+            "gridLocation": "N02",
+            "assignedMarketMaker": "market_maker_2",
+            "devices": [
+                {
+                    "deviceType": "load",
+                    "deviceID": "CHH16_sample.csv"
+                },
+                {
+                    "deviceType": "solar",
+                    "deviceID": "generated_pv.csv"
+                },
+                {
+                    "deviceType": "battery",
+                    "capacityKwh": 3,
+                    "initialSOC": 0.5
+                }
+            ],
+            "strategy": 3,
+            "pricing_strategy": {"name": "linear", "param": [0.01]}
+        }
+    ],
+    "marketMakers": [
+        {
+            "comment": "MM comment",
+            "marketMakerName": "market_maker_1",
+            "buyPrices": "dyn_buy_1.csv",
+            "sellPrices": "dyn_sell_1.csv"
+        },
+        {
+            "comment": "MM comment",
+            "marketMakerName": "market_maker_2",
+            "buyPrices": "fix_buy_1.csv",
+            "sellPrices": "fix_sell_1.csv"
+        }
+    ]
+}
