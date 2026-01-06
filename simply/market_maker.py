@@ -24,10 +24,11 @@ class MarketMaker:
     """
 
     def __init__(self, buy_prices: Sized, environment: 'Environment' = None,
-                 sell_prices: np.array = None, buy_to_sell_function=None, name=MARKETMAKERID, **kwargs):
+                 sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
         self.environment = environment
-        self.id = name
+        self.id = kwargs.get("name", MARKETMAKERID)
         self.cluster = kwargs.get("market_maker_cluster", None)
+        self.csv_file = f'{self.id}.csv'
         # All prices the market maker is paying to buy energy. Mostly the prediction of these
         # values is used and provided via property
         self.all_buy_prices = round_prices_array(np.array(buy_prices))
@@ -115,6 +116,7 @@ class MarketMaker:
         """
         return {
             "id": self.id,
+            "csv": self.csv_file,
             "sell_prices": list(self.all_sell_prices),
             "buy_prices": list(self.all_buy_prices)
             }

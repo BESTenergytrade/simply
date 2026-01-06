@@ -100,29 +100,26 @@ def read_config_json(config_json):
     buy and sell."""
     with open(config_json) as f:
         d = json.load(f)
-    if type(d) == list:
-        actor_df = pd.DataFrame(d)  # todo: testen auf Value Error?
+    if type(d) == list:  # for backward compatibility: default is list of actor parameter
+        actor_df = pd.DataFrame(d)
         market_maker_df = None
+        warnings.warn("Actor config is actor list (backward compatibility). Now changed actor config to contain actor"
+                      " list within key 'actor' i.e. {'actors': [], 'marketMakers': []}")
     elif type(d) == dict:
         if "actors" in d.keys():
-            actor_df = pd.DataFrame(d["actors"])  # todo: testen auf Value Error?
+            actor_df = pd.DataFrame(d["actors"])
         else:
-            raise KeyError # todo: prüfen ob richtige Fehlermeldung
+            raise KeyError(f"{config_json} misses key 'actors'")
         if "marketMakers" in d.keys():
-            market_maker_df = pd.DataFrame(d["marketMakers"])  # todo: testen auf Value Error?
+            market_maker_df = pd.DataFrame(d["marketMakers"])
         else:
             market_maker_df = None
     else:
-        raise TypeError  # todo: prüfen ob richtige Fehlermeldung
+        raise TypeError(f"{config_json} contains wrong data type. On the top level It should be a list or dict.")
+    if "prosumerName" not in actor_df:
+        raise KeyError("actors need to have 'prosumerName' column")
     if 'devices' not in actor_df:
         actor_df['devices'] = np.nan
-    # Do not include market maker
-    if market_maker_df is None:
-        market_maker_df = pd.DataFrame([{"comment": "MM comment",
-                                         "marketMakerName": "MarketMaker",
-                                         "buyPrices": "basic_prices.csv",
-                                         "sellPrices": "basic_prices.csv"}
-                                        ])  # todo: bessere Art das umzusetzen?
 
     return actor_df, market_maker_df
 
@@ -261,20 +258,32 @@ def create_scenario_from_config(
     # When buy_prices are provided a market maker is automatically generated
     scenario = Scenario(None, None)
 
-    for i, mm_row in market_maker_df.iterrows():
+    if market_maker_df is not None:
+        for i, mm_row in market_maker_df.iterrows():
+            try:
+                buy_prices = get_mm_prices(price_path / mm_row["buyPrices"], start_date, end_date,
+                                           mm_buy_col, required=True)
+                sell_prices = get_mm_prices(price_path / mm_row["sellPrices"], start_date, end_date,
+                                            mm_sell_col, required=False)
+            except Exception as e:
+                buy_prices = get_mm_prices(price_path / mm_row["buyPrices"], start_date, end_date,
+                                           "prices", required=True)
+                sell_prices = None
+                warnings.warn(f"{e}: ... but found default column 'prices'.")
+            scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices, buy_to_sell_function=buy_sell_function, name=mm_row["marketMakerName"])
+    else:
         try:
-            print(mm_row["buyPrices"])
-            print(mm_row["sellPrices"])
-            buy_prices = get_mm_prices(price_path / mm_row["buyPrices"], start_date, end_date,
+            buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
                                        mm_buy_col, required=True)
-            sell_prices = get_mm_prices(price_path / mm_row["sellPrices"], start_date, end_date,
+            sell_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
                                         mm_sell_col, required=False)
         except Exception as e:
-            buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,  # todo: soll das hier vielleicht als default bleiben?
+            buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
                                        "prices", required=True)
             sell_prices = None
             warnings.warn(f"{e}: ... but found default column 'prices'.")
-        scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices, buy_to_sell_function=buy_sell_function, name=mm_row["marketMakerName"])
+        scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices,
+                                  buy_to_sell_function=buy_sell_function)
 
     for i, actor_row in actor_df.iterrows():
         file_dict = {}

@@ -117,14 +117,14 @@ class Scenario:
         if "market" in kwargs.keys():
             self.set_market(kwargs["market"])
 
-    def add_market_maker(self, buy_prices: Sized, name="MaketMaker", **kwargs):
+    def add_market_maker(self, buy_prices: Sized, **kwargs):
         if len(buy_prices) == 0:
             warnings.warn("Environment was created without a market maker since no buy_prices, "
                           "were provided.")
         else:
             # Create the Market maker. Since the environment is passed the MarketMaker automatically
             # adds itself to the environment and also to the scenario participants
-            MarketMaker(buy_prices=buy_prices, environment=self.environment, name=name, **kwargs)
+            MarketMaker(buy_prices=buy_prices, environment=self.environment, **kwargs)
 
     def get_market(self):
         return self._market
@@ -331,11 +331,15 @@ class Scenario:
         if data_format == "csv":
             # Save data in separate csv file and all actors in one config file
             a_dict = {}
+            m_dict = {}
             for participant in self.market_participants:
-                a_dict[participant.id] = participant.to_dict(external_data=True)
+                if isinstance(participant, Actor):
+                    a_dict[participant.id] = participant.to_dict(external_data=True)
+                if isinstance(participant, MarketMaker):
+                    m_dict[participant.id] = participant.to_dict(external_data=True)
                 participant.save_csv(dirpath)
             dirpath.joinpath('actors.json').write_text(
-                json.dumps(a_dict, indent=2, default=serialize_int64))
+                json.dumps({"actors": a_dict, "marketMakers": m_dict}, indent=2, default=serialize_int64))
         else:
             # Save config and data per actor in a single file
             for participant in self.market_participants:
