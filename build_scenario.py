@@ -120,6 +120,8 @@ def read_config_json(config_json):
         raise KeyError("actors need to have 'prosumerName' column")
     if 'devices' not in actor_df:
         actor_df['devices'] = np.nan
+    if 'assignedMarketMaker' not in actor_df:
+        actor_df['assignedMarketMaker'] = np.nan
 
     return actor_df, market_maker_df
 
@@ -127,7 +129,7 @@ def read_config_json(config_json):
 def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2016-01-01",
                              nb_ts=None, horizon=24, ts_hour=1,
                              cols=["load", "pv", "schedule", "price"], ps=None, ls=None,
-                             strategy=0, pricing_strategy=None):
+                             strategy=0, pricing_strategy=None, assigned_mm=None):
     """
     Create Actor with an ID and given asset time series shifted to a specified start time and
     resolution (and scaled by factors ps/ls if given).
@@ -194,7 +196,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
     return Actor(actor_id, df, environment, ls=1, ps=1, battery_cap=battery_cap,
                  battery_initial_soc=init_soc, strategy=strategy, pricing_strategy=pricing_strategy,
-                 **ev_param)
+                 assigned_mm=assigned_mm, **ev_param)
 
 
 def create_scenario_from_config(
@@ -328,7 +330,6 @@ def create_scenario_from_config(
         # EV
         if 'ev' in file_dict:
             asset_dict['ev'].update({"csv": ev_path.joinpath(file_dict['ev'])})
-        # TODO: attribution - [MZ] zweiter Schritt
         # Prices
         asset_dict['price'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
         # actors are automatically added to the scenario environment
@@ -336,7 +337,8 @@ def create_scenario_from_config(
                                      asset_dict=asset_dict, start_date=start_date,
                                      nb_ts=nb_ts, horizon=horizon, ts_hour=ts_hour, ps=ps, ls=ls,
                                      strategy=actor_row.get('strategy'),
-                                     pricing_strategy=actor_row.get("pricing_strategy"))
+                                     pricing_strategy=actor_row.get("pricing_strategy"),
+                                     assigned_mm=actor_row['assignedMarketMaker'])
         print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{file_dict["load"]}"')
 
     actor_map = map_actors(actor_df)

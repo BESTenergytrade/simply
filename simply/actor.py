@@ -11,6 +11,7 @@ from simply.battery import Battery, VariableBattery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 from simply.optimisation import optimize_schedule
+MARKETMAKERID = "MarketMaker"  # todo - problem: import from simply.market_maker doesnt work
 
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
@@ -125,7 +126,7 @@ class Actor:
     """
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
-                 cluster=None, strategy: int = 0, pricing_strategy=None,
+                 cluster=None, strategy: int = 0, pricing_strategy=None, assigned_mm = None,
                  battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
                  ev_available=0, ev_max_c_rate=1, ev_max_power=11, grid_connection_capacity=20):
         """
@@ -168,6 +169,11 @@ class Actor:
         else:
             self.strategy = strategy
         self.pricing_strategy = pricing_strategy
+        if assigned_mm != assigned_mm or assigned_mm is None:
+            self.assigned_mm = MARKETMAKERID
+            warnings.warn(f'No Market Maker specified for Actor {self.id}. Using default Market Maker.')
+        else:
+            self.assigned_mm = assigned_mm
         if csv is not None:
             self.csv_file = csv
         else:
@@ -1057,7 +1063,8 @@ class Actor:
         # Add battery and strategy parameter
         args.update(
             {"battery_cap": self.battery.capacity, "battery_initial_soc": self.battery.soc,
-             "strategy": self.strategy, "pricing_strategy": self.pricing_strategy}
+             "strategy": self.strategy, "pricing_strategy": self.pricing_strategy,
+             "assignedMarketMaker": self.assigned_mm}
         )
         # Add EV parameter
         if self.var_battery.capacity > 0:
