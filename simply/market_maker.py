@@ -26,7 +26,7 @@ class MarketMaker:
     def __init__(self, buy_prices: Sized, environment: 'Environment' = None,
                  sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
         self.environment = environment
-        self.id = kwargs.get("name", MARKETMAKERID)
+        self.id = kwargs.get("id", MARKETMAKERID)
         self.cluster = kwargs.get("market_maker_cluster", None)
         self.csv_file = f'{self.id}.csv'
         # All prices the market maker is paying to buy energy. Mostly the prediction of these

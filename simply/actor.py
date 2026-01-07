@@ -126,7 +126,7 @@ class Actor:
     """
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
-                 cluster=None, strategy: int = 0, pricing_strategy=None, assigned_mm = None,
+                 cluster=None, strategy: int = 0, pricing_strategy=None, assignedMarketMaker = None,
                  battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
                  ev_available=0, ev_max_c_rate=1, ev_max_power=11, grid_connection_capacity=20):
         """
@@ -169,11 +169,11 @@ class Actor:
         else:
             self.strategy = strategy
         self.pricing_strategy = pricing_strategy
-        if assigned_mm != assigned_mm or assigned_mm is None:
+        if assignedMarketMaker != assignedMarketMaker or assignedMarketMaker is None:
             self.assigned_mm = MARKETMAKERID
             warnings.warn(f'No Market Maker specified for Actor {self.id}. Using default Market Maker.')
         else:
-            self.assigned_mm = assigned_mm
+            self.assigned_mm = assignedMarketMaker
         if csv is not None:
             self.csv_file = csv
         else:
@@ -300,17 +300,17 @@ class Actor:
 
     def get_mm_buy_prices(self):
         env = self.environment
-        grid_fee = env.get_grid_fee(bid_cluster=env.market_maker.cluster, ask_cluster=self.cluster)
+        grid_fee = env.get_grid_fee(bid_cluster=env.market_makers[self.assigned_mm].cluster, ask_cluster=self.cluster)
         # the achievable prices the mm buys energy for from the actor are reduced by the grid fee
-        return env.market_maker.buy_prices-grid_fee
+        return env.market_makers[self.assigned_mm].buy_prices-grid_fee
     # creating a property object
     mm_buy_prices = property(get_mm_buy_prices)
 
     def get_mm_sell_prices(self):
         env = self.environment
-        grid_fee = env.get_grid_fee(ask_cluster=env.market_maker.cluster, bid_cluster=self.cluster)
+        grid_fee = env.get_grid_fee(ask_cluster=env.market_makers[self.assigned_mm].cluster, bid_cluster=self.cluster)
         # the prices for which the mm sells energy to the actor are increased by the grid fee
-        return (self.environment.market_maker.sell_prices+grid_fee).round(cfg.config.round_decimal)
+        return (self.environment.market_makers[self.assigned_mm].sell_prices+grid_fee).round(cfg.config.round_decimal)
 
     # creating a property object
     mm_sell_prices = property(get_mm_sell_prices)

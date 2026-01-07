@@ -76,7 +76,8 @@ class Environment:
         # when market is added to scenario
         self.get_grid_fee = None  # is instance of Market().get_grid_fee
         self.market_maker: MarketMaker = None
-        self.market_maker_list: list[MarketMaker] = [None]
+        self.market_makers = {}
+
 
 
 def is_scenario_participant(obj):
@@ -178,13 +179,10 @@ class Scenario:
         for participant in participants:
             self._add_participant(participant)
 
-        # Make sure not to have more than 1 MarketMaker
-        error = "Can not add a 2nd MarketMaker to a scenario, which already has one."
         mm_list = [x for x in self.market_participants if isinstance(x, MarketMaker)]
         if mm_list != 0:
-            print(" + Added MarketMaker to the Scenario.")
+            print(f" + Added {len(mm_list)} MarketMakers to the Scenario.")
         print(f" + Added {len(actors)} Actors to the Scenario.")
-        assert len(mm_list) <= 1, error
 
     def add_participant(self, participant, map_node=None, add_to_network=False):
         self._add_participant(participant)
@@ -202,7 +200,7 @@ class Scenario:
         assert is_scenario_participant(participant)
         if participant not in self.market_participants:
             if isinstance(participant, MarketMaker):
-                self.environment.market_maker_list.append(participant)
+                self.environment.market_makers[participant.id] = participant
             self.market_participants.append(participant)
         else:
             warnings.warn(f"Participant {participant} is already part of the scenario, and was "
@@ -468,15 +466,15 @@ def load(dirpath, data_format):
         actors_file = next(dirpath.glob("actors.*"))
         at = actors_file.read_text()
         actors_j = json.loads(at)
-        for aj in actors_j.values():
-            if aj["id"] == market_maker.MARKETMAKERID:
-                participant = market_maker.MarketMaker(**aj)
-            else:
-                aj["df"] = pd.read_csv(dirpath / aj["csv"], parse_dates=['Time'], dayfirst=False,
-                                       index_col='Time')
-                assert datetime.strptime(cfg.config.start_date, "%Y-%m-%d") in aj["df"].index
-                time_range = aj["df"].index
-                participant = actor.Actor(**aj)
+        for aj in actors_j["actors"].values():
+            aj["df"] = pd.read_csv(dirpath / aj["csv"], parse_dates=['Time'], dayfirst=False,
+                                   index_col='Time')
+            assert datetime.strptime(cfg.config.start_date, "%Y-%m-%d") in aj["df"].index
+            time_range = aj["df"].index
+            participant = actor.Actor(**aj)
+            participants.append(participant)
+        for mj in actors_j["marketMakers"].values():
+            participant = market_maker.MarketMaker(**mj)
             participants.append(participant)
     else:
         actor_files = dirpath.glob(f"actor_*.{data_format}")

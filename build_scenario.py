@@ -196,7 +196,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
     return Actor(actor_id, df, environment, ls=1, ps=1, battery_cap=battery_cap,
                  battery_initial_soc=init_soc, strategy=strategy, pricing_strategy=pricing_strategy,
-                 assigned_mm=assigned_mm, **ev_param)
+                 assignedMarketMaker=assigned_mm, **ev_param)
 
 
 def create_scenario_from_config(
@@ -272,7 +272,7 @@ def create_scenario_from_config(
                                            "prices", required=True)
                 sell_prices = None
                 warnings.warn(f"{e}: ... but found default column 'prices'.")
-            scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices, buy_to_sell_function=buy_sell_function, name=mm_row["marketMakerName"])
+            scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices, buy_to_sell_function=buy_sell_function, id=mm_row["marketMakerName"])
     else:
         try:
             buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
