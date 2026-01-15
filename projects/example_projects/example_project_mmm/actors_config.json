@@ -6,6 +6,7 @@
             "prosumerType": "residential",
             "gridLocation": "N01",
             "assignedMarketMaker": "market_maker_1",
+            "assignedMarket": "market_1",
             "devices": [
                 {
                     "deviceType": "load",
@@ -22,7 +23,8 @@
             "prosumerName": "residential_2",
             "prosumerType": "residential",
             "gridLocation": "N02",
-            "assignedMarketMaker": "market_maker_1",
+            "assignedMarketMaker": "market_maker_2",
+            "assignedMarket": "market_2",
             "devices": [
                 {
                     "deviceType": "load",
@@ -35,7 +37,8 @@
             "prosumerName": "residential_3",
             "prosumerType": "residential",
             "gridLocation": "N02",
-            "assignedMarketMaker": "market_maker_2",
+            "assignedMarketMaker": "market_maker_1",
+            "assignedMarket": "market_1",
             "devices": [
                 {
                     "deviceType": "load",
@@ -59,12 +62,14 @@
         {
             "comment": "MM comment",
             "marketMakerName": "market_maker_1",
+            "assignedMarket": "market_1",
             "buyPrices": "dyn_buy_1.csv",
             "sellPrices": "dyn_sell_1.csv"
         },
         {
             "comment": "MM comment",
             "marketMakerName": "market_maker_2",
+            "assignedMarket": ["market_2", "market_3"],
             "buyPrices": "fix_buy_1.csv",
             "sellPrices": "fix_sell_1.csv"
         }
