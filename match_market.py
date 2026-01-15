@@ -94,7 +94,14 @@ def main(cfg: Config):
         raise NotImplementedError(
             "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair']")
 
-    sc.add_market(m)
+    #sc.add_market(m)
+
+    m1 = market.Market(name="market_1")
+    sc.add_to_market_dict(m1.name, m1)
+    m2 = market.Market(name = "market_2")
+    sc.add_to_market_dict(m2.name, m2)
+    m3 = market.Market(name = "market_3")
+    sc.add_to_market_dict(m3.name, m3)
     exec_start = time()
 
     for i, t in enumerate(time_range[cfg.start:cfg.nb_ts]):
@@ -108,12 +115,13 @@ def main(cfg: Config):
 
         # actors are prepared for the next time step by changing socs, banks and predictions
         sc.next_time_step()
-
-        logging.info(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)}")
+        for m in sc.market_dict.values():
+            logging.info(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)}")
 
         # save/update additional actor results every at least 10 time steps
         if cfg.save_csv and i % 10 == 0:
-            sc.save_additional_results(sc.market.csv_path)
+            for m in sc.market_dict.values():
+                sc.save_additional_results(m.csv_path)
             # currently only debug function (no configuration needed)
             # sc.track_actor_schedule(sc.market.csv_path, actor_id="building_2275985")
 
@@ -129,8 +137,10 @@ def main(cfg: Config):
 
     # save additional results
     if cfg.save_csv:
-        sc.save_additional_results(sc.market.csv_path)
-    print(f"Results saved to {sc.market.csv_path}")
+        for m in sc.market_dict.values():
+            sc.save_additional_results(m.csv_path)
+    for m in sc.market_dict.values():
+        print(f"Results saved to {m.csv_path}")
 
     return sc
 

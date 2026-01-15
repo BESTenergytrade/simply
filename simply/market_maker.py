@@ -27,6 +27,10 @@ class MarketMaker:
                  sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
         self.environment = environment
         self.id = kwargs.get("id", MARKETMAKERID)
+        assigned_markets_list = kwargs.get("assignedMarket", ["market_1"])
+        if isinstance(assigned_markets_list, str):
+            assigned_markets_list = [assigned_markets_list]
+        self.assigned_market = assigned_markets_list
         self.cluster = kwargs.get("market_maker_cluster", None)
         self.csv_file = f'{self.id}.csv'
         # All prices the market maker is paying to buy energy. Mostly the prediction of these
@@ -116,6 +120,7 @@ class MarketMaker:
         """
         return {
             "id": self.id,
+            "assignedMarket": self.assigned_market,
             "csv": self.csv_file,
             "sell_prices": list(self.all_sell_prices),
             "buy_prices": list(self.all_buy_prices)

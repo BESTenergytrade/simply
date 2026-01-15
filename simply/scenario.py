@@ -75,6 +75,7 @@ class Environment:
         # Get grid fee method of market to make grid fees accessible for actors. Will be overwritten
         # when market is added to scenario
         self.get_grid_fee = None  # is instance of Market().get_grid_fee
+        self.get_grid_fee_dict = {}
         self.market_maker: MarketMaker = None
         self.market_makers = {}
 
@@ -101,6 +102,7 @@ class Scenario:
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
         self._market = None
+        self.market_dict = {}
         self.power_network: power_network.PowerNetwork = network
         self.market_participants = list()
         # maps node ids to actors
@@ -257,26 +259,47 @@ class Scenario:
         self.market = market
         self.sync_market_time()
 
+    def add_to_market_dict(self, market_name, market):
+        assert isinstance(market, Market), "Only Instances of class 'Market' can be added to Scenario.market_dict"
+        self.market_dict[market_name] = market
+        self.market_dict[market_name].t_step = self.environment.time_step
+        self.market_dict[market_name].t_step = self.environment.time_range[self.environment.time_step]
+        self.market_dict[market_name].step = self.environment.time_step
+        self.environment.get_grid_fee_dict[market_name] = self.market_dict[market_name].get_grid_fee
+
+
     def sync_market_time(self):
-        self.market.t_step = self.environment.time_range[self.environment.time_step]
-        self.market.step = self.environment.time_step
+        #self.market.t_step = self.environment.time_range[self.environment.time_step]
+        #self.market.step = self.environment.time_step
+        for market in self.market_dict.values():
+            market.t_step = self.environment.time_range[self.environment.time_step]
+            market.step = self.environment.time_step
 
     @timeit
     def market_step(self):
         for participant in self.market_participants:
             orders = participant.generate_orders()
             for order in orders:
-                self.market.accept_order(order, callback=participant.receive_market_results)
+                #self.market.accept_order(order, callback=participant.receive_market_results)
+                if isinstance(participant, Actor):
+                    self.market_dict[participant.assigned_market].accept_order(order, callback=participant.receive_market_results)
+                else:  # MarketMaker
+                    for market in participant.assigned_market:
+                        self.market_dict[market].accept_order(order, callback=participant.receive_market_results)
         if debug_actor:
             print([order for order in orders if "MarketMaker" != order.actor_id])
-            print(self.market.orders)
-        self.market.clear(reset=cfg.config.reset_market)
+            for m in self.market_dict.values():
+                print(m.orders)
+        #self.market.clear(reset=cfg.config.reset_market)
+        for market in self.market_dict.values():
+            market.clear(reset=cfg.config.reset_market)
         if debug_actor:
-            print([m for ma in self.market.matches for m in ma if
-                   m["time"] == self.environment.time_step])
-            print([m for matches in self.market.matches for m in matches
-                   if m["time"] == self.environment.time_step
-                   and (m["bid_actor"] == debug_actor or m["ask_actor"] == debug_actor)])
+            for mark in self.market_dict.values():
+                print([m for ma in mark.matches for m in ma if
+                       m["time"] == self.environment.time_step])
+                print([m for matches in mark.matches for m in matches
+                       if m["time"] == self.environment.time_step
+                       and (m["bid_actor"] == debug_actor or m["ask_actor"] == debug_actor)])
 
     def next_time_step(self):
         for participant in self.market_participants:
@@ -406,9 +429,9 @@ class Scenario:
         """ Reset the scenario after a simulation is run"""
         # Reset the time step
         self.environment.time_step = cfg.config.start
-        if self.market is not None:
-            self.market.t_step = self.environment.time_step
-            self.market.reset()
+        for m in self.market_dict.values():
+            m.t_step = self.environment.time_step
+            m.reset()
 
         # Remove previous participants
         self.market_participants = []
@@ -461,6 +484,8 @@ def load(dirpath, data_format):
     # read actors
     participants = []
     time_range = None
+    market_list = []
+    mm_markets = {}  # per maket maker: aqssigned_market
     from datetime import datetime
     if data_format == "csv":
         actors_file = next(dirpath.glob("actors.*"))
@@ -475,7 +500,18 @@ def load(dirpath, data_format):
             participants.append(participant)
         for mj in actors_j["marketMakers"].values():
             participant = market_maker.MarketMaker(**mj)
+            market_list += participant.assigned_market
+            mm_markets[participant.id] = participant.assigned_market
             participants.append(participant)
+        # check that every market has only one market maker assigned
+        assert len(set(market_list)) == len(market_list), 'markets with more than one assigned market maker'
+        print(market_list)
+        for p in participants:
+            # check for every Actor, that its assigned market_maker actually trades in its assigned market
+            if isinstance(p, Actor):
+                assert p.assigned_market in mm_markets[p.assigned_mm] , (f"{p.id} is assigned to {p.assigned_market} "
+                    f"and {p.assigned_mm}. But this market maker does not trade on this market.")
+
     else:
         actor_files = dirpath.glob(f"actor_*.{data_format}")
         for f in sorted(actor_files):

@@ -127,7 +127,7 @@ class Actor:
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
                  cluster=None, strategy: int = 0, pricing_strategy=None, assignedMarketMaker = None,
-                 battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
+                 assignedMarket = None, battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
                  ev_available=0, ev_max_c_rate=1, ev_max_power=11, grid_connection_capacity=20):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
@@ -174,6 +174,12 @@ class Actor:
             warnings.warn(f'No Market Maker specified for Actor {self.id}. Using default Market Maker.')
         else:
             self.assigned_mm = assignedMarketMaker
+        if assignedMarket != assignedMarket or assignedMarket is None:
+            self.assigned_market = "market_1"
+            warnings.warn(f'No Market specified for Actor {self.id}. Using market_1.')
+        else:
+            assert isinstance(assignedMarket, str), "Actor can only be assigned to one market."
+            self.assigned_market = assignedMarket
         if csv is not None:
             self.csv_file = csv
         else:
@@ -300,7 +306,7 @@ class Actor:
 
     def get_mm_buy_prices(self):
         env = self.environment
-        grid_fee = env.get_grid_fee(bid_cluster=env.market_makers[self.assigned_mm].cluster, ask_cluster=self.cluster)
+        grid_fee = env.get_grid_fee_dict[self.assigned_market](bid_cluster=env.market_makers[self.assigned_mm].cluster, ask_cluster=self.cluster)
         # the achievable prices the mm buys energy for from the actor are reduced by the grid fee
         return env.market_makers[self.assigned_mm].buy_prices-grid_fee
     # creating a property object
@@ -308,7 +314,7 @@ class Actor:
 
     def get_mm_sell_prices(self):
         env = self.environment
-        grid_fee = env.get_grid_fee(ask_cluster=env.market_makers[self.assigned_mm].cluster, bid_cluster=self.cluster)
+        grid_fee = env.get_grid_fee_dict[self.assigned_market](ask_cluster=env.market_makers[self.assigned_mm].cluster, bid_cluster=self.cluster)
         # the prices for which the mm sells energy to the actor are increased by the grid fee
         return (self.environment.market_makers[self.assigned_mm].sell_prices+grid_fee).round(cfg.config.round_decimal)
 
@@ -1064,7 +1070,7 @@ class Actor:
         args.update(
             {"battery_cap": self.battery.capacity, "battery_initial_soc": self.battery.soc,
              "strategy": self.strategy, "pricing_strategy": self.pricing_strategy,
-             "assignedMarketMaker": self.assigned_mm}
+             "assignedMarketMaker": self.assigned_mm, "assignedMarket": self.assigned_market}
         )
         # Add EV parameter
         if self.var_battery.capacity > 0:

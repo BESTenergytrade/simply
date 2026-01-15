@@ -129,7 +129,7 @@ def read_config_json(config_json):
 def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2016-01-01",
                              nb_ts=None, horizon=24, ts_hour=1,
                              cols=["load", "pv", "schedule", "price"], ps=None, ls=None,
-                             strategy=0, pricing_strategy=None, assigned_mm=None):
+                             strategy=0, pricing_strategy=None, assigned_mm=None, assigned_market=None):
     """
     Create Actor with an ID and given asset time series shifted to a specified start time and
     resolution (and scaled by factors ps/ls if given).
@@ -196,7 +196,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
     return Actor(actor_id, df, environment, ls=1, ps=1, battery_cap=battery_cap,
                  battery_initial_soc=init_soc, strategy=strategy, pricing_strategy=pricing_strategy,
-                 assignedMarketMaker=assigned_mm, **ev_param)
+                 assignedMarketMaker=assigned_mm, assignedMarket = assigned_market, **ev_param)
 
 
 def create_scenario_from_config(
@@ -272,7 +272,7 @@ def create_scenario_from_config(
                                            "prices", required=True)
                 sell_prices = None
                 warnings.warn(f"{e}: ... but found default column 'prices'.")
-            scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices, buy_to_sell_function=buy_sell_function, id=mm_row["marketMakerName"])
+            scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices, buy_to_sell_function=buy_sell_function, id=mm_row["marketMakerName"], assignedMarket=mm_row["assignedMarket"])
     else:
         try:
             buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
@@ -338,7 +338,8 @@ def create_scenario_from_config(
                                      nb_ts=nb_ts, horizon=horizon, ts_hour=ts_hour, ps=ps, ls=ls,
                                      strategy=actor_row.get('strategy'),
                                      pricing_strategy=actor_row.get("pricing_strategy"),
-                                     assigned_mm=actor_row['assignedMarketMaker'])
+                                     assigned_mm=actor_row['assignedMarketMaker'],
+                                     assigned_market=actor_row['assignedMarket'])
         print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{file_dict["load"]}"')
 
     actor_map = map_actors(actor_df)
