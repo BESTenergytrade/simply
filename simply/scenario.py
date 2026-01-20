@@ -481,6 +481,15 @@ def load(dirpath, data_format):
     pn = power_network.create_power_network_from_config(
         next(dirpath.glob('network.*')), weight_factor=cfg.config.weight_factor)
 
+    markets_json = dirpath / "markets.json"
+    if markets_json.is_file():
+        existing_markets = []
+        with open(markets_json) as f:
+            for mc in json.load(f):
+                existing_markets.append(mc["market_name"])
+    else:
+        existing_markets = ["market"]
+
     # read actors
     participants = []
     time_range = None
@@ -492,20 +501,23 @@ def load(dirpath, data_format):
         at = actors_file.read_text()
         actors_j = json.loads(at)
         for aj in actors_j["actors"].values():
-            aj["df"] = pd.read_csv(dirpath / aj["csv"], parse_dates=['Time'], dayfirst=False,
-                                   index_col='Time')
-            assert datetime.strptime(cfg.config.start_date, "%Y-%m-%d") in aj["df"].index
-            time_range = aj["df"].index
-            participant = actor.Actor(**aj)
-            participants.append(participant)
+            if not existing_markets or aj["assignedMarket"] in existing_markets:
+                aj["df"] = pd.read_csv(dirpath / aj["csv"], parse_dates=['Time'], dayfirst=False,
+                                       index_col='Time')
+                assert datetime.strptime(cfg.config.start_date, "%Y-%m-%d") in aj["df"].index
+                time_range = aj["df"].index
+                participant = actor.Actor(**aj)
+                participants.append(participant)
         for mj in actors_j["marketMakers"].values():
-            participant = market_maker.MarketMaker(**mj)
-            market_list += participant.assigned_market
-            mm_markets[participant.id] = participant.assigned_market
-            participants.append(participant)
+            inter = list(set(existing_markets) & set(mj["assignedMarket"]))
+            if not existing_markets or len(inter) > 0:
+                mj["assignedMarket"] = inter
+                participant = market_maker.MarketMaker(**mj)
+                market_list += participant.assigned_market
+                mm_markets[participant.id] = participant.assigned_market
+                participants.append(participant)
         # check that every market has only one market maker assigned
         assert len(set(market_list)) == len(market_list), 'markets with more than one assigned market maker'
-        print(market_list)
         for p in participants:
             # check for every Actor, that its assigned market_maker actually trades in its assigned market
             if isinstance(p, Actor):
