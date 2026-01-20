@@ -46,7 +46,7 @@ def main(cfg: Config):
         [False for i in cfg.scenario_path.glob(f"*actor*_*.{cfg.data_format}")]) != 0
     print("scenario_exists: ", scenario_exists)
 
-    markets_json = cfg.scenario_path / "markets.json"
+    markets_json = cfg.project_path / "markets.json"
     print("markets_json exists: ", markets_json.is_file())
 
     # load existing scenario or else create randomized new one
