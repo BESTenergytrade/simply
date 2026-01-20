@@ -409,6 +409,12 @@ def main(project_dir, data_dir, config_path=None):
     sc.save(cfg.path, cfg.data_format)
     # insert_market_maker_id(cfg.path)
 
+    # Copy market.json to scenario folder
+    market_json = project_dir / "markets.json"
+    if market_json.is_file():
+        market_json_scen = cfg.path / "markets.json"
+        shutil.copy(market_json, market_json_scen)
+
     if cfg.show_plots:
         sc.power_network.plot()
         sc.plot_participant_data()
