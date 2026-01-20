@@ -16,7 +16,7 @@ class TwoSidedPayAsClear(Market):
     Each timestep, the highest bids are matched with the lowest offers.
     """
 
-    def __init__(self, network=None, grid_fee_matrix=None, time_step=None):
+    def __init__(self, name=None, network=None, grid_fee_matrix=None, time_step=None):
         if grid_fee_matrix is None:
             warnings.warn("Two sided Pay-As-Clear market was generated without a grid_fee_matrix "
                           "in its constructor. The market will use the grid fee from the "
@@ -31,7 +31,7 @@ class TwoSidedPayAsClear(Market):
         # This will throw an error even if assertions are turned off, if grid_fee_matrix is not a
         # numeric value
         self.grid_fee_matrix = float(grid_fee_matrix)
-        super().__init__(network=network, grid_fee_matrix=grid_fee_matrix, time_step=time_step)
+        super().__init__(name=name, network=network, grid_fee_matrix=grid_fee_matrix, time_step=time_step)
 
     def match(self, show=False):
         # order orders by price

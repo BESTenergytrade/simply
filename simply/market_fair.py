@@ -185,11 +185,11 @@ class BestMarket(Market):
     grid_fee_matrix.
     """
 
-    def __init__(self, network=None, grid_fee_matrix=None, time_step=None,
+    def __init__(self, name=None, network=None, grid_fee_matrix=None, time_step=None,
                  disputed_matching='grid_fee'):
         if network is not None and grid_fee_matrix is None:
             grid_fee_matrix = network.grid_fee_matrix
-        super().__init__(network, grid_fee_matrix, time_step)
+        super().__init__(name=name, network=network, grid_fee_matrix=grid_fee_matrix, time_step=time_step)
         self.clusters: List[BestCluster] = []
         # ToDo: enum-type would be nicer than string
         self.disputed_matching = disputed_matching

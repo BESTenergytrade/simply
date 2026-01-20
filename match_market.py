@@ -3,6 +3,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 from time import time
 import os
+import json
 import glob
 import logging
 
@@ -45,6 +46,9 @@ def main(cfg: Config):
         [False for i in cfg.scenario_path.glob(f"*actor*_*.{cfg.data_format}")]) != 0
     print("scenario_exists: ", scenario_exists)
 
+    markets_json = cfg.scenario_path / "markets.json"
+    print("markets_json exists: ", markets_json.is_file())
+
     # load existing scenario or else create randomized new one
     sc: Scenario
 
@@ -79,29 +83,31 @@ def main(cfg: Config):
         sc.plot_participant_data()
         sc.plot_prices()
 
-    # generate requested market
-    if "pac" in cfg.market_type:
-        m = market_2pac.TwoSidedPayAsClear(network=sc.power_network)
-    elif "fair" in cfg.market_type:
-        m = market_fair.BestMarket(network=sc.power_network,
-                                   disputed_matching=cfg.disputed_matching)
-    elif "pab" in cfg.market_type:
-        # default pay-as-bid
-        m = market.Market()
-    elif "tarif" in cfg.market_type:
-        m = market_tarif.MarketMakerDirectTarif(network=sc.power_network)
+    # generate requested market(s)
+    if markets_json.is_file():
+        with open(markets_json) as f:
+            market_configs = json.load(f)
     else:
-        raise NotImplementedError(
-            "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair']")
+        market_configs = [{"market_type": cfg.market_type,
+                          "market_name": "market",
+                          "disputed_matching": cfg.disputed_matching}]
+    for mc in market_configs:
+        if "pac" in mc["market_type"]:
+            m = market_2pac.TwoSidedPayAsClear(name=mc["market_name"], network=sc.power_network)
+        elif "fair" in mc["market_type"]:
+            m = market_fair.BestMarket(name=mc["market_name"],
+                                       network=sc.power_network,
+                                       disputed_matching=mc["disputed_matching"])
+        elif "pab" in mc["market_type"]:
+            # default pay-as-bid
+            m = market.Market(name=mc["market_name"])
+        elif "tarif" in mc["market_type"]:
+            m = market_tarif.MarketMakerDirectTarif(name=mc["market_name"], network=sc.power_network)
+        else:
+            raise NotImplementedError(
+                "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair']")
+        sc.add_to_market_dict(mc["market_name"], m)
 
-    #sc.add_market(m)
-
-    m1 = market.Market(name="market_1")
-    sc.add_to_market_dict(m1.name, m1)
-    m2 = market.Market(name = "market_2")
-    sc.add_to_market_dict(m2.name, m2)
-    m3 = market.Market(name = "market_3")
-    sc.add_to_market_dict(m3.name, m3)
     exec_start = time()
 
     for i, t in enumerate(time_range[cfg.start:cfg.nb_ts]):
