@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from simply.scenario import Environment
 
 
-MARKETMAKERID = "MarketMaker"
+from simply.defaults import MARKETMAKERID
 
 
 class MarketMaker:

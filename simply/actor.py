@@ -11,7 +11,7 @@ from simply.battery import Battery, VariableBattery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 from simply.optimisation import optimize_schedule
-MARKETMAKERID = "MarketMaker"  # todo - problem: import from simply.market_maker doesnt work
+from simply.defaults import MARKETMAKERID
 
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
