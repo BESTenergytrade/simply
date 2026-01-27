@@ -6,6 +6,7 @@ import os
 import json
 import glob
 import logging
+import warnings
 
 from simply import market, market_2pac, market_fair, market_tarif
 from simply.defaults import MARKETID
@@ -89,9 +90,11 @@ def main(cfg: Config):
         with open(markets_json) as f:
             market_configs = json.load(f)
     else:
+        warnings.warn("market.json not found. Defaulting to a single market, based on the market specs in config.cfg")
         market_configs = [{"market_type": cfg.market_type,
-                          "market_name": MARKETID,
-                          "disputed_matching": cfg.disputed_matching}]
+                          "market_name": MARKETID}]
+        if cfg.market_type == "fair":
+            market_configs[0]["disputed_matching"] = cfg.disputed_matching
     for mc in market_configs:
         if "pac" in mc["market_type"]:
             m = market_2pac.TwoSidedPayAsClear(name=mc["market_name"], network=sc.power_network)
@@ -106,8 +109,8 @@ def main(cfg: Config):
             m = market_tarif.MarketMakerDirectTarif(name=mc["market_name"], network=sc.power_network)
         else:
             raise NotImplementedError(
-                "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair']")
-        sc.add_to_market_dict(mc["market_name"], m)
+                "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair', 'tarif']")
+        sc.add_to_market_dict(m.name, m)
 
     exec_start = time()
 
