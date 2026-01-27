@@ -11,7 +11,7 @@ from simply.battery import Battery, VariableBattery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 from simply.optimisation import optimize_schedule
-from simply.defaults import MARKETMAKERID
+from simply.defaults import MARKETMAKERID, MARKETID
 
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
@@ -175,8 +175,8 @@ class Actor:
         else:
             self.assigned_mm = assignedMarketMaker
         if assignedMarket != assignedMarket or assignedMarket is None:
-            self.assigned_market = "market_1"
-            warnings.warn(f'No Market specified for Actor {self.id}. Using market_1.')
+            self.assigned_market = MARKETID
+            warnings.warn(f'No Market specified for Actor {self.id}. Using default Market.')
         else:
             assert isinstance(assignedMarket, str), "Actor can only be assigned to one market."
             self.assigned_market = assignedMarket

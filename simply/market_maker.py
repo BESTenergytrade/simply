@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from simply.scenario import Environment
 
 
-from simply.defaults import MARKETMAKERID
+from simply.defaults import MARKETMAKERID, MARKETID
 
 
 class MarketMaker:
@@ -27,7 +27,7 @@ class MarketMaker:
                  sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
         self.environment = environment
         self.id = kwargs.get("id", MARKETMAKERID)
-        assigned_markets_list = kwargs.get("assignedMarket", ["market_1"])
+        assigned_markets_list = kwargs.get("assignedMarket", [MARKETID])
         if isinstance(assigned_markets_list, str):
             assigned_markets_list = [assigned_markets_list]
         self.assigned_market = assigned_markets_list

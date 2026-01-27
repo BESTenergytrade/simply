@@ -1,1 +1,2 @@
 MARKETMAKERID = "MarketMaker"
+MARKETID = "Market"
