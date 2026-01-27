@@ -8,6 +8,7 @@ import glob
 import logging
 
 from simply import market, market_2pac, market_fair, market_tarif
+from simply.defaults import MARKETID
 from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading, dates_to_datetime
@@ -89,7 +90,7 @@ def main(cfg: Config):
             market_configs = json.load(f)
     else:
         market_configs = [{"market_type": cfg.market_type,
-                          "market_name": "market",
+                          "market_name": MARKETID,
                           "disputed_matching": cfg.disputed_matching}]
     for mc in market_configs:
         if "pac" in mc["market_type"]:

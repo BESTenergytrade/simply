@@ -19,6 +19,7 @@ from simply.market_maker import MarketMaker
 from simply.actor import Actor
 from simply.market import Market
 from simply.util import run_obj_method
+from simply.defaults import MARKETID
 
 try:
     matplotlib.use('TkAgg')
@@ -488,7 +489,7 @@ def load(dirpath, data_format):
             for mc in json.load(f):
                 existing_markets.append(mc["market_name"])
     else:
-        existing_markets = ["market"]
+        existing_markets = [MARKETID]
 
     # read actors
     participants = []

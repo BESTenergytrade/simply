@@ -122,6 +122,8 @@ def read_config_json(config_json):
         actor_df['devices'] = np.nan
     if 'assignedMarketMaker' not in actor_df:
         actor_df['assignedMarketMaker'] = np.nan
+    if 'assignedMarket' not in actor_df:
+        actor_df['assignedMarket'] = np.nan
 
     return actor_df, market_maker_df
 
