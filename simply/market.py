@@ -6,6 +6,7 @@ import csv
 
 import simply.config as cfg
 from simply.actor import Order
+from simply.defaults import MARKETID
 
 LARGE_ORDER_THRESHOLD = 2**32
 MARKET_MAKER_THRESHOLD = 2**63-1
@@ -24,7 +25,11 @@ class Market:
     """
     def __init__(self, network=None, grid_fee_matrix=None, time_step=None, name=None):
         self.orders = pd.DataFrame(columns=Order._fields)
-        self.name = name
+        if name != name or name is None:
+            self.name = MARKETID
+            warnings.warn(f'No Market name specified. Using default name {MARKETID}.')
+        else:
+            self.name = name
 
         self.trades = None
         self.cleared_volume = {}

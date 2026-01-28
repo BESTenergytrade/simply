@@ -260,8 +260,10 @@ class Scenario:
         self.market = market
         self.sync_market_time()
 
-    def add_to_market_dict(self, market_name, market):
+    def add_to_market_dict(self, market, market_name=MARKETID):
         assert isinstance(market, Market), "Only Instances of class 'Market' can be added to Scenario.market_dict"
+        if market_name in self.market_dict.keys():
+            warnings.warn(f"Market named {market_name} already exists.")
         self.market_dict[market_name] = market
         self.market_dict[market_name].t_step = self.environment.time_step
         self.market_dict[market_name].t_step = self.environment.time_range[self.environment.time_step]
@@ -428,7 +430,7 @@ class Scenario:
 
     def reset(self):
         """ Reset the scenario after a simulation is run"""
-        # Reset the time step
+        # Reset the time step for the environment and all markets
         self.environment.time_step = cfg.config.start
         for m in self.market_dict.values():
             m.t_step = self.environment.time_step
@@ -443,6 +445,11 @@ class Scenario:
             market_maker.reset()
             # But add the market maker again
             self.add_participant(market_maker)
+        # adaptation for multi market makers
+        market_makers = self.environment.market_makers
+        for mm in market_makers.values():
+            mm.reset()
+            self.add_participant(mm)
 
 
 def serialize_int64(obj):

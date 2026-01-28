@@ -110,7 +110,7 @@ def main(cfg: Config):
         else:
             raise NotImplementedError(
                 "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair', 'tarif']")
-        sc.add_to_market_dict(m.name, m)
+        sc.add_to_market_dict(m, m.name)
 
     exec_start = time()
 
