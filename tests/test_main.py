@@ -28,7 +28,9 @@ class TestMain:
         # check that loaded energy values are equal to the ones generated before
         for i, p in enumerate(sc.market_participants):
             if not isinstance(p, MarketMaker):
-                p.data.equals(sc_loaded.market_participants[i].data)
+                p_loaded = [a for a in sc_loaded.market_participants if a.id == p.id]
+                assert len(p_loaded) == 1
+                p.data.equals(p_loaded[0].data)
             else:
                 pass
 

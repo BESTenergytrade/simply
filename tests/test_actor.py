@@ -45,7 +45,7 @@ class TestActor:
         cfg.config.nb_ts = NR_STEPS
         scenario = Scenario(pn, None, buy_prices=np.tile(test_prices, 10), steps_per_hour=4,
                             sell_prices=round_prices_array(np.tile(test_prices, 10)*SELL_MULT))
-        scenario.add_market(Market(pn))
+        scenario.add_to_market_dict(Market(pn))
 
         return scenario
 
@@ -189,7 +189,7 @@ class TestActor:
 
             # make sure every iteration an order is placed and also matched. Pricing must guarantee
             # order fulfillment
-            market = scenario.market
+            market = scenario.market_dict[actor.assigned_market]
             assert len(market.matches)-1 == nr_of_matches, 'Generated order was not matched'
             nr_of_matches = len(market.matches)
             scenario.next_time_step()
@@ -206,7 +206,7 @@ class TestActor:
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, environment=env, battery=battery)
-        env.market_maker.create_prediction()
+        env.market_makers[actor.assigned_mm].create_prediction()
 
         nr_of_matches = 0
         cost_no_strat = 0
@@ -220,18 +220,18 @@ class TestActor:
             scenario.market_step()
 
             cost_no_strat += (actor.pred.schedule[0] < 0) * \
-                -actor.pred.schedule[0] * env.market_maker.current_sell_price
+                -actor.pred.schedule[0] * env.market_makers[actor.assigned_mm].current_sell_price
             energy_no_strat += (actor.pred.schedule[0] < 0) * \
                 -actor.pred.schedule[0]
 
             # market schedule has opposite sign to schedule, i.e. positive sign schedule is pv
             # production which leads to negative sign market schedule
             cost_with_strat += (actor.market_schedule[0] > 0) * \
-                actor.market_schedule[0] * env.market_maker.current_sell_price
+                actor.market_schedule[0] * env.market_makers[actor.assigned_mm].current_sell_price
             energy_with_strat += (actor.market_schedule[0] > 0) * actor.market_schedule[0]
 
-            assert len(scenario.market.matches)-1 == nr_of_matches
-            nr_of_matches = len(scenario.market.matches)
+            assert len(scenario.market_dict[actor.assigned_market].matches)-1 == nr_of_matches
+            nr_of_matches = len(scenario.market_dict[actor.assigned_market].matches)
 
             # battery makes sure soc bounds are not violated, so no assertion is needed here
             # make sure the schedule is planning only to buy energy. Might sell energy in the
@@ -247,7 +247,7 @@ class TestActor:
         # strategy since strategy 1 uses pv when possible
         # this should be the case in the current test scenario.
         assert energy_no_strat >= energy_with_strat
-        minimal_price = env.market_maker.all_buy_prices.min()
+        minimal_price = env.market_makers[actor.assigned_mm].all_buy_prices.min()
 
         cost_in_bat = minimal_price * actor.battery.energy()
         # battery could be full. If this energy would be sold for the minimal price strategy 1 has
@@ -266,11 +266,11 @@ class TestActor:
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
         actor = Actor(0, self.example_df, environment=env, battery=battery)
-        env.market_maker.create_prediction()
+        env.market_makers[actor.assigned_mm].create_prediction()
 
         nr_of_matches = 0
         # iterate over time steps
-        market = scenario.market
+        market = scenario.market_dict[actor.assigned_market]
         for _ in range(NR_STEPS):
             actor.get_market_schedule(strategy=2)
             scenario.market_step()
@@ -279,7 +279,7 @@ class TestActor:
             scenario.next_time_step()
 
         ratings["strategy_2"] = actor.bank
-        minimal_price = env.market_maker.all_buy_prices.min()
+        minimal_price = env.market_makers[actor.assigned_mm].all_buy_prices.min()
         bank_in_bat = minimal_price * actor.battery.energy()
         # battery could be full. If this energy would be sold for the minimal price strategy 2 has
         # to have a higher bank than strategy 0
@@ -292,9 +292,9 @@ class TestActor:
         env = scenario.environment
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, environment=env, battery=battery)
-        env.market_maker.create_prediction()
+        env.market_makers[actor.assigned_mm].create_prediction()
 
-        market = scenario.market
+        market = scenario.market_dict[actor.assigned_market]
         nr_of_matches = 0
         # iterate over time steps
         for _ in range(NR_STEPS):
@@ -314,8 +314,8 @@ class TestActor:
         env = scenario.environment
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, environment=env, battery=battery)
-        env.market_maker.all_buy_prices *= SELL_MULT / 2
-        env.market_maker.create_prediction()
+        env.market_makers[actor.assigned_mm].all_buy_prices *= SELL_MULT / 2
+        env.market_makers[actor.assigned_mm].create_prediction()
 
         # iterate over time steps
         for _ in range(NR_STEPS):
@@ -330,7 +330,7 @@ class TestActor:
         env = scenario.environment
         battery = Battery(capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0)
         actor = Actor(0, self.example_df, environment=env, battery=battery)
-        market_maker = env.market_maker
+        market_maker = env.market_makers[actor.assigned_mm]
         market_maker.all_sell_prices = market_maker.all_buy_prices.copy()
         market_maker.create_prediction()
 
@@ -346,7 +346,7 @@ class TestActor:
             actor.get_market_schedule(strategy=3)
             scenario.market_step()
             scenario.next_time_step()
-        sell_prices = env.market_maker.all_sell_prices
+        sell_prices = env.market_makers[actor.assigned_mm].all_sell_prices
         # cumulated sum of positive price gradients and the battery capacity yields achievable
         # profit
         max_profit = (np.diff(sell_prices)[:NR_STEPS][np.diff(sell_prices)[:NR_STEPS] > 0].sum()
@@ -423,9 +423,9 @@ class TestActor:
         actor = Actor(0, self.example_df, env, battery=battery,
                       pricing_strategy=pricing_strategy)
         # Note: Price the actor can buy energy for is the mm sell price and vice versa
-        env.market_maker.all_buy_prices[:] = mm_buy_price
-        env.market_maker.all_sell_prices[:] = mm_sell_price
-        env.market_maker.create_prediction()
+        env.market_makers[actor.assigned_mm].all_buy_prices[:] = mm_buy_price
+        env.market_makers[actor.assigned_mm].all_sell_prices[:] = mm_sell_price
+        env.market_makers[actor.assigned_mm].create_prediction()
         return actor
 
     # Test different pricing algorithms as well as self defined pricing functionality.
@@ -476,8 +476,8 @@ class TestActor:
         actor.market_schedule[:] = 0
         actor.market_schedule[check_index] = energy_amount
         orders = actor.generate_orders()
-        assert actor.environment.market_maker.current_buy_price == sell_price
-        assert actor.environment.market_maker.current_sell_price == buy_price
+        assert actor.environment.market_makers[actor.assigned_mm].current_buy_price == sell_price
+        assert actor.environment.market_makers[actor.assigned_mm].current_sell_price == buy_price
         assert orders[0].price == buy_price/check_index + energy_amount
 
         energy_amount = - energy_amount
@@ -657,9 +657,9 @@ class TestActor:
         # test if the market schedule is properly adjusted when orders are matched with the pricing
         # strategy.
         scenario.reset()
-        market = scenario.market
         # with this soc and capacity it means max 10 energy can be stored
         actor = self.get_actor_w_pricing_setup(scenario, capacity=10, soc_initial=0)
+        market = scenario.market_dict[actor.assigned_market]
         # actor will use the same price as the final price for every order with gradient = 0
         GRADIENT = 0
         actor.pricing_strategy = dict(name="linear", param=[GRADIENT])
