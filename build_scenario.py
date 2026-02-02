@@ -274,7 +274,9 @@ def create_scenario_from_config(
                                            "prices", required=True)
                 sell_prices = None
                 warnings.warn(f"{e}: ... but found default column 'prices'.")
-            scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices, buy_to_sell_function=buy_sell_function, id=mm_row["marketMakerName"], assignedMarket=mm_row["assignedMarket"])
+            scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices,
+                                      buy_to_sell_function=buy_sell_function, id=mm_row["marketMakerName"],
+                                      assignedMarket=mm_row["assignedMarket"])
     else:
         try:
             buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,

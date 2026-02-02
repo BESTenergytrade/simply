@@ -306,7 +306,8 @@ class Actor:
 
     def get_mm_buy_prices(self):
         env = self.environment
-        grid_fee = env.get_grid_fee_dict[self.assigned_market](bid_cluster=env.market_makers[self.assigned_mm].cluster, ask_cluster=self.cluster)
+        grid_fee = env.get_grid_fee_dict[self.assigned_market](bid_cluster=env.market_makers[self.assigned_mm].cluster,
+                                                               ask_cluster=self.cluster)
         # the achievable prices the mm buys energy for from the actor are reduced by the grid fee
         return env.market_makers[self.assigned_mm].buy_prices-grid_fee
     # creating a property object
@@ -314,7 +315,8 @@ class Actor:
 
     def get_mm_sell_prices(self):
         env = self.environment
-        grid_fee = env.get_grid_fee_dict[self.assigned_market](ask_cluster=env.market_makers[self.assigned_mm].cluster, bid_cluster=self.cluster)
+        grid_fee = env.get_grid_fee_dict[self.assigned_market](ask_cluster=env.market_makers[self.assigned_mm].cluster,
+                                                               bid_cluster=self.cluster)
         # the prices for which the mm sells energy to the actor are increased by the grid fee
         return (self.environment.market_makers[self.assigned_mm].sell_prices+grid_fee).round(cfg.config.round_decimal)
 
