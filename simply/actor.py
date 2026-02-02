@@ -169,16 +169,17 @@ class Actor:
         else:
             self.strategy = strategy
         self.pricing_strategy = pricing_strategy
-        if assignedMarketMaker != assignedMarketMaker or assignedMarketMaker is None:
+        if not isinstance(assignedMarketMaker, str):
             self.assigned_mm = MARKETMAKERID
             warnings.warn(f'No Market Maker specified for Actor {self.id}. Using default Market Maker.')
         else:
             self.assigned_mm = assignedMarketMaker
-        if assignedMarket != assignedMarket or assignedMarket is None:
+        if not isinstance(assignedMarket, str):
+            if isinstance(assignedMarket, list):
+                raise ValueError("Actor can only be assigned to one market.")
             self.assigned_market = MARKETID
             warnings.warn(f'No Market specified for Actor {self.id}. Using default Market.')
         else:
-            assert isinstance(assignedMarket, str), "Actor can only be assigned to one market."
             self.assigned_market = assignedMarket
         if csv is not None:
             self.csv_file = csv

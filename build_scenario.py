@@ -121,9 +121,9 @@ def read_config_json(config_json):
     if 'devices' not in actor_df:
         actor_df['devices'] = np.nan
     if 'assignedMarketMaker' not in actor_df:
-        actor_df['assignedMarketMaker'] = np.nan
+        actor_df['assignedMarketMaker'] = None
     if 'assignedMarket' not in actor_df:
-        actor_df['assignedMarket'] = np.nan
+        actor_df['assignedMarket'] = None
 
     return actor_df, market_maker_df
 
@@ -342,8 +342,8 @@ def create_scenario_from_config(
                                      nb_ts=nb_ts, horizon=horizon, ts_hour=ts_hour, ps=ps, ls=ls,
                                      strategy=actor_row.get('strategy'),
                                      pricing_strategy=actor_row.get("pricing_strategy"),
-                                     assigned_mm=actor_row['assignedMarketMaker'],
-                                     assigned_market=actor_row['assignedMarket'])
+                                     assigned_mm=actor_row.get('assignedMarketMaker', None),
+                                     assigned_market=actor_row.get('assignedMarket', None))
         print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{file_dict["load"]}"')
 
     actor_map = map_actors(actor_df)
