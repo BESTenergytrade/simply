@@ -8,6 +8,7 @@ from pathlib import Path
 import argparse
 
 from simply.actor import Actor
+from simply.defaults import MARKETMAKERID, MARKETID
 from simply.scenario import Scenario
 from simply.power_network import create_power_network_from_config
 from simply.config import Config
@@ -121,9 +122,11 @@ def read_config_json(config_json):
     if 'devices' not in actor_df:
         actor_df['devices'] = np.nan
     if 'assignedMarketMaker' not in actor_df:
-        actor_df['assignedMarketMaker'] = None
+        actor_df['assignedMarketMaker'] = MARKETMAKERID
+        warnings.warn("No Market Maker specification for any actors. Using default Market Maker for all.")
     if 'assignedMarket' not in actor_df:
-        actor_df['assignedMarket'] = None
+        actor_df['assignedMarket'] = MARKETID
+        warnings.warn("No Market specification for any actors. Using default Market for all.")
 
     return actor_df, market_maker_df
 
@@ -292,6 +295,10 @@ def create_scenario_from_config(
                                   buy_to_sell_function=buy_sell_function)
 
     for i, actor_row in actor_df.iterrows():
+        if not isinstance(actor_row["assignedMarketMaker"], str):
+            raise ValueError(f"No valid Market Maker provided for {actor_row['prosumerName']}")
+        if not isinstance(actor_row["assignedMarket"], str):
+            raise ValueError(f"No valid Market provided for {actor_row['prosumerName']}")
         file_dict = {}
         asset_dict = {}
         # If there is no devices use
