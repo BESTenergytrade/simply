@@ -27,10 +27,7 @@ class MarketMaker:
                  sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
         self.environment = environment
         self.id = kwargs.get("id", None)
-        if isinstance(self.id, str):
-            if self.id == MARKETMAKERID:
-                raise ValueError("Explicit MarketMaker definition is not allowed to have the default MarketMaker ID.")
-        else:
+        if not isinstance(self.id, str):
             self.id = MARKETMAKERID
             warnings.warn(f'No MarketMaker name specified. Using default name {MARKETMAKERID}.')
         assigned_markets_list = kwargs.get("assignedMarket", None)

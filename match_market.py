@@ -9,7 +9,6 @@ import logging
 import warnings
 
 from simply import market, market_2pac, market_fair, market_tarif
-from simply.defaults import MARKETID
 from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading, dates_to_datetime
@@ -92,7 +91,7 @@ def main(cfg: Config):
     else:
         warnings.warn("market.json not found. Defaulting to a single market, based on the market specs in config.cfg")
         market_configs = [{"market_type": cfg.market_type,
-                          "market_name": MARKETID}]
+                          "market_name": None}]
         if cfg.market_type == "fair":
             market_configs[0]["disputed_matching"] = cfg.disputed_matching
     for mc in market_configs:
