@@ -26,10 +26,21 @@ class MarketMaker:
     def __init__(self, buy_prices: Sized, environment: 'Environment' = None,
                  sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
         self.environment = environment
-        self.id = kwargs.get("id", MARKETMAKERID)
-        assigned_markets_list = kwargs.get("assignedMarket", [MARKETID])
+        self.id = kwargs.get("id", None)
+        if isinstance(self.id, str):
+            if self.id == MARKETMAKERID:
+                raise ValueError("Explicit MarketMaker definition is not allowed to have the default MarketMaker ID.")
+        else:
+            self.id = MARKETMAKERID
+            warnings.warn(f'No MarketMaker name specified. Using default name {MARKETMAKERID}.')
+        assigned_markets_list = kwargs.get("assignedMarket", None)
         if isinstance(assigned_markets_list, str):
             assigned_markets_list = [assigned_markets_list]
+        elif isinstance(assigned_markets_list, list):
+            pass
+        else:
+            assigned_markets_list = [MARKETID]
+            warnings.warn(f"No Market specified for MarketMaker {self.id}. Assigning it to default market.")
         self.assigned_market = assigned_markets_list
         self.cluster = kwargs.get("market_maker_cluster", None)
         self.csv_file = f'{self.id}.csv'

@@ -25,11 +25,14 @@ class Market:
     """
     def __init__(self, network=None, grid_fee_matrix=None, time_step=None, name=None):
         self.orders = pd.DataFrame(columns=Order._fields)
-        if name != name or name is None:
+        if isinstance(name, str):
+            if not name == MARKETID:
+                self.name = name
+            else:
+                raise ValueError("Explicit Market definition is not allowed to have the default Market ID.")
+        else:
             self.name = MARKETID
             warnings.warn(f'No Market name specified. Using default name {MARKETID}.')
-        else:
-            self.name = name
 
         self.trades = None
         self.cleared_volume = {}
