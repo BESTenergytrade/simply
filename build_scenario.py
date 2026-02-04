@@ -101,12 +101,12 @@ def read_config_json(config_json):
     buy and sell."""
     with open(config_json) as f:
         d = json.load(f)
-    if type(d) == list:  # for backward compatibility: default is list of actor parameter
+    if isinstance(d, list):  # for backward compatibility: default is list of actor parameter
         actor_df = pd.DataFrame(d)
         market_maker_df = None
         warnings.warn("Actor config is actor list (backward compatibility). Now changed actor config to contain actor"
                       " list within key 'actor' i.e. {'actors': [], 'marketMakers': []}")
-    elif type(d) == dict:
+    elif isinstance(d, dict):
         if "actors" in d.keys():
             actor_df = pd.DataFrame(d["actors"])
         else:
@@ -201,7 +201,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
     return Actor(actor_id, df, environment, ls=1, ps=1, battery_cap=battery_cap,
                  battery_initial_soc=init_soc, strategy=strategy, pricing_strategy=pricing_strategy,
-                 assignedMarketMaker=assigned_mm, assignedMarket = assigned_market, **ev_param)
+                 assignedMarketMaker=assigned_mm, assignedMarket=assigned_market, **ev_param)
 
 
 def create_scenario_from_config(

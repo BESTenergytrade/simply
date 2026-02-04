@@ -254,7 +254,7 @@ class Scenario:
             return
         else:
             for a in actors:
-                    a.get_market_schedule()
+                a.get_market_schedule()
 
     def add_market(self, market):
         self.market = market
@@ -270,10 +270,7 @@ class Scenario:
         self.market_dict[market_name].step = self.environment.time_step
         self.environment.get_grid_fee_dict[market_name] = self.market_dict[market_name].get_grid_fee
 
-
     def sync_market_time(self):
-        #self.market.t_step = self.environment.time_range[self.environment.time_step]
-        #self.market.step = self.environment.time_step
         for market in self.market_dict.values():
             market.t_step = self.environment.time_range[self.environment.time_step]
             market.step = self.environment.time_step
@@ -283,7 +280,6 @@ class Scenario:
         for participant in self.market_participants:
             orders = participant.generate_orders()
             for order in orders:
-                #self.market.accept_order(order, callback=participant.receive_market_results)
                 if isinstance(participant, Actor):
                     self.market_dict[participant.assigned_market].accept_order(order, callback=participant.receive_market_results)
                 else:  # MarketMaker
@@ -293,7 +289,6 @@ class Scenario:
             print([order for order in orders if "MarketMaker" != order.actor_id])
             for m in self.market_dict.values():
                 print(m.orders)
-        #self.market.clear(reset=cfg.config.reset_market)
         for market in self.market_dict.values():
             market.clear(reset=cfg.config.reset_market)
         if debug_actor:
@@ -529,7 +524,7 @@ def load(dirpath, data_format):
         for p in participants:
             # check for every Actor, that its assigned market_maker actually trades in its assigned market
             if isinstance(p, Actor):
-                assert p.assigned_market in mm_markets[p.assigned_mm] , (f"{p.id} is assigned to {p.assigned_market} "
+                assert p.assigned_market in mm_markets[p.assigned_mm], (f"{p.id} is assigned to {p.assigned_market} "
                     f"and {p.assigned_mm}. But this market maker does not trade on this market.")
 
     else:

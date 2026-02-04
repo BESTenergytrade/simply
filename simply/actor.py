@@ -126,8 +126,8 @@ class Actor:
     """
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
-                 cluster=None, strategy: int = 0, pricing_strategy=None, assignedMarketMaker = None,
-                 assignedMarket = None, battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
+                 cluster=None, strategy: int = 0, pricing_strategy=None, assignedMarketMaker=None,
+                 assignedMarket=None, battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
                  ev_available=0, ev_max_c_rate=1, ev_max_power=11, grid_connection_capacity=20):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given

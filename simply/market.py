@@ -248,7 +248,7 @@ class Market:
         """
         if self.save_csv:
             saved_data = pd.DataFrame(data, dtype=object)
-            saved_data['market_name']=self.name
+            saved_data['market_name'] = self.name
             saved_data.to_csv(self.csv_path / filename, mode='a', index=False, header=False)
 
     def create_csv(self, filename, headers):
@@ -322,6 +322,7 @@ class Market:
             # if an actor has none as cluster, e.g. the market maker, a TypeError will be thrown.
             # use default grid fee in this case.
             ask.price += cfg.config.default_grid_fee
+
 
 def filter_orders(asks, bids):
     large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
