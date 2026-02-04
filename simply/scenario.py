@@ -59,7 +59,7 @@ class Environment:
 
     def __init__(self, steps_per_hour, add_actor_to_scenario, time_range=None, **kwargs):
         self.time_step = cfg.config.start
-        self.steps_per_hour = steps_per_hour
+        self.steps_per_hour = steps_per_hour if steps_per_hour is not None else cfg.config.ts_per_hour
         if time_range is None:
             self.time_range = range(cfg.config.start + cfg.config.nb_ts + 1)
         elif isinstance(time_range, pd.DatetimeIndex):
@@ -68,9 +68,9 @@ class Environment:
                 time_range.freq = pd.infer_freq(time_range)
             print(f"Found date time index starting at {time_range[0]} "
                   f"with freq {time_range.freq}")
-            if time_range.freq != "{}T".format(60 / steps_per_hour):
+            if time_range.freq != "{}T".format(60 / self.steps_per_hour):
                 warnings.warn(f"Time Index of data frequency {str(time_range.freq)} "
-                              f"does not match the configured steps_per_hour: {steps_per_hour}")
+                              f"does not match the configured steps_per_hour: {self.steps_per_hour}")
             self.time_range = time_range
         else:
             self.time_range = time_range
@@ -99,7 +99,7 @@ class Scenario:
     """
 
     def __init__(self, network, map_actors=None, buy_prices: np.array = None, rng_seed=None,
-                 steps_per_hour=4, time_range=None, **kwargs):
+                 steps_per_hour=None, time_range=None, **kwargs):
 
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
