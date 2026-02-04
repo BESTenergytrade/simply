@@ -119,6 +119,13 @@ input required before running the main simply function is the `config.cfg` file 
 An example of config file and a generated random scenario can be found in `projects/example_projects/random_scenario`.
 For more details please also see :ref:`scenarios`.
 
+**Running old projects**
+
+To run projects, that were created and built before the introduction of the feature to add multiple market makers,
+you need to rebuild the scenario via `build_scenario.py`. What this does is apply the new structure, especially to the
+actor.json file, that `match_market.py` now expects. If `match_market.py` is called on old projects, before rebuilding
+them this will result in errors.
+
 .. _run_simulation:
 
 Running the simulation
