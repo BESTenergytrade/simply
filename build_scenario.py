@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import shutil
 import warnings
@@ -426,7 +427,7 @@ def main(project_dir, data_dir, config_path=None):
         market_json_scen = cfg.path / "markets.json"
         shutil.copy(market_json, market_json_scen)
 
-    if cfg.show_plots:
+    if cfg.show_plots and not "pytest" in sys.modules:
         sc.power_network.plot()
         sc.plot_participant_data()
 
