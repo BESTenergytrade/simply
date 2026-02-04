@@ -283,7 +283,7 @@ class Scenario:
             for order in orders:
                 if isinstance(participant, Actor):
                     self.market_dict[participant.assigned_market].accept_order(
-                        order,callback=participant.receive_market_results)
+                        order, callback=participant.receive_market_results)
                 else:  # MarketMaker
                     for market in participant.assigned_market:
                         self.market_dict[market].accept_order(order, callback=participant.receive_market_results)
@@ -531,8 +531,9 @@ def load(dirpath, data_format):
         for p in participants:
             # check for every Actor, that its assigned market_maker actually trades in its assigned market
             if isinstance(p, Actor):
-                assert p.assigned_market in mm_markets[p.assigned_mm], (f"{p.id} is assigned to {p.assigned_market} "
-                    f"and {p.assigned_mm}. But this market maker does not trade on this market.")
+                assert p.assigned_market in mm_markets[p.assigned_mm], (
+                    f"{p.id} is assigned to {p.assigned_market} and {p.assigned_mm}. "
+                    f"But this market maker does not trade on this market.")
     else:
         actor_files = dirpath.glob(f"actor_*.{data_format}")
         for f in sorted(actor_files):

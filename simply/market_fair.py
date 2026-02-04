@@ -4,7 +4,6 @@ from time import time
 
 from simply.market import Market, filter_orders
 import simply.config as cfg
-from simply.market import LARGE_ORDER_THRESHOLD, MARKET_MAKER_THRESHOLD
 from simply.util import round_price
 
 
