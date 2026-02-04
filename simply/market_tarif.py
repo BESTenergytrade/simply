@@ -14,7 +14,7 @@ class MarketMakerDirectTarif(Market):
 
     def __init__(self, name=None, network=None, grid_fee_matrix=None, time_step=None):
         if grid_fee_matrix is None:
-            warnings.warn("Two sided Pay-As-Clear market was generated without a grid_fee_matrix "
+            warnings.warn("The Tarif market was generated without a grid_fee_matrix "
                           "in its constructor. The market will use the grid fee from the "
                           f"configuration for all trades.\n Grid Fee = "
                           f"{cfg.config.default_grid_fee}")
