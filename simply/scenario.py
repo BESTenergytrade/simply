@@ -52,7 +52,9 @@ class Environment:
     get_grid_fee : method
         getter function of grid_fee of the Market
     market_maker : py:class:`~simply.market_maker.MarketMaker`
-        market_maker in this environment
+        market_maker in this environment (deprecated)
+    market_makers : list(py:class:`~simply.market_maker.MarketMaker`)
+        list of market_maker objects of this environment
     """
 
     def __init__(self, steps_per_hour, add_actor_to_scenario, time_range=None, **kwargs):
@@ -77,9 +79,8 @@ class Environment:
         # when market is added to scenario
         self.get_grid_fee = None  # is instance of Market().get_grid_fee
         self.get_grid_fee_dict = {}
-        self.market_maker: MarketMaker = None
+        self.market_maker: MarketMaker = None  # TODO: remove legacy
         self.market_makers = {}
-
 
 
 def is_scenario_participant(obj):
@@ -281,7 +282,8 @@ class Scenario:
             orders = participant.generate_orders()
             for order in orders:
                 if isinstance(participant, Actor):
-                    self.market_dict[participant.assigned_market].accept_order(order, callback=participant.receive_market_results)
+                    self.market_dict[participant.assigned_market].accept_order(
+                        order,callback=participant.receive_market_results)
                 else:  # MarketMaker
                     for market in participant.assigned_market:
                         self.market_dict[market].accept_order(order, callback=participant.receive_market_results)
@@ -436,6 +438,8 @@ class Scenario:
 
         # Store the old market maker
         if self.environment.market_maker is not None:
+            raise NotImplementedError()
+            # TODO remove legacy
             market_maker = self.environment.market_maker
             market_maker.reset()
             # But add the market maker again
@@ -492,6 +496,7 @@ def load(dirpath, data_format):
                 existing_markets.append(mc["market_name"])
     else:
         existing_markets = [MARKETID]
+    assert len(existing_markets) != 0, "At least one market has to be defined"
 
     # read actors
     participants = []
@@ -504,7 +509,8 @@ def load(dirpath, data_format):
         at = actors_file.read_text()
         actors_j = json.loads(at)
         for aj in actors_j["actors"].values():
-            if not existing_markets or aj["assignedMarket"] in existing_markets:
+            if aj["assignedMarket"] in existing_markets:
+                # market.json is not empty
                 aj["df"] = pd.read_csv(dirpath / aj["csv"], parse_dates=['Time'], dayfirst=False,
                                        index_col='Time')
                 assert datetime.strptime(cfg.config.start_date, "%Y-%m-%d") in aj["df"].index
@@ -512,9 +518,10 @@ def load(dirpath, data_format):
                 participant = actor.Actor(**aj)
                 participants.append(participant)
         for mj in actors_j["marketMakers"].values():
-            inter = list(set(existing_markets) & set(mj["assignedMarket"]))
-            if not existing_markets or len(inter) > 0:
-                mj["assignedMarket"] = inter
+            # filter the assigned markets with the available markets i.e. from market.json
+            filtered_market = list(set(existing_markets) & set(mj["assignedMarket"]))
+            if len(filtered_market) > 0:
+                mj["assignedMarket"] = filtered_market
                 participant = market_maker.MarketMaker(**mj)
                 market_list += participant.assigned_market
                 mm_markets[participant.id] = participant.assigned_market
@@ -526,7 +533,6 @@ def load(dirpath, data_format):
             if isinstance(p, Actor):
                 assert p.assigned_market in mm_markets[p.assigned_mm], (f"{p.id} is assigned to {p.assigned_market} "
                     f"and {p.assigned_mm}. But this market maker does not trade on this market.")
-
     else:
         actor_files = dirpath.glob(f"actor_*.{data_format}")
         for f in sorted(actor_files):
