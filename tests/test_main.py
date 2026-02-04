@@ -4,6 +4,7 @@ from pathlib import Path
 from simply.config import Config
 from match_market import main
 from simply.market_maker import MarketMaker
+import build_scenario
 
 
 class TestMain:
@@ -54,8 +55,12 @@ def example_project(project_name):
 
 
 class TestProjects:
-    @pytest.mark.parametrize('project_name', ["example_project", "example_project_ev_opt"])
-    def test_example_scenarios(self, example_project):
+    @pytest.mark.parametrize('project_name', [
+        "example_project",
+        "example_project_ev_opt",
+        "example_project_mmm"
+    ])
+    def test_running_example_scenarios(self, example_project):
         proj_dir = example_project
         cfg = Config(proj_dir / "config.cfg", proj_dir)
         # cfg.save_csv = True is the default value. Therefore, we don't set it
@@ -63,5 +68,26 @@ class TestProjects:
         cfg.load_scenario = True
         cfg.show_plots = False
         # tests that example project runs through without errors
-        sc_loaded = main(cfg)
-        # TODO compare results did not change ...
+        main(cfg)
+
+    @pytest.mark.parametrize('project_name', [
+        "example_project",
+        "example_project_ev_opt",
+        "example_project_mmm"
+    ])
+    def test_build_n_run_example_scenarios(self, example_project):
+        proj_dir = example_project
+        cfg_path = proj_dir / "config.cfg"
+        data_dir = proj_dir / "scenario_inputs"
+
+        cfg = Config(cfg_path, proj_dir)
+        cfg.show_plots = False
+        # cfg.save_csv = True is the default value. Therefore, we don't have to set it
+
+        # build the scenario
+        build_scenario.main(proj_dir, data_dir, cfg_path)
+
+        cfg.load_scenario = True
+
+        # tests that example project runs through without errors
+        main(cfg)
