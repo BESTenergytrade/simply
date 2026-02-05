@@ -264,7 +264,7 @@ class Scenario:
     def add_to_market_dict(self, market):
         assert isinstance(market, Market), "Only Instances of class 'Market' can be added to Scenario.market_dict"
         if market.name in self.market_dict.keys():
-            raise ValueError(f"Market named {market.name} already exists.")
+            warnings.warn(f"Market named {market.name} already exists.")
         self.market_dict[market.name] = market
         self.market_dict[market.name].t_step = self.environment.time_step
         self.market_dict[market.name].t_step = self.environment.time_range[self.environment.time_step]
