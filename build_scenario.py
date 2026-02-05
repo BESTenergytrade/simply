@@ -269,27 +269,18 @@ def create_scenario_from_config(
     if market_maker_df is not None:
         for i, mm_row in market_maker_df.iterrows():
             if "buyPrices" in mm_row.keys() and isinstance(mm_row["buyPrices"], str):
-                try:
-                    buy_prices = get_mm_prices(price_path / mm_row["buyPrices"], start_date, end_date,
-                                               mm_buy_col, required=True)
-                except Exception as e:
-                    buy_prices = get_mm_prices(price_path / mm_row["buyPrices"], start_date, end_date,
-                                               "prices", required=True)
-                    warnings.warn(f"{e}: ... but found default column 'prices'.")
-            elif "fixBuyPrices" in mm_row.keys() and isinstance(mm_row["fixBuyPrices"], float):
-                buy_prices = [mm_row["fixBuyPrices"]] * len(_)
+                buy_prices = get_mm_prices(price_path / mm_row["buyPrices"], start_date, end_date,
+                                           mm_buy_col, required=True)
+            elif "buyPricesFixed" in mm_row.keys() and isinstance(mm_row["buyPricesFixed"], float):
+                buy_prices = [mm_row["buyPricesFixed"]] * len(_)
             else:
                 raise KeyError(f"No buy prices specified for Market Maker {mm_row['marketMakerName']}")
 
             if "sellPrices" in mm_row.keys() and isinstance(mm_row["sellPrices"], str):
-                try:
-                    sell_prices = get_mm_prices(price_path / mm_row["sellPrices"], start_date, end_date,
-                                                mm_sell_col, required=False)
-                except Exception as e:
-                    sell_prices = None
-                    warnings.warn(f"{e}: ... but found default column 'prices'.")
-            elif "fixSellPrices" in mm_row.keys() and isinstance(mm_row["fixSellPrices"], float):
-                sell_prices = [mm_row["fixSellPrices"]] * len(_)
+                sell_prices = get_mm_prices(price_path / mm_row["sellPrices"], start_date, end_date,
+                                            mm_sell_col, required=False)
+            elif "sellPricesFixed" in mm_row.keys() and isinstance(mm_row["sellPricesFixed"], float):
+                sell_prices = [mm_row["sellPricesFixed"]] * len(_)
             else:
                 sell_prices = None
                 warnings.warn("Sell prices not explicitly set.")
