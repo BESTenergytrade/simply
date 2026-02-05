@@ -79,7 +79,6 @@ class Environment:
         # when market is added to scenario
         self.get_grid_fee = None  # is instance of Market().get_grid_fee
         self.get_grid_fee_dict = {}
-        self.market_maker: MarketMaker = None  # TODO: remove legacy
         self.market_makers = {}
 
 
@@ -416,14 +415,15 @@ class Scenario:
         ax[2].legend(["pv", "load"])
         plt.show()
 
-    def plot_prices(self):
-        if self.environment.market_maker is not None:
-            fig, ax = plt.subplots(1, sharex=True)
+    def plot_prices(self, market_name=MARKETID):
+        fig, ax = plt.subplots(1, sharex=True)
+        for mm in self.environment.market_makers:
+
             ax = [ax]
             ax[0].plot([p + cfg.config.default_grid_fee for p in
-                        self.environment.market_maker.all_sell_prices])
-            ax[0].plot(self.environment.market_maker.all_buy_prices)
-            plt.show()
+                        mm.all_sell_prices])
+            ax[0].plot(mm.all_buy_prices)
+        plt.show()
 
     def reset(self):
         """ Reset the scenario after a simulation is run"""
@@ -437,13 +437,6 @@ class Scenario:
         self.market_participants = []
 
         # Store the old market maker
-        if self.environment.market_maker is not None:
-            raise NotImplementedError()
-            # TODO remove legacy
-            market_maker = self.environment.market_maker
-            market_maker.reset()
-            # But add the market maker again
-            self.add_participant(market_maker)
         # adaptation for multi market makers
         market_makers = self.environment.market_makers
         for mm in market_makers.values():
