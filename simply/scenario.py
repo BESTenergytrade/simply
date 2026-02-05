@@ -495,6 +495,7 @@ def load(dirpath, data_format):
             for mc in json.load(f):
                 existing_markets.append(mc["market_name"])
     else:
+        warnings.warn(f"No markets file found. Using default market: {MARKETID}.")
         existing_markets = [MARKETID]
     assert len(existing_markets) != 0, "At least one market has to be defined"
 
