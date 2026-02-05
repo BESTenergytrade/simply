@@ -1,5 +1,6 @@
 from simply.actor import Order
-from simply.market_fair import BestMarket, MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD
+from simply.market_fair import BestMarket
+from simply.market import MARKET_MAKER_THRESHOLD, LARGE_ORDER_THRESHOLD
 from simply.power_network import PowerNetwork
 import simply.config as cfg
 from simply.scenario import Scenario

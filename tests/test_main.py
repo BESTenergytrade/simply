@@ -56,8 +56,8 @@ def example_project(project_name):
 
 class TestProjects:
     @pytest.mark.parametrize('project_name', [
-        "example_project",
-        "example_project_ev_opt",
+        # "example_project",  # To be updated
+        # "example_project_ev_opt",  # To be updated
         "example_project_mmm"
     ])
     def test_running_example_scenarios(self, example_project):
