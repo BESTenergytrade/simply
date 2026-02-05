@@ -129,9 +129,7 @@ class MarketMaker:
         return {
             "id": self.id,
             "assignedMarket": self.assigned_market,
-            "csv": self.csv_file,
-            "sell_prices": list(self.all_sell_prices),
-            "buy_prices": list(self.all_buy_prices)
+            "csv": self.csv_file
             }
 
     def get_t_step(self):

@@ -522,6 +522,10 @@ def load(dirpath, data_format):
             filtered_market = list(set(existing_markets) & set(mj["assignedMarket"]))
             if len(filtered_market) > 0:
                 mj["assignedMarket"] = filtered_market
+                m_df = pd.read_csv(dirpath / mj["csv"])
+                mj["buy_prices"] = list(m_df["all_buy_prices"])
+                if "all_sell_prices" in m_df.columns:
+                    mj["sell_prices"] = m_df["all_sell_prices"]
                 participant = market_maker.MarketMaker(**mj)
                 market_list += participant.assigned_market
                 mm_markets[participant.id] = participant.assigned_market
