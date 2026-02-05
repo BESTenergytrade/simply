@@ -261,15 +261,15 @@ class Scenario:
         self.market = market
         self.sync_market_time()
 
-    def add_to_market_dict(self, market, market_name=MARKETID):
+    def add_to_market_dict(self, market):
         assert isinstance(market, Market), "Only Instances of class 'Market' can be added to Scenario.market_dict"
-        if market_name in self.market_dict.keys():
-            warnings.warn(f"Market named {market_name} already exists.")
-        self.market_dict[market_name] = market
-        self.market_dict[market_name].t_step = self.environment.time_step
-        self.market_dict[market_name].t_step = self.environment.time_range[self.environment.time_step]
-        self.market_dict[market_name].step = self.environment.time_step
-        self.environment.get_grid_fee_dict[market_name] = self.market_dict[market_name].get_grid_fee
+        if market.name in self.market_dict.keys():
+            warnings.warn(f"Market named {market.name} already exists.")
+        self.market_dict[market.name] = market
+        self.market_dict[market.name].t_step = self.environment.time_step
+        self.market_dict[market.name].t_step = self.environment.time_range[self.environment.time_step]
+        self.market_dict[market.name].step = self.environment.time_step
+        self.environment.get_grid_fee_dict[market.name] = self.market_dict[market.name].get_grid_fee
 
     def sync_market_time(self):
         for market in self.market_dict.values():

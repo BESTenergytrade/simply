@@ -119,9 +119,9 @@ def read_config_json(config_json):
     else:
         raise TypeError(f"{config_json} contains wrong data type. On the top level It should be a list or dict.")
     if "prosumerName" not in actor_df:
-        raise KeyError("actors need to have 'prosumerName' column")
+        raise KeyError("actors need to have 'prosumerName' field.")
     if 'devices' not in actor_df:
-        actor_df['devices'] = np.nan
+        raise KeyError("actors need to have 'devices' field.")
     if 'assignedMarketMaker' not in actor_df:
         actor_df['assignedMarketMaker'] = MARKETMAKERID
         warnings.warn("No Market Maker specification for any actors. Using default Market Maker for all.")
