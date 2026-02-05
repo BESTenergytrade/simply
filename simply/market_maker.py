@@ -130,7 +130,7 @@ class MarketMaker:
             "id": self.id,
             "assignedMarket": self.assigned_market,
             "csv": self.csv_file
-            }
+        }
         if not external_data:
             args["buy_prices"] = list(self.all_buy_prices)
             args["sell_prices"] = list(self.all_sell_prices)

@@ -4,7 +4,6 @@ import json
 import shutil
 import warnings
 import pandas as pd
-import numpy as np
 from pathlib import Path
 import argparse
 
