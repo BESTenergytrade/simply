@@ -56,9 +56,8 @@ def example_project(project_name):
 
 class TestProjects:
     @pytest.mark.parametrize('project_name', [
-        # "example_project",  # To be updated
-        # "example_project_ev_opt",  # To be updated
-        "example_project_mmm"
+        # "example_project",  # scenario to be updated
+        # "example_project_ev_opt",  # scenario to be updated
     ])
     def test_running_example_scenarios(self, example_project):
         proj_dir = example_project
