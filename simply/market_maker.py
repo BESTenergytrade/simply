@@ -121,16 +121,20 @@ class MarketMaker:
             save_df[data] = self.__dict__[data]
         save_df.to_csv(dirpath.joinpath(self.id + ".csv"))
 
-    def to_dict(self, external_data=None):
+    def to_dict(self, external_data=False):
         """
         Builds dictionary for saving.
 
         """
-        return {
+        args = {
             "id": self.id,
             "assignedMarket": self.assigned_market,
             "csv": self.csv_file
             }
+        if not external_data:
+            args["buy_prices"] = list(self.all_buy_prices)
+            args["sell_prices"] = list(self.all_sell_prices)
+        return args
 
     def get_t_step(self):
         return self.environment.time_step

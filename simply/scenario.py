@@ -543,7 +543,7 @@ def load(dirpath, data_format):
         for f in sorted(actor_files):
             at = f.read_text()
             aj = json.loads(at)
-            if aj["id"] == market_maker.MARKETMAKERID:
+            if aj["id"] == market_maker.MARKETMAKERID or 'market_maker' in aj["id"]:
                 participant = market_maker.MarketMaker(**aj)
             else:
                 aj["df"] = pd.read_json(aj["df"])
