@@ -1,0 +1,15 @@
+[
+  {
+    "market_type": "tarif",
+    "market_name": "market_1"
+  },
+  {
+    "market_type": "fair",
+    "market_name": "market_2",
+    "disputed_matching": "grid_fee"
+  },
+  {
+    "market_type": "pac",
+    "market_name": "market_3"
+  }
+]

@@ -1,10 +1,9 @@
 import pandas as pd
-from simply.market import Market
-import simply.config as cfg
 from typing import List
-from simply.market import LARGE_ORDER_THRESHOLD
-from simply.market import MARKET_MAKER_THRESHOLD
 from time import time
+
+from simply.market import Market, filter_orders
+import simply.config as cfg
 from simply.util import round_price
 
 
@@ -185,11 +184,11 @@ class BestMarket(Market):
     grid_fee_matrix.
     """
 
-    def __init__(self, network=None, grid_fee_matrix=None, time_step=None,
+    def __init__(self, name=None, network=None, grid_fee_matrix=None, time_step=None,
                  disputed_matching='grid_fee'):
         if network is not None and grid_fee_matrix is None:
             grid_fee_matrix = network.grid_fee_matrix
-        super().__init__(network, grid_fee_matrix, time_step)
+        super().__init__(name=name, network=network, grid_fee_matrix=grid_fee_matrix, time_step=time_step)
         self.clusters: List[BestCluster] = []
         # ToDo: enum-type would be nicer than string
         self.disputed_matching = disputed_matching
@@ -235,7 +234,7 @@ class BestMarket(Market):
         bids = self.get_bids()
 
         # filter out market makers (infinite bus) and really large orders
-        asks, asks_mm, bids, bids_mm, large_asks, large_bids = self.filter_orders(asks, bids)
+        asks, asks_mm, bids, bids_mm, large_asks, large_bids = filter_orders(asks, bids)
 
         if (asks.empty and bids.empty) \
                 or (asks.empty and asks_mm.empty) \
@@ -459,7 +458,7 @@ class BestMarket(Market):
         bids.loc[:, "price"] = bids["price"].apply(lambda x: round(x, cfg.config.round_decimal))
 
         # filter out market makers (infinite bus) and really large orders
-        asks, asks_mm, bids, bids_mm, _, _ = self.filter_orders(asks, bids)
+        asks, asks_mm, bids, bids_mm, _, _ = filter_orders(asks, bids)
 
         if (asks.empty and bids.empty) \
                 or (asks.empty and asks_mm.empty) \
@@ -840,26 +839,6 @@ class BestMarket(Market):
             orders.energy * (1 / cfg.config.energy_unit), axis=0), columns=orders.columns)
         orders.energy = cfg.config.energy_unit
         return orders
-
-    @time_it
-    def filter_orders(self, asks, bids):
-        large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
-        large_asks = asks[large_asks_mask]
-        asks_mm = large_asks[large_asks.energy >= MARKET_MAKER_THRESHOLD]
-        if len(asks_mm) > 1:
-            print(f"WARNING! More than one ask market maker:{len(asks_mm)}")
-        asks = asks[~large_asks_mask]
-        if len(large_asks) > len(asks_mm):
-            print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
-        large_bids_mask = bids.energy >= LARGE_ORDER_THRESHOLD
-        large_bids = bids[large_bids_mask]
-        bids_mm = large_bids[large_bids.energy >= MARKET_MAKER_THRESHOLD]
-        if len(bids_mm) > 1:
-            print(f"WARNING! More than one bid market maker: {len(bids_mm)}")
-        bids = bids[~large_bids_mask]
-        if len(large_bids) > len(bids_mm):
-            print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
-        return asks, asks_mm, bids, bids_mm, large_asks, large_bids
 
 
 @time_it

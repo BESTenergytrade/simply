@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from simply.scenario import Environment
 
 
-MARKETMAKERID = "MarketMaker"
+from simply.defaults import MARKETMAKERID, MARKETID
 
 
 class MarketMaker:
@@ -26,8 +26,21 @@ class MarketMaker:
     def __init__(self, buy_prices: Sized, environment: 'Environment' = None,
                  sell_prices: np.array = None, buy_to_sell_function=None, **kwargs):
         self.environment = environment
-        self.id = MARKETMAKERID
+        self.id = kwargs.get("id", None)
+        if not isinstance(self.id, str):
+            self.id = MARKETMAKERID
+            warnings.warn(f'No MarketMaker name specified. Using default name {MARKETMAKERID}.')
+        assigned_markets_list = kwargs.get("assignedMarket", None)
+        if isinstance(assigned_markets_list, str):
+            assigned_markets_list = [assigned_markets_list]
+        elif isinstance(assigned_markets_list, list):
+            pass
+        else:
+            assigned_markets_list = [MARKETID]
+            warnings.warn(f"No Market specified for MarketMaker {self.id}. Assigning it to default market.")
+        self.assigned_market = assigned_markets_list
         self.cluster = kwargs.get("market_maker_cluster", None)
+        self.csv_file = f'{self.id}.csv'
         # All prices the market maker is paying to buy energy. Mostly the prediction of these
         # values is used and provided via property
         self.all_buy_prices = round_prices_array(np.array(buy_prices))
@@ -108,16 +121,20 @@ class MarketMaker:
             save_df[data] = self.__dict__[data]
         save_df.to_csv(dirpath.joinpath(self.id + ".csv"))
 
-    def to_dict(self, external_data=None):
+    def to_dict(self, external_data=False):
         """
         Builds dictionary for saving.
 
         """
-        return {
-            "id": MARKETMAKERID,
-            "sell_prices": list(self.all_sell_prices),
-            "buy_prices": list(self.all_buy_prices)
-            }
+        args = {
+            "id": self.id,
+            "assignedMarket": self.assigned_market,
+            "csv": self.csv_file
+        }
+        if not external_data:
+            args["buy_prices"] = list(self.all_buy_prices)
+            args["sell_prices"] = list(self.all_sell_prices)
+        return args
 
     def get_t_step(self):
         return self.environment.time_step

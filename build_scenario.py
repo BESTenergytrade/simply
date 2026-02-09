@@ -1,13 +1,14 @@
 import os
+import sys
 import json
 import shutil
 import warnings
 import pandas as pd
-import numpy as np
 from pathlib import Path
 import argparse
 
 from simply.actor import Actor
+from simply.defaults import MARKETMAKERID, MARKETID
 from simply.scenario import Scenario
 from simply.power_network import create_power_network_from_config
 from simply.config import Config
@@ -60,6 +61,8 @@ def check_data_present(loads_path, pv_path, ev_path, price_path):
     for path in [loads_path, pv_path, price_path]:
         if len(os.listdir(path)) == 0:
             raise Exception(f'{path} is missing data.')
+    if len(os.listdir(ev_path)) == 0:
+        warnings.warn(f'{ev_path} is missing data.')
 
 
 def remove_existing_dir(path):
@@ -96,21 +99,42 @@ def map_actors(config_df):
 def read_config_json(config_json):
     """Builds a pandas dataframe containing values from config json and splits market_maker into
     buy and sell."""
-    try:
-        config_df = pd.read_json(config_json)
-    except ValueError as e:
-        raise ValueError(f"You have to provide a correct json file: {e}")
-    if 'devices' not in config_df:
-        config_df['devices'] = np.nan
-    # Do not include market maker
+    with open(config_json) as f:
+        d = json.load(f)
+    if isinstance(d, list):  # for backward compatibility: default is list of actor parameter
+        actor_df = pd.DataFrame(d)
+        market_maker_df = None
+        warnings.warn("Actor config is actor list (backward compatibility). Now changed actor config to contain actor"
+                      " list within key 'actor' i.e. {'actors': [], 'marketMakers': []}")
+    elif isinstance(d, dict):
+        if "actors" in d.keys():
+            actor_df = pd.DataFrame(d["actors"])
+        else:
+            raise KeyError(f"{config_json} misses key 'actors'")
+        if "marketMakers" in d.keys():
+            market_maker_df = pd.DataFrame(d["marketMakers"])
+        else:
+            market_maker_df = None
+    else:
+        raise TypeError(f"{config_json} contains wrong data type. On the top level It should be a list or dict.")
+    if "prosumerName" not in actor_df:
+        raise KeyError("actors need to have 'prosumerName' field.")
+    if 'devices' not in actor_df:
+        raise KeyError("actors need to have 'devices' field.")
+    if 'assignedMarketMaker' not in actor_df:
+        actor_df['assignedMarketMaker'] = MARKETMAKERID
+        warnings.warn("No Market Maker specification for any actors. Using default Market Maker for all.")
+    if 'assignedMarket' not in actor_df:
+        actor_df['assignedMarket'] = MARKETID
+        warnings.warn("No Market specification for any actors. Using default Market for all.")
 
-    return config_df
+    return actor_df, market_maker_df
 
 
 def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2016-01-01",
                              nb_ts=None, horizon=24, ts_hour=1,
                              cols=["load", "pv", "schedule", "price"], ps=None, ls=None,
-                             strategy=0, pricing_strategy=None):
+                             strategy=0, pricing_strategy=None, assigned_mm=None, assigned_market=None):
     """
     Create Actor with an ID and given asset time series shifted to a specified start time and
     resolution (and scaled by factors ps/ls if given).
@@ -177,11 +201,11 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
     return Actor(actor_id, df, environment, ls=1, ps=1, battery_cap=battery_cap,
                  battery_initial_soc=init_soc, strategy=strategy, pricing_strategy=pricing_strategy,
-                 **ev_param)
+                 assignedMarketMaker=assigned_mm, assignedMarket=assigned_market, **ev_param)
 
 
 def create_scenario_from_config(
-        config_json, network_path, loads_dir_path, data_dirpath=None,
+        config_json, network_path, loads_dir_path, data_dirpath,
         buy_sell_function=None,
         weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
         start_date="2016-01-01", plot_network=False,
@@ -191,6 +215,8 @@ def create_scenario_from_config(
     Create Scenario object while creating Actor objects from config_json referencing to time series
      data in data_path. The Actors are further mapped to a defined network.
 
+    :param buy_sell_function: function | None Defines in Scenario the MarketMaker sell values based on buy
+        values if sell_prices are not defined and this function is defined, defaults to None
     :param config_json: Path object of the configuration json file
     :param network_path: Path object of the network json file
     :param loads_dir_path: Path object of the directory containing loads csv
@@ -223,7 +249,7 @@ def create_scenario_from_config(
     check_data_present(loads_path, pv_path, ev_path, price_path)
 
     # Parse json
-    config_df = read_config_json(config_json)
+    actor_df, market_maker_df = read_config_json(config_json)
 
     # Create nodes for power network
     pn = create_power_network_from_config(network_path, weight_factor)
@@ -234,22 +260,51 @@ def create_scenario_from_config(
     if start_date is None:
         warnings.warn(f"No start date was given, use default date {start_date}.")
     start_date, end_date, _ = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
-    try:
-        buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
-                                   mm_buy_col, required=True)
-        sell_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
-                                    mm_sell_col, required=False)
-    except Exception as e:
-        buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
-                                   "prices", required=True)
-        sell_prices = None
-        warnings.warn(f"{e}: ... but found default column 'prices'.")
 
     # Empty scenario. Member Participants, map actors and power network will be added later
     # When buy_prices are provided a market maker is automatically generated
-    scenario = Scenario(None, None, buy_prices=buy_prices, sell_prices=sell_prices,
-                        buy_to_sell_function=buy_sell_function)
-    for i, actor_row in config_df.iterrows():
+    scenario = Scenario(None, None)
+
+    if market_maker_df is not None:
+        for i, mm_row in market_maker_df.iterrows():
+            if "buyPrices" in mm_row.keys() and isinstance(mm_row["buyPrices"], str):
+                buy_prices = get_mm_prices(price_path / mm_row["buyPrices"], start_date, end_date,
+                                           mm_buy_col, required=True)
+            elif "buyPricesFixed" in mm_row.keys() and isinstance(mm_row["buyPricesFixed"], float):
+                buy_prices = [mm_row["buyPricesFixed"]] * len(_)
+            else:
+                raise KeyError(f"No buy prices specified for Market Maker {mm_row['marketMakerName']}")
+
+            if "sellPrices" in mm_row.keys() and isinstance(mm_row["sellPrices"], str):
+                sell_prices = get_mm_prices(price_path / mm_row["sellPrices"], start_date, end_date,
+                                            mm_sell_col, required=False)
+            elif "sellPricesFixed" in mm_row.keys() and isinstance(mm_row["sellPricesFixed"], float):
+                sell_prices = [mm_row["sellPricesFixed"]] * len(_)
+            else:
+                sell_prices = None
+                warnings.warn("Sell prices not explicitly set.")
+            scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices,
+                                      buy_to_sell_function=buy_sell_function, id=mm_row["marketMakerName"],
+                                      assignedMarket=mm_row["assignedMarket"])
+    else:
+        try:
+            buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
+                                       mm_buy_col, required=True)
+            sell_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
+                                        mm_sell_col, required=False)
+        except Exception as e:
+            buy_prices = get_mm_prices(price_path / price_filename, start_date, end_date,
+                                       "prices", required=True)
+            sell_prices = None
+            warnings.warn(f"{e}: ... but found default column 'prices'.")
+        scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices,
+                                  buy_to_sell_function=buy_sell_function)
+
+    for i, actor_row in actor_df.iterrows():
+        if not isinstance(actor_row["assignedMarketMaker"], str):
+            raise ValueError(f"No valid Market Maker provided for {actor_row['prosumerName']}")
+        if not isinstance(actor_row["assignedMarket"], str):
+            raise ValueError(f"No valid Market provided for {actor_row['prosumerName']}")
         file_dict = {}
         asset_dict = {}
         # If there is no devices use
@@ -292,7 +347,6 @@ def create_scenario_from_config(
         # EV
         if 'ev' in file_dict:
             asset_dict['ev'].update({"csv": ev_path.joinpath(file_dict['ev'])})
-
         # Prices
         asset_dict['price'] = {"csv": price_path.joinpath(price_filename), "col_index": 1}
         # actors are automatically added to the scenario environment
@@ -300,10 +354,12 @@ def create_scenario_from_config(
                                      asset_dict=asset_dict, start_date=start_date,
                                      nb_ts=nb_ts, horizon=horizon, ts_hour=ts_hour, ps=ps, ls=ls,
                                      strategy=actor_row.get('strategy'),
-                                     pricing_strategy=actor_row.get("pricing_strategy"))
+                                     pricing_strategy=actor_row.get("pricing_strategy"),
+                                     assigned_mm=actor_row.get('assignedMarketMaker', None),
+                                     assigned_market=actor_row.get('assignedMarket', None))
         print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{file_dict["load"]}"')
 
-    actor_map = map_actors(config_df)
+    actor_map = map_actors(actor_df)
     actor_map = pn.add_actors_map(actor_map)
 
     if plot_network is True:
@@ -318,12 +374,13 @@ def create_scenario_from_config(
     return scenario
 
 
-def main(project_dir, data_dir):
+def main(project_dir, data_dir, config_path=None):
     project_dir = Path(project_dir)
     # Set the paths based on the scenario directory
     config_json_path = project_dir / "actors_config.json"
     network_path = project_dir / "network_config.json"
-    config_path = project_dir / "config.cfg"
+    if config_path is None:
+        config_path = project_dir / "config.cfg"
     data_dirpath = Path(data_dir) if data_dir else project_dir / "scenario_inputs"
     loads_dir_path = data_dirpath / "loads_dir.csv"
 
@@ -352,21 +409,30 @@ def main(project_dir, data_dir):
     sc = create_scenario_from_config(
         config_json_path,
         network_path,
-        weight_factor=cfg.weight_factor,
+        loads_dir_path=loads_dir_path,
         data_dirpath=data_dirpath,
+        weight_factor=cfg.weight_factor,
         buy_sell_function=lin_parameter_function(cfg.buy_sell_lin_param),
         start_date=cfg.start_date,
         nb_ts=cfg.nb_ts,
         horizon=cfg.horizon,
         ts_hour=cfg.ts_per_hour,
-        loads_dir_path=loads_dir_path,
+        price_filename="basic_prices.csv",
+        mm_buy_col="buy_prices",
+        mm_sell_col="sell_prices",
         ps=None,
         ls=None
     )
     sc.save(cfg.path, cfg.data_format)
     # insert_market_maker_id(cfg.path)
 
-    if cfg.show_plots:
+    # Copy market.json to scenario folder
+    market_json = project_dir / "markets.json"
+    if market_json.is_file():
+        market_json_scen = cfg.path / "markets.json"
+        shutil.copy(market_json, market_json_scen)
+
+    if cfg.show_plots and "pytest" not in sys.modules:
         sc.power_network.plot()
         sc.plot_participant_data()
 

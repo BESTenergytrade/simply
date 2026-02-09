@@ -11,6 +11,7 @@ from simply.battery import Battery, VariableBattery
 from simply.util import daily, gaussian_pv
 import simply.config as cfg
 from simply.optimisation import optimize_schedule
+from simply.defaults import MARKETMAKERID, MARKETID
 
 Order = namedtuple("Order", ("type", "time", "actor_id", "cluster", "energy", "price"))
 Order.__doc__ = """
@@ -125,8 +126,8 @@ class Actor:
     """
 
     def __init__(self, id, df, environment=None, battery=None, csv=None, ls=1, ps=1, pm={},
-                 cluster=None, strategy: int = 0, pricing_strategy=None,
-                 battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
+                 cluster=None, strategy: int = 0, pricing_strategy=None, assignedMarketMaker=None,
+                 assignedMarket=None, battery_cap=0, battery_initial_soc=0.5, ev_cap=0, ev_initial_soc=1.0,
                  ev_available=0, ev_max_c_rate=1, ev_max_power=11, grid_connection_capacity=20):
         """
         Actor Constructor that defines an ID, and extracts resource time series from the given
@@ -168,6 +169,18 @@ class Actor:
         else:
             self.strategy = strategy
         self.pricing_strategy = pricing_strategy
+        if not isinstance(assignedMarketMaker, str):
+            self.assigned_mm = MARKETMAKERID
+            warnings.warn(f'No Market Maker specified for Actor {self.id}. Using default Market Maker.')
+        else:
+            self.assigned_mm = assignedMarketMaker
+        if not isinstance(assignedMarket, str):
+            if isinstance(assignedMarket, list):
+                raise ValueError("Actor can only be assigned to one market.")
+            self.assigned_market = MARKETID
+            warnings.warn(f'No Market specified for Actor {self.id}. Using default Market.')
+        else:
+            self.assigned_market = assignedMarket
         if csv is not None:
             self.csv_file = csv
         else:
@@ -287,23 +300,26 @@ class Actor:
         self.create_prediction()
         self.market_schedule = np.zeros(self.horizon)
         self.market_schedule[0] = self.get_default_market_schedule()[0]
+        self.market_schedule_hist = []
 
     # creating a property object. This way changing environment also leads to updates
     environment = property(get_environment, set_environment)
 
     def get_mm_buy_prices(self):
         env = self.environment
-        grid_fee = env.get_grid_fee(bid_cluster=env.market_maker.cluster, ask_cluster=self.cluster)
+        grid_fee = env.get_grid_fee_dict[self.assigned_market](bid_cluster=env.market_makers[self.assigned_mm].cluster,
+                                                               ask_cluster=self.cluster)
         # the achievable prices the mm buys energy for from the actor are reduced by the grid fee
-        return env.market_maker.buy_prices-grid_fee
+        return env.market_makers[self.assigned_mm].buy_prices-grid_fee
     # creating a property object
     mm_buy_prices = property(get_mm_buy_prices)
 
     def get_mm_sell_prices(self):
         env = self.environment
-        grid_fee = env.get_grid_fee(ask_cluster=env.market_maker.cluster, bid_cluster=self.cluster)
+        grid_fee = env.get_grid_fee_dict[self.assigned_market](ask_cluster=env.market_makers[self.assigned_mm].cluster,
+                                                               bid_cluster=self.cluster)
         # the prices for which the mm sells energy to the actor are increased by the grid fee
-        return (self.environment.market_maker.sell_prices+grid_fee).round(cfg.config.round_decimal)
+        return (self.environment.market_makers[self.assigned_mm].sell_prices+grid_fee).round(cfg.config.round_decimal)
 
     # creating a property object
     mm_sell_prices = property(get_mm_sell_prices)
@@ -318,6 +334,15 @@ class Actor:
     def get_steps_per_hour(self):
         return self.environment.steps_per_hour
     steps_per_hour = property(get_steps_per_hour)
+
+    def save_actor_schedule(self, dirpath):
+        if dirpath is not None:
+            test_sched = pd.DataFrame(self.market_schedule_hist)
+            test_sched.to_csv(dirpath)
+
+    def shift_market_schedule(self):
+        self.market_schedule = np.roll(self.market_schedule, -1)
+        self.market_schedule[-1] = 0
 
     def get_market_schedule(self, strategy=None):
         """ Generates a market_schedule for the actor which represents the strategy of the actor
@@ -955,6 +980,7 @@ class Actor:
         """
 
         if self.battery and not self.pred.empty:
+            self.market_schedule_hist.append(np.concatenate(([self.matched_energy_current_step], self.market_schedule)))
             self.update_battery()
             self.var_battery.set_available(
                 0 if self.var_battery.capacity == 0 else self.pred.ev_avail[1])
@@ -998,7 +1024,7 @@ class Actor:
         # received energy
         delta_energy = sign*energy
         i = -1
-        while np.sign(delta_energy) == sign and abs(delta_energy) > cfg.config.energy_unit:
+        while np.sign(delta_energy) == sign and abs(delta_energy) + cfg.config.EPS > cfg.config.energy_unit:
             i += 1
             if i == len(self.market_schedule):
                 # energy amount of match was not found inside of the market schedule. Testing,
@@ -1046,7 +1072,8 @@ class Actor:
         # Add battery and strategy parameter
         args.update(
             {"battery_cap": self.battery.capacity, "battery_initial_soc": self.battery.soc,
-             "strategy": self.strategy, "pricing_strategy": self.pricing_strategy}
+             "strategy": self.strategy, "pricing_strategy": self.pricing_strategy,
+             "assignedMarketMaker": self.assigned_mm, "assignedMarket": self.assigned_market}
         )
         # Add EV parameter
         if self.var_battery.capacity > 0:

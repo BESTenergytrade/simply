@@ -19,6 +19,7 @@ from simply.market_maker import MarketMaker
 from simply.actor import Actor
 from simply.market import Market
 from simply.util import run_obj_method
+from simply.defaults import MARKETID
 
 try:
     matplotlib.use('TkAgg')
@@ -51,12 +52,14 @@ class Environment:
     get_grid_fee : method
         getter function of grid_fee of the Market
     market_maker : py:class:`~simply.market_maker.MarketMaker`
-        market_maker in this environment
+        market_maker in this environment (deprecated)
+    market_makers : list(py:class:`~simply.market_maker.MarketMaker`)
+        list of market_maker objects of this environment
     """
 
     def __init__(self, steps_per_hour, add_actor_to_scenario, time_range=None, **kwargs):
         self.time_step = cfg.config.start
-        self.steps_per_hour = steps_per_hour
+        self.steps_per_hour = steps_per_hour if steps_per_hour is not None else cfg.config.ts_per_hour
         if time_range is None:
             self.time_range = range(cfg.config.start + cfg.config.nb_ts + 1)
         elif isinstance(time_range, pd.DatetimeIndex):
@@ -65,9 +68,9 @@ class Environment:
                 time_range.freq = pd.infer_freq(time_range)
             print(f"Found date time index starting at {time_range[0]} "
                   f"with freq {time_range.freq}")
-            if time_range.freq != "{}T".format(60 / steps_per_hour):
+            if time_range.freq != "{}T".format(60 / self.steps_per_hour):
                 warnings.warn(f"Time Index of data frequency {str(time_range.freq)} "
-                              f"does not match the configured steps_per_hour: {steps_per_hour}")
+                              f"does not match the configured steps_per_hour: {self.steps_per_hour}")
             self.time_range = time_range
         else:
             self.time_range = time_range
@@ -75,7 +78,8 @@ class Environment:
         # Get grid fee method of market to make grid fees accessible for actors. Will be overwritten
         # when market is added to scenario
         self.get_grid_fee = None  # is instance of Market().get_grid_fee
-        self.market_maker: MarketMaker = None
+        self.get_grid_fee_dict = {}
+        self.market_makers = {}
 
 
 def is_scenario_participant(obj):
@@ -94,11 +98,12 @@ class Scenario:
     """
 
     def __init__(self, network, map_actors=None, buy_prices: np.array = None, rng_seed=None,
-                 steps_per_hour=4, time_range=None, **kwargs):
+                 steps_per_hour=None, time_range=None, **kwargs):
 
         self.rng_seed = rng_seed if rng_seed is not None else random.getrandbits(32)
         random.seed(self.rng_seed)
         self._market = None
+        self.market_dict = {}
         self.power_network: power_network.PowerNetwork = network
         self.market_participants = list()
         # maps node ids to actors
@@ -177,13 +182,10 @@ class Scenario:
         for participant in participants:
             self._add_participant(participant)
 
-        # Make sure not to have more than 1 MarketMaker
-        error = "Can not add a 2nd MarketMaker to a scenario, which already has one."
         mm_list = [x for x in self.market_participants if isinstance(x, MarketMaker)]
         if mm_list != 0:
-            print(" + Added MarketMaker to the Scenario.")
+            print(f" + Added {len(mm_list)} MarketMakers to the Scenario.")
         print(f" + Added {len(actors)} Actors to the Scenario.")
-        assert len(mm_list) <= 1, error
 
     def add_participant(self, participant, map_node=None, add_to_network=False):
         self._add_participant(participant)
@@ -196,22 +198,12 @@ class Scenario:
             if add_to_network:
                 _ = self.power_network.add_actors_map(map_actors)
         self.map_actors.update(map_actors)
-        # Make sure not to have more than 1 MarketMaker
-        error = "Can not add a 2nd MarketMaker to a scenario, which already has one."
-        assert len([x for x in self.market_participants if isinstance(x, MarketMaker)]) <= 1, error
 
     def _add_participant(self, participant):
         assert is_scenario_participant(participant)
         if participant not in self.market_participants:
             if isinstance(participant, MarketMaker):
-                try:
-                    self.market_participants.remove(self.environment.market_maker)
-                    warnings.warn("MarketMaker overwritten")
-                except ValueError or AttributeError:
-                    # No Market Maker in environment or market_participants
-                    # This can be ignored
-                    pass
-                self.environment.market_maker = participant
+                self.environment.market_makers[participant.id] = participant
             self.market_participants.append(participant)
         else:
             warnings.warn(f"Participant {participant} is already part of the scenario, and was "
@@ -220,10 +212,15 @@ class Scenario:
         participant.create_prediction()
 
     @timeit
-    def create_strategies(self, max_workers=None):
+    def create_strategies(self, max_workers=None, update_step=1):
         # only actors create strategies (in parallel)
         actors = [p for p in self.market_participants if isinstance(p, Actor)]
         if not actors:
+            return
+
+        if self.environment.time_step % update_step != 0:
+            for a in actors:
+                a.shift_market_schedule()
             return
 
         if max_workers is None:
@@ -248,36 +245,60 @@ class Scenario:
                     actor.market_schedule = market_schedule
 
     @timeit
-    def create_strategies_sequential(self):
+    def create_strategies_sequential(self, update_step=1):
         # sequential execution of market_schedule creation
-        for participant in self.market_participants:
-            if isinstance(participant, Actor):
-                participant.get_market_schedule()
+        actors = [p for p in self.market_participants if isinstance(p, Actor)]
+        if self.environment.time_step % update_step != 0:
+            for a in actors:
+                a.shift_market_schedule()
+            return
+        else:
+            for a in actors:
+                a.get_market_schedule()
 
     def add_market(self, market):
         self.market = market
         self.sync_market_time()
 
+    def add_to_market_dict(self, market):
+        assert isinstance(market, Market), "Only Instances of class 'Market' can be added to Scenario.market_dict"
+        if market.name in self.market_dict.keys():
+            warnings.warn(f"Market named {market.name} already exists.")
+        self.market_dict[market.name] = market
+        self.market_dict[market.name].t_step = self.environment.time_step
+        self.market_dict[market.name].t_step = self.environment.time_range[self.environment.time_step]
+        self.market_dict[market.name].step = self.environment.time_step
+        self.environment.get_grid_fee_dict[market.name] = self.market_dict[market.name].get_grid_fee
+
     def sync_market_time(self):
-        self.market.t_step = self.environment.time_range[self.environment.time_step]
-        self.market.step = self.environment.time_step
+        for market in self.market_dict.values():
+            market.t_step = self.environment.time_range[self.environment.time_step]
+            market.step = self.environment.time_step
 
     @timeit
     def market_step(self):
         for participant in self.market_participants:
             orders = participant.generate_orders()
             for order in orders:
-                self.market.accept_order(order, callback=participant.receive_market_results)
+                if isinstance(participant, Actor):
+                    self.market_dict[participant.assigned_market].accept_order(
+                        order, callback=participant.receive_market_results)
+                else:  # MarketMaker
+                    for market in participant.assigned_market:
+                        self.market_dict[market].accept_order(order, callback=participant.receive_market_results)
         if debug_actor:
             print([order for order in orders if "MarketMaker" != order.actor_id])
-            print(self.market.orders)
-        self.market.clear(reset=cfg.config.reset_market)
+            for m in self.market_dict.values():
+                print(m.orders)
+        for market in self.market_dict.values():
+            market.clear(reset=cfg.config.reset_market)
         if debug_actor:
-            print([m for ma in self.market.matches for m in ma if
-                   m["time"] == self.environment.time_step])
-            print([m for matches in self.market.matches for m in matches
-                   if m["time"] == self.environment.time_step
-                   and (m["bid_actor"] == debug_actor or m["ask_actor"] == debug_actor)])
+            for mark in self.market_dict.values():
+                print([m for ma in mark.matches for m in ma if
+                       m["time"] == self.environment.time_step])
+                print([m for matches in mark.matches for m in matches
+                       if m["time"] == self.environment.time_step
+                       and (m["bid_actor"] == debug_actor or m["ask_actor"] == debug_actor)])
 
     def next_time_step(self):
         for participant in self.market_participants:
@@ -330,11 +351,15 @@ class Scenario:
         if data_format == "csv":
             # Save data in separate csv file and all actors in one config file
             a_dict = {}
+            m_dict = {}
             for participant in self.market_participants:
-                a_dict[participant.id] = participant.to_dict(external_data=True)
+                if isinstance(participant, Actor):
+                    a_dict[participant.id] = participant.to_dict(external_data=True)
+                if isinstance(participant, MarketMaker):
+                    m_dict[participant.id] = participant.to_dict(external_data=True)
                 participant.save_csv(dirpath)
             dirpath.joinpath('actors.json').write_text(
-                json.dumps(a_dict, indent=2, default=serialize_int64))
+                json.dumps({"actors": a_dict, "marketMakers": m_dict}, indent=2, default=serialize_int64))
         else:
             # Save config and data per actor in a single file
             for participant in self.market_participants:
@@ -352,6 +377,13 @@ class Scenario:
         for a in list(filter(lambda x: isinstance(x, Actor), self.market_participants)):
             a.save_actor_result(dirpath / f"actor_{a.id}.csv")
         print("Additional actor results saved.")
+
+    def track_actor_schedule(self, dirpath, actor_id):
+        for a in list(filter(lambda x: isinstance(x, Actor), self.market_participants)):
+            if a.id == actor_id:
+                a.save_actor_schedule(dirpath / f"actor_{a.id}_schedule.csv")
+                print(f"Tracking actor {actor_id} schedule (saved)")
+                return
 
     def concat_actors_data(self):
         """
@@ -383,32 +415,33 @@ class Scenario:
         ax[2].legend(["pv", "load"])
         plt.show()
 
-    def plot_prices(self):
-        if self.environment.market_maker is not None:
+    def plot_prices(self, market_name=MARKETID):
+        for mm_name, mm in self.environment.market_makers.items():
             fig, ax = plt.subplots(1, sharex=True)
             ax = [ax]
             ax[0].plot([p + cfg.config.default_grid_fee for p in
-                        self.environment.market_maker.all_sell_prices])
-            ax[0].plot(self.environment.market_maker.all_buy_prices)
-            plt.show()
+                        mm.all_sell_prices])
+            ax[0].plot(mm.all_buy_prices)
+            ax[0].set_title(mm_name)
+        plt.show()
 
     def reset(self):
         """ Reset the scenario after a simulation is run"""
-        # Reset the time step
+        # Reset the time step for the environment and all markets
         self.environment.time_step = cfg.config.start
-        if self.market is not None:
-            self.market.t_step = self.environment.time_step
-            self.market.reset()
+        for m in self.market_dict.values():
+            m.t_step = self.environment.time_step
+            m.reset()
 
         # Remove previous participants
         self.market_participants = []
 
         # Store the old market maker
-        if self.environment.market_maker is not None:
-            market_maker = self.environment.market_maker
-            market_maker.reset()
-            # But add the market maker again
-            self.add_participant(market_maker)
+        # adaptation for multi market makers
+        market_makers = self.environment.market_makers
+        for mm in market_makers.values():
+            mm.reset()
+            self.add_participant(mm)
 
 
 def serialize_int64(obj):
@@ -448,30 +481,63 @@ def load(dirpath, data_format):
     pn = power_network.create_power_network_from_config(
         next(dirpath.glob('network.*')), weight_factor=cfg.config.weight_factor)
 
+    markets_json = dirpath / "markets.json"
+    if markets_json.is_file():
+        existing_markets = []
+        with open(markets_json) as f:
+            for mc in json.load(f):
+                existing_markets.append(mc["market_name"])
+    else:
+        warnings.warn(f"No markets file found. Using default market: {MARKETID}.")
+        existing_markets = [MARKETID]
+    assert len(existing_markets) != 0, "At least one market has to be defined"
+
     # read actors
     participants = []
     time_range = None
+    market_list = []
+    mm_markets = {}  # per maket maker: aqssigned_market
     from datetime import datetime
     if data_format == "csv":
         actors_file = next(dirpath.glob("actors.*"))
         at = actors_file.read_text()
         actors_j = json.loads(at)
-        for aj in actors_j.values():
-            if aj["id"] == market_maker.MARKETMAKERID:
-                participant = market_maker.MarketMaker(**aj)
-            else:
+        for aj in actors_j["actors"].values():
+            if aj["assignedMarket"] in existing_markets:
+                # market.json is not empty
                 aj["df"] = pd.read_csv(dirpath / aj["csv"], parse_dates=['Time'], dayfirst=False,
                                        index_col='Time')
                 assert datetime.strptime(cfg.config.start_date, "%Y-%m-%d") in aj["df"].index
                 time_range = aj["df"].index
                 participant = actor.Actor(**aj)
-            participants.append(participant)
+                participants.append(participant)
+        for mj in actors_j["marketMakers"].values():
+            # filter the assigned markets with the available markets i.e. from market.json
+            filtered_market = list(set(existing_markets) & set(mj["assignedMarket"]))
+            if len(filtered_market) > 0:
+                mj["assignedMarket"] = filtered_market
+                m_df = pd.read_csv(dirpath / mj["csv"])
+                mj["buy_prices"] = list(m_df["all_buy_prices"])
+                if "all_sell_prices" in m_df.columns:
+                    mj["sell_prices"] = m_df["all_sell_prices"]
+                participant = market_maker.MarketMaker(**mj)
+                market_list += participant.assigned_market
+                mm_markets[participant.id] = participant.assigned_market
+                participants.append(participant)
+        # check that every market has only one market maker assigned
+        assert len(set(market_list)) == len(market_list), 'markets with more than one assigned market maker'
+        for p in participants:
+            # check for every Actor, that its assigned market_maker actually trades in its assigned market
+            if isinstance(p, Actor):
+                assert p.assigned_market in mm_markets[p.assigned_mm], (
+                    f"{p.id} is assigned to {p.assigned_market} and {p.assigned_mm}. "
+                    f"But this market maker does not trade on this market.")
     else:
         actor_files = dirpath.glob(f"actor_*.{data_format}")
         for f in sorted(actor_files):
             at = f.read_text()
             aj = json.loads(at)
-            if aj["id"] == market_maker.MARKETMAKERID:
+            if aj["id"] == market_maker.MARKETMAKERID or 'market_maker' in aj["id"]:
                 participant = market_maker.MarketMaker(**aj)
             else:
                 aj["df"] = pd.read_json(aj["df"])

@@ -40,7 +40,9 @@ class Config:
             fair (custom BEST market)\n
         - energy_unit: size of energy units to be traded individually [0.01]\n
         - weight_factor: conversion factor from grid fees to power network node weight [0.03]\n
-        - horizon - number of time steps to look ahead for prediction [24]
+        - horizon: number of time steps to look ahead for prediction [24]\n
+        - actor_strategy: (currently unused) default actor strategy [None]\n
+        - schedule_update_step: every x-th time step the actor market schedule should be updated [1]
 
     :param cfg_file: configuration file path with the attributes listed above.
     :type cfg_file: str
@@ -133,6 +135,8 @@ class Config:
         self.horizon = parser.getint("default", "horizon", fallback=24)
         # [unused] strategy that every actor uses if not specified
         self.actor_strategy = parser.getint("default", "actor_strategy", fallback=None)
+        # every x-th time step the actor market schedule should be updated
+        self.schedule_update_step = parser.getint("default", "schedule_update_step", fallback=1)
 
         # --------------------------
         # output

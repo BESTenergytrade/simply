@@ -3,10 +3,12 @@ from pathlib import Path
 from argparse import ArgumentParser
 from time import time
 import os
+import json
 import glob
 import logging
+import warnings
 
-from simply import market, market_2pac, market_fair
+from simply import market, market_2pac, market_fair, market_tarif
 from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading, dates_to_datetime
@@ -45,6 +47,9 @@ def main(cfg: Config):
         [False for i in cfg.scenario_path.glob(f"*actor*_*.{cfg.data_format}")]) != 0
     print("scenario_exists: ", scenario_exists)
 
+    markets_json = cfg.scenario_path / "markets.json"
+    print("markets_json exists: ", markets_json.is_file())
+
     # load existing scenario or else create randomized new one
     sc: Scenario
 
@@ -79,25 +84,38 @@ def main(cfg: Config):
         sc.plot_participant_data()
         sc.plot_prices()
 
-    # generate requested market
-    if "pac" in cfg.market_type:
-        m = market_2pac.TwoSidedPayAsClear(network=sc.power_network)
-    elif "fair" in cfg.market_type:
-        m = market_fair.BestMarket(network=sc.power_network,
-                                   disputed_matching=cfg.disputed_matching)
-    elif "pab" in cfg.market_type:
-        # default pay-as-bid
-        m = market.Market()
+    # generate requested market(s)
+    if markets_json.is_file():
+        with open(markets_json) as f:
+            market_configs = json.load(f)
     else:
-        raise NotImplementedError(
-            "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair']")
+        warnings.warn("market.json not found. Defaulting to a single market, based on the market specs in config.cfg")
+        market_configs = [{"market_type": cfg.market_type,
+                          "market_name": None}]
+        if cfg.market_type == "fair":
+            market_configs[0]["disputed_matching"] = cfg.disputed_matching
+    for mc in market_configs:
+        if "pac" in mc["market_type"]:
+            m = market_2pac.TwoSidedPayAsClear(name=mc["market_name"], network=sc.power_network)
+        elif "fair" in mc["market_type"]:
+            m = market_fair.BestMarket(name=mc["market_name"],
+                                       network=sc.power_network,
+                                       disputed_matching=mc["disputed_matching"])
+        elif "pab" in mc["market_type"]:
+            # default pay-as-bid
+            m = market.Market(name=mc["market_name"])
+        elif "tarif" in mc["market_type"]:
+            m = market_tarif.MarketMakerDirectTarif(name=mc["market_name"], network=sc.power_network)
+        else:
+            raise NotImplementedError(
+                "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair', 'tarif']")
+        sc.add_to_market_dict(m)
 
-    sc.add_market(m)
     exec_start = time()
 
     for i, t in enumerate(time_range[cfg.start:cfg.nb_ts]):
         # actors calculate strategy based market interaction with the market maker
-        sc.create_strategies()
+        sc.create_strategies(update_step=cfg.schedule_update_step)
         logging.info("Actors finished scheduling created")
 
         # orders are generated based on the flexibility towards the planned market interaction
@@ -106,12 +124,15 @@ def main(cfg: Config):
 
         # actors are prepared for the next time step by changing socs, banks and predictions
         sc.next_time_step()
-
-        logging.info(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)}")
+        for m in sc.market_dict.values():
+            logging.info(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)}")
 
         # save/update additional actor results every at least 10 time steps
         if cfg.save_csv and i % 10 == 0:
-            sc.save_additional_results(sc.market.csv_path)
+            for m in sc.market_dict.values():
+                sc.save_additional_results(m.csv_path)
+            # currently only debug function (no configuration needed)
+            # sc.track_actor_schedule(sc.market.csv_path, actor_id="building_2275985")
 
     print(f"Total execution time was: {time()-exec_start} s")
 
@@ -125,8 +146,10 @@ def main(cfg: Config):
 
     # save additional results
     if cfg.save_csv:
-        sc.save_additional_results(sc.market.csv_path)
-    print(f"Results saved to {sc.market.csv_path}")
+        for m in sc.market_dict.values():
+            sc.save_additional_results(m.csv_path)
+    for m in sc.market_dict.values():
+        print(f"Results saved to {m.csv_path}")
 
     return sc
 

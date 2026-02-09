@@ -6,6 +6,7 @@ import csv
 
 import simply.config as cfg
 from simply.actor import Order
+from simply.defaults import MARKETID
 
 LARGE_ORDER_THRESHOLD = 2**32
 MARKET_MAKER_THRESHOLD = 2**63-1
@@ -22,8 +23,16 @@ class Market:
 
     This class provides a basic matching strategy which may be overridden.
     """
-    def __init__(self, network=None, grid_fee_matrix=None, time_step=None):
+    def __init__(self, network=None, grid_fee_matrix=None, time_step=None, name=None):
         self.orders = pd.DataFrame(columns=Order._fields)
+        if isinstance(name, str):
+            if not name == MARKETID:
+                self.name = name
+            else:
+                raise ValueError("Explicit Market definition is not allowed to have the default Market ID.")
+        else:
+            self.name = MARKETID
+            warnings.warn(f'No Market name specified. Using default name {MARKETID}.')
 
         self.trades = None
         self.cleared_volume = {}
@@ -54,9 +63,9 @@ class Market:
                           f"{cfg.config.default_grid_fee}")
         if self.save_csv:
             match_header = ["time", "bid_id", "ask_id", "bid_actor", "ask_actor", "bid_cluster",
-                            "ask_cluster", "energy", "price", 'included_grid_fee']
+                            "ask_cluster", "energy", "price", 'included_grid_fee', 'market_name']
             self.create_csv('matches.csv', match_header)
-            self.create_csv('orders.csv', Order._fields)
+            self.create_csv('orders.csv', list(Order._fields)+["market_name"])
 
     def get_bids(self):
         # Get all open bids in market. Returns dataframe.
@@ -154,7 +163,7 @@ class Market:
         matches = self.match(show=cfg.config.show_prints)
         self.matches.append(matches)
         self.cleared_volume[self.t_step] = sum([m["energy"] for m in matches])
-        print(f"Market cleared for time {self.t_step}"
+        print(f"Market '{self.name}' cleared for time {self.t_step}"
               f" ({self.step}/{cfg.config.start + cfg.config.nb_ts - 1}):")
 
         for match in matches:
@@ -231,7 +240,7 @@ class Market:
 
     def append_to_csv(self, data, filename):
         """
-        append_to_csv() appends the given data to the specified CSV file.
+        append_to_csv() appends the given data to the specified CSV file. Extends data by market_name.
 
         :param data: the data to be appended to the file, as a Pandas DataFrame
         :param filename: the name of the file to which data should be appended
@@ -239,6 +248,7 @@ class Market:
         """
         if self.save_csv:
             saved_data = pd.DataFrame(data, dtype=object)
+            saved_data['market_name'] = self.name
             saved_data.to_csv(self.csv_path / filename, mode='a', index=False, header=False)
 
     def create_csv(self, filename, headers):
@@ -312,3 +322,23 @@ class Market:
             # if an actor has none as cluster, e.g. the market maker, a TypeError will be thrown.
             # use default grid fee in this case.
             ask.price += cfg.config.default_grid_fee
+
+
+def filter_orders(asks, bids):
+    large_asks_mask = asks.energy >= LARGE_ORDER_THRESHOLD
+    large_asks = asks[large_asks_mask]
+    asks_mm = large_asks[large_asks.energy >= MARKET_MAKER_THRESHOLD]
+    if len(asks_mm) > 1:
+        print(f"WARNING! More than one ask market maker:{len(asks_mm)}")
+    asks = asks[~large_asks_mask]
+    if len(large_asks) > len(asks_mm):
+        print("WARNING! {} large asks filtered".format(len(large_asks) - len(asks_mm)))
+    large_bids_mask = bids.energy >= LARGE_ORDER_THRESHOLD
+    large_bids = bids[large_bids_mask]
+    bids_mm = large_bids[large_bids.energy >= MARKET_MAKER_THRESHOLD]
+    if len(bids_mm) > 1:
+        print(f"WARNING! More than one bid market maker: {len(bids_mm)}")
+    bids = bids[~large_bids_mask]
+    if len(large_bids) > len(bids_mm):
+        print("WARNING! {} large bids filtered".format(len(large_bids) - len(bids_mm)))
+    return asks, asks_mm, bids, bids_mm, large_asks, large_bids

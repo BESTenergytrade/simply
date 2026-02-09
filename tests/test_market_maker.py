@@ -6,6 +6,7 @@ from simply.market_maker import MarketMaker
 import simply.config as cfg
 from simply.scenario import Scenario
 from simply.actor import create_random
+from simply.defaults import MARKETMAKERID
 
 
 @pytest.fixture
@@ -37,7 +38,7 @@ class TestMarketMaker:
         # Reset the market_maker to be sure there is no data present
         self.scenario.reset()
         market_maker = MarketMaker(buy_prices=self.buy_prices, environment=self.env)
-        self.scenario.add_market(Market())
+        self.scenario.add_to_market_dict(Market())
         assert len(market_maker.traded) == 0
         assert sum(market_maker.energy_sold) == 0
         assert sum(market_maker.energy_bought) == 0
@@ -53,8 +54,8 @@ class TestMarketMaker:
         # Reset the market_maker to be sure there is no data present
         self.scenario.reset()
         MarketMaker(buy_prices=self.buy_prices, environment=self.env)
-        market_maker = self.env.market_maker
-        self.scenario.add_market(Market())
+        market_maker = self.env.market_makers[MARKETMAKERID]
+        self.scenario.add_to_market_dict(Market())
         assert len(market_maker.traded) == 0
         assert sum(market_maker.energy_sold) == 0
         assert sum(market_maker.energy_bought) == 0
@@ -94,7 +95,7 @@ class TestMarketMaker:
         grid_fee = 0.5
         cfg.config.default_grid_fee = grid_fee
         market_maker = MarketMaker(buy_prices=self.buy_prices, environment=self.env)
-        self.scenario.add_market(Market())
+        self.scenario.add_to_market_dict(Market())
 
         ask_order, bid_order = self.generate_mm_order(market_maker)
         # Is the market_maker using the correct data
