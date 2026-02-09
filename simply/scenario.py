@@ -416,13 +416,13 @@ class Scenario:
         plt.show()
 
     def plot_prices(self, market_name=MARKETID):
-        fig, ax = plt.subplots(1, sharex=True)
-        for mm in self.environment.market_makers:
-
+        for mm_name, mm in self.environment.market_makers.items():
+            fig, ax = plt.subplots(1, sharex=True)
             ax = [ax]
             ax[0].plot([p + cfg.config.default_grid_fee for p in
                         mm.all_sell_prices])
             ax[0].plot(mm.all_buy_prices)
+            ax[0].set_title(mm_name)
         plt.show()
 
     def reset(self):
