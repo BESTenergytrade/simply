@@ -231,7 +231,7 @@ class Actor:
         max_abs_residual = max(abs(self.pred["schedule"]))
         if max_abs_residual > self.grid_connection_capacity:
             warnings.warn(f"Grid connection of {self.id} is set to max abs residual {max_abs_residual}, "
-                         f"to avoid infeasable optimization.")
+                          f"to avoid infeasable optimization.")
             self.grid_connection_capacity = max_abs_residual + 10 + cfg.config.EPS
 
         # Use the optimization library to implement the new strategy
