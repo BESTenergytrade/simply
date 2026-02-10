@@ -1,6 +1,7 @@
 # REQUIREMENTS# pyomo package needs to be installed
 # a solver needs to be installed: CBC or GLPK are open source; for CBC
 # coppy cbc_solver in the directory where the repo clone is
+import warnings
 
 import pyomo.environ as pyo
 import pandas as pd
@@ -254,7 +255,7 @@ def optimize_schedule(
         df_actor, buy_prices, sell_prices, capacity=10, max_c_rate=1, soc_initial=0.5,
         ev_capacity=0, ev_max_c_rate=1, ev_soc_initial=0, ev_min_soc=0.1,
         charger_max_power=11, end_min_soc=0.6, grid_connection_capacity=20,
-        ts_per_hour=1, model=None):
+        ts_per_hour=1, model=None, actor_id=None):
     """
     Optimizes load, pv time series with battery and electric vehicle flexibility based on buying and
     selling price time series.
@@ -359,10 +360,12 @@ def optimize_schedule(
     try:
         objective = sum(model.cash_flow[i].value for i in model.T)
     except TypeError:
+        warnings.warn(f"Actor {actor_id} without optimization result! Will be skipped. Dump/print: values")
         print({
+            "actor_id": actor_id,
             "df_actor": df_actor.to_dict(),
-            "buy_prices": buy_prices,
-            "sell_prices": sell_prices,
+            "buy_prices": list(buy_prices),
+            "sell_prices": list(sell_prices),
             "capacity": capacity,
             "max_c_rate": max_c_rate,
             "soc_initial": soc_initial,
@@ -374,8 +377,11 @@ def optimize_schedule(
             "end_min_soc": end_min_soc,
             "grid_connection_capacity": grid_connection_capacity
         })
-        print(f"init soc: {ev_soc_initial}, demand_max: "
-              f"{max(data['ev_demand'])/ts_per_hour/ev_capacity}")
+        if ev_capacity != 0:
+            print(f"init soc: {ev_soc_initial}, demand_max: "
+                  f"{max(data['ev_demand']) / ts_per_hour / ev_capacity}")
+        else:
+            print("No EV")
         raise TypeError
 
     return model, objective, pd.DataFrame({

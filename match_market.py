@@ -113,7 +113,7 @@ def main(cfg: Config):
 
     exec_start = time()
 
-    for i, t in enumerate(time_range[cfg.start:cfg.nb_ts]):
+    for i, t in enumerate(time_range[cfg.start:cfg.start + cfg.nb_ts]):
         # actors calculate strategy based market interaction with the market maker
         sc.create_strategies(update_step=cfg.schedule_update_step)
         logging.info("Actors finished scheduling created")
