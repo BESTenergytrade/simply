@@ -205,7 +205,7 @@ class TestActor:
         env = scenario.environment
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, environment=env, battery=battery)
+        actor = Actor(0, self.example_df, environment=env, battery=battery, strategy=1)
         env.market_makers[actor.assigned_mm].create_prediction()
 
         nr_of_matches = 0
@@ -265,7 +265,7 @@ class TestActor:
         env = scenario.environment
         battery = Battery(
             capacity=BAT_CAPACITY, max_c_rate=2, soc_initial=0.0, check_boundaries=True)
-        actor = Actor(0, self.example_df, environment=env, battery=battery)
+        actor = Actor(0, self.example_df, environment=env, battery=battery, strategy=2)
         env.market_makers[actor.assigned_mm].create_prediction()
 
         nr_of_matches = 0

@@ -23,7 +23,7 @@
       "pm": {},
       "battery_cap": 0.02,
       "battery_initial_soc": 0.5,
-      "strategy": 4.0,
+      "strategy": 0,
       "pricing_strategy": NaN,
       "assignedMarketMaker": "MarketMaker",
       "assignedMarket": "Market"

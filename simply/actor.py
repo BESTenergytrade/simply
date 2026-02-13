@@ -154,11 +154,6 @@ class Actor:
         self.load_scale = ls
         self.pv_scale = ps
         self.error_scale = 0
-        self.battery = battery
-        if self.battery is None:
-            self.battery = Battery(capacity=max(battery_cap, 2 * cfg.config.energy_unit),
-                                   soc_initial=battery_initial_soc)
-        self.var_battery = None
         self.model = None
         df.index.name = "Time"
         self.data = pd.DataFrame()
@@ -169,6 +164,17 @@ class Actor:
         else:
             self.strategy = strategy
         self.pricing_strategy = pricing_strategy
+        self.battery = battery
+        if self.battery is None:
+            self.battery = Battery(capacity=max(battery_cap, 2 * cfg.config.energy_unit),
+                                   soc_initial=battery_initial_soc)
+        self.var_battery = None
+        if self.battery.capacity <= 2 * cfg.config.energy_unit + cfg.config.EPS and ev_cap == 0:
+            # Without flexibility, no planning i.e. schedule horizon is needed nor an elaborate strategy
+            self.horizon = 2
+            self.strategy = 0
+            print(f"Actor without flexibility {self.id}: reset strategy and horizon")
+
         if not isinstance(assignedMarketMaker, str):
             self.assigned_mm = MARKETMAKERID
             warnings.warn(f'No Market Maker specified for Actor {self.id}. Using default Market Maker.')
