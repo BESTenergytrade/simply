@@ -125,7 +125,7 @@ def main(cfg: Config):
         # actors are prepared for the next time step by changing socs, banks and predictions
         sc.next_time_step()
         for m in sc.market_dict.values():
-            logging.info(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)}")
+            logging.info(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)} ({m.name})")
 
         # save/update additional actor results every at least 10 time steps
         if cfg.save_csv and i % 10 == 0:
