@@ -213,3 +213,11 @@ class MarketMaker:
     def prepare_next_time_step(self):
         self.energy_sold.append(0)
         self.energy_bought.append(0)
+
+    def update_batch(self):
+        # partial data read todo:
+        #                    analog zu load (scenario.py): CSV-Datei neu einlesen
+        #                    analog zu Initialisierung des MMs: buy_prices und sell_prices verarbeiten
+
+        # partial data read todo: gibt es hier resultate die zwischengespeichert und intern gelöscht werden können?
+        pass

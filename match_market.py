@@ -53,10 +53,13 @@ def main(cfg: Config):
     # load existing scenario or else create randomized new one
     sc: Scenario
 
+    # partial_data_read todo: config: add batch_size argument
+
     if cfg.load_scenario:
         print(f"Load scenario from cfg.scenario_path: {cfg.scenario_path}")
         if scenario_exists:
-            sc = load(cfg.scenario_path, cfg.data_format)
+            # partial_data_read todo: calculate batch_end = start_date + batch_size + time_horizon
+            sc = load(cfg.scenario_path, cfg.data_format)  # partial_data_read todo: add batch_end argument
         else:
             raise Exception(
                 f'Could not find scenario path: {cfg.scenario_path}. Make sure to include the '
@@ -126,6 +129,9 @@ def main(cfg: Config):
         sc.next_time_step()
         for m in sc.market_dict.values():
             logging.info(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)} ({m.name})")
+
+        # partial_data_read todo: if i % (cfg.batch_size-2) == 0:
+        #                             sc.update_batch()
 
         # save/update additional actor results every at least 10 time steps
         if cfg.save_csv and i % 10 == 0:

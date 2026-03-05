@@ -1006,6 +1006,15 @@ class Actor:
             self.mm_buy_hist.append(self.mm_buy_prices[0])
         self.matched_energy_current_step = 0
 
+    def update_batch(self):
+        # partial data read todo: self.save_actor_result()
+        #                    den Inhalt der internen variablen löschen
+
+        # partial data read todo:
+        #                    analog zu load (scenario.py): CSV-Datei neu einlesen
+        #                    analog zu Initialisierung des Actors: df verarbeiten
+        pass
+
     def receive_market_results(self, time, sign, energy, price):
         """
         Callback function when order is matched. Updates the actor's individual trading result.
@@ -1150,6 +1159,7 @@ class Actor:
                 self.ev_socs) * self.var_battery.capacity
         if dirpath is not None:
             save_df.to_csv(dirpath)
+            # partial_data_read todo: append to CSV file and remove internal data
 
         return save_df
 
