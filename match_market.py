@@ -6,7 +6,7 @@ import logging
 
 
 from simply.config import Config
-from simply.simply_main import main
+from simply.match_market import main
 
 
 logging.basicConfig(
