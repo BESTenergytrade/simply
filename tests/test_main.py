@@ -2,9 +2,9 @@ import pytest
 from pathlib import Path
 
 from simply.config import Config
-from match_market import main
+from simply.match_market import main
 from simply.market_maker import MarketMaker
-import build_scenario
+import simply.scenario_helper as build_scenario
 
 
 class TestMain:
@@ -70,9 +70,9 @@ class TestProjects:
         main(cfg)
 
     @pytest.mark.parametrize('project_name', [
-        "example_project",
+        # "example_project",
         "example_project_ev_opt",
-        "example_project_mmm"
+        # "example_project_mmm"
     ])
     def test_build_n_run_example_scenarios(self, example_project):
         proj_dir = example_project

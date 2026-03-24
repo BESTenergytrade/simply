@@ -5,7 +5,6 @@ import shutil
 import warnings
 import pandas as pd
 from pathlib import Path
-import argparse
 
 from simply.actor import Actor
 from simply.defaults import MARKETMAKERID, MARKETID
@@ -15,7 +14,7 @@ from simply.config import Config
 from simply.util import dates_to_datetime
 
 """
-This script creates a simulation scenario from a config JSON file, network JSON file,
+This module creates a simulation scenario from a config JSON file, network JSON file,
 configuration text file, a loads assignment CSV file, and a data directory.
 
 It creates a scenario object and uses this to create an Actor and Power Network object. The Actor
@@ -440,23 +439,3 @@ def main(project_dir, data_dir, config_path=None):
 def lin_parameter_function(p):
     assert len(p) == 2
     return lambda x: p[0] + x * p[1]
-
-
-if __name__ == "__main__":
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description='Entry point for market simulation')
-    parser.add_argument('project_dir', help='project directory path')
-    parser.add_argument('--data_dir', default='', help='data directory')
-    args = parser.parse_args()
-
-    if args.project_dir is None:
-        raise FileNotFoundError(
-            "Project directory path must be specified. Please provide the path as a command-line "
-            "argument.")
-    data_dir = args.data_dir if args.data_dir is not None else os.path.join(args.project_dir,
-                                                                            "scenario_inputs")
-    if args.data_dir is None:
-        print(f"Using data directory: {data_dir}")
-
-    # Call the main function with the specified scenario directory and data directory
-    main(args.project_dir, args.data_dir)

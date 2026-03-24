@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from pathlib import Path
-from argparse import ArgumentParser
 from time import time
 import os
 import json
@@ -13,18 +12,38 @@ from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading, dates_to_datetime
 
+
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        logging.DEBUG: "\033[37m",     # white/gray
+        logging.INFO: "\033[36m",      # cyan
+        logging.WARNING: "\033[33m",   # yellow
+        logging.ERROR: "\033[31m",     # red
+        logging.CRITICAL: "\033[41m",  # red background
+    }
+    RESET = "\033[0m"
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelno, self.RESET)
+        message = super().format(record)
+        return f"{color}{message}{self.RESET}"
+
+
+handler = logging.StreamHandler()
+handler.setFormatter(ColorFormatter(
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+))
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[handler],
 )
 """
-Entry point for standalone functionality.
+Main function for standalone functionality.
 
 Reads in configuration file (or uses defaults when none is supplied),
 creates or loads scenario and matches orders in each timestep.
 May show network plots or print market statistics, depending on config.
-
-Usage: python match_market.py [config file]
 """
 
 
@@ -133,6 +152,7 @@ def main(cfg: Config):
                 sc.save_additional_results(m.csv_path)
             # currently only debug function (no configuration needed)
             # sc.track_actor_schedule(sc.market.csv_path, actor_id="building_2275985")
+            # sc.track_actor_schedule(cfg.results_path, actor_id="building_2280265")
 
     print(f"Total execution time was: {time()-exec_start} s")
 
@@ -152,34 +172,3 @@ def main(cfg: Config):
         print(f"Results saved to {m.csv_path}")
 
     return sc
-
-
-if __name__ == "__main__":
-    parser = ArgumentParser(description='Entry point for market simulation')
-    # parser.add_argument('config', nargs='?', default="", help='configuration file')
-    # Replaced the above line to take in the project directory (which will contain the config file)
-    # instead of putting in the config file
-    # also made it mandatory
-    parser.add_argument('project_dir', nargs='?', default=None, help='project directory path')
-    args = parser.parse_args()
-    # Raise error if project directory not specified
-    if args.project_dir is None:
-        raise FileNotFoundError(
-            "Project directory path must be specified. Please provide the path as a command-line "
-            "argument, e.g. './projects/example_projects/example_project'. This example "
-            "also provides the expected structure of a project.")
-    if not Path(args.project_dir).exists():
-        raise FileNotFoundError(
-                f"The provided project_dir '{args.project_dir}' does not exist.")
-    # This means that the config file must always be in the project directory
-    config_file = os.path.join(args.project_dir, "config.cfg")
-    # Raise error if config.(cfg|txt) file not found in project directory
-    if not os.path.isfile(config_file):
-        config_file = os.path.join(args.project_dir, "config.txt")
-        if not os.path.isfile(config_file):
-            raise FileNotFoundError(
-                "Config file 'config.cfg' or 'config.txt' not found in project directory: "
-                f"{args.project_dir}")
-
-    cfg = Config(config_file, args.project_dir)
-    main(cfg)
