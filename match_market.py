@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 from pathlib import Path
 from argparse import ArgumentParser
-from time import time
 import os
-import json
-import glob
 import logging
-import warnings
 
-from simply import market, market_2pac, market_fair, market_tarif
-from simply.scenario import load, create_random, Scenario
+
 from simply.config import Config
-from simply.util import summerize_actor_trading, dates_to_datetime
 from simply.simply_main import main
 
 

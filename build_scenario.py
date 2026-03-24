@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from simply.scenario_helper import main
 

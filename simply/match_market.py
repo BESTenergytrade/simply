@@ -12,13 +12,14 @@ from simply.scenario import load, create_random, Scenario
 from simply.config import Config
 from simply.util import summerize_actor_trading, dates_to_datetime
 
+
 class ColorFormatter(logging.Formatter):
     COLORS = {
-        logging.DEBUG: "\033[37m",    # white/gray
-        logging.INFO: "\033[36m",     # cyan
-        logging.WARNING: "\033[33m",  # yellow
-        logging.ERROR: "\033[31m",    # red
-        logging.CRITICAL: "\033[41m", # red background
+        logging.DEBUG: "\033[37m",     # white/gray
+        logging.INFO: "\033[36m",      # cyan
+        logging.WARNING: "\033[33m",   # yellow
+        logging.ERROR: "\033[31m",     # red
+        logging.CRITICAL: "\033[41m",  # red background
     }
     RESET = "\033[0m"
 
@@ -26,6 +27,7 @@ class ColorFormatter(logging.Formatter):
         color = self.COLORS.get(record.levelno, self.RESET)
         message = super().format(record)
         return f"{color}{message}{self.RESET}"
+
 
 handler = logging.StreamHandler()
 handler.setFormatter(ColorFormatter(
