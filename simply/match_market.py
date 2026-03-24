@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+from pathlib import Path
+from time import time
+import os
+import json
+import glob
+import logging
+import warnings
+
+from simply import market, market_2pac, market_fair, market_tarif
+from simply.scenario import load, create_random, Scenario
+from simply.config import Config
+from simply.util import summerize_actor_trading, dates_to_datetime
+
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        logging.DEBUG: "\033[37m",    # white/gray
+        logging.INFO: "\033[36m",     # cyan
+        logging.WARNING: "\033[33m",  # yellow
+        logging.ERROR: "\033[31m",    # red
+        logging.CRITICAL: "\033[41m", # red background
+    }
+    RESET = "\033[0m"
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelno, self.RESET)
+        message = super().format(record)
+        return f"{color}{message}{self.RESET}"
+
+handler = logging.StreamHandler()
+handler.setFormatter(ColorFormatter(
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+))
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[handler],
+)
+"""
+Main function for standalone functionality.
+
+Reads in configuration file (or uses defaults when none is supplied),
+creates or loads scenario and matches orders in each timestep.
+May show network plots or print market statistics, depending on config.
+"""
+
+
+def main(cfg: Config):
+    # Checks if actor files with the correct format exist in the cfg.scenario_path
+    # --------------------------------
+    def list_files_in_path(current_path, pattern='*'):
+        file_list = glob.glob(os.path.join(current_path, pattern))
+        return file_list
+
+    current_path = Path.cwd()
+
+    print("Current directory:", current_path)
+    files_in_path = list_files_in_path(cfg.scenario_path)
+    print(f"Files in {cfg.scenario_path}:  {len(files_in_path)}")
+    print("data_format: ", cfg.data_format)
+    # --------------------------------
+
+    scenario_exists = len(
+        [False for i in cfg.scenario_path.glob(f"*actor*_*.{cfg.data_format}")]) != 0
+    print("scenario_exists: ", scenario_exists)
+
+    markets_json = cfg.scenario_path / "markets.json"
+    print("markets_json exists: ", markets_json.is_file())
+
+    # load existing scenario or else create randomized new one
+    sc: Scenario
+
+    if cfg.load_scenario:
+        print(f"Load scenario from cfg.scenario_path: {cfg.scenario_path}")
+        if scenario_exists:
+            sc = load(cfg.scenario_path, cfg.data_format)
+        else:
+            raise Exception(
+                f'Could not find scenario path: {cfg.scenario_path}. Make sure to include the '
+                f'scenario directory in your project or if you want to generate a random scenario, '
+                f'set load_scenario = False in config.cfg.')
+    else:
+        print(f"Create scenario at cfg.scenario_path: {cfg.scenario_path}")
+        if cfg.scenario_path.exists():
+
+            raise Exception(
+                f'The path: {cfg.scenario_path} already exists with another file structure. '
+                'Please remove or rename folder to avoid confusion and restart '
+                'simulation.')
+        else:
+            # create scenario path if it does not exist yet
+            cfg.scenario_path.mkdir(parents=True, exist_ok=True)
+        sc = create_random(cfg.nb_nodes, cfg.nb_actors, cfg.weight_factor)
+        sc.save(cfg.scenario_path, cfg.data_format)
+
+    start_date, end_date, time_range = dates_to_datetime(cfg.start_date, cfg.nb_ts + 1, cfg.horizon,
+                                                         cfg.ts_per_hour)
+
+    if cfg.show_plots:
+        sc.power_network.plot()
+        sc.plot_participant_data()
+        sc.plot_prices()
+
+    # generate requested market(s)
+    if markets_json.is_file():
+        with open(markets_json) as f:
+            market_configs = json.load(f)
+    else:
+        warnings.warn("market.json not found. Defaulting to a single market, based on the market specs in config.cfg")
+        market_configs = [{"market_type": cfg.market_type,
+                          "market_name": None}]
+        if cfg.market_type == "fair":
+            market_configs[0]["disputed_matching"] = cfg.disputed_matching
+    for mc in market_configs:
+        if "pac" in mc["market_type"]:
+            m = market_2pac.TwoSidedPayAsClear(name=mc["market_name"], network=sc.power_network)
+        elif "fair" in mc["market_type"]:
+            m = market_fair.BestMarket(name=mc["market_name"],
+                                       network=sc.power_network,
+                                       disputed_matching=mc["disputed_matching"])
+        elif "pab" in mc["market_type"]:
+            # default pay-as-bid
+            m = market.Market(name=mc["market_name"])
+        elif "tarif" in mc["market_type"]:
+            m = market_tarif.MarketMakerDirectTarif(name=mc["market_name"], network=sc.power_network)
+        else:
+            raise NotImplementedError(
+                "This matching algorithm is not implemented, choose out of: ['pab', 'pac', 'fair', 'tarif']")
+        sc.add_to_market_dict(m)
+
+    exec_start = time()
+
+    for i, t in enumerate(time_range[cfg.start:cfg.start + cfg.nb_ts]):
+        # actors calculate strategy based market interaction with the market maker
+        sc.create_strategies(update_step=cfg.schedule_update_step)
+        logging.info("Actors finished scheduling created")
+
+        # orders are generated based on the flexibility towards the planned market interaction
+        # and a pricing scheme. Orders are matched at the end
+        sc.market_step()
+
+        # actors are prepared for the next time step by changing socs, banks and predictions
+        sc.next_time_step()
+        for m in sc.market_dict.values():
+            logging.info(f"Cleared Volume: {round(m.cleared_volume[t], cfg.round_decimal)} ({m.name})")
+
+        # save/update additional actor results every at least 10 time steps
+        if cfg.save_csv and i % 10 == 0:
+            for m in sc.market_dict.values():
+                sc.save_additional_results(m.csv_path)
+            # currently only debug function (no configuration needed)
+            # sc.track_actor_schedule(sc.market.csv_path, actor_id="building_2275985")
+            # sc.track_actor_schedule(cfg.results_path, actor_id="building_2280265")
+
+    print(f"Total execution time was: {time()-exec_start} s")
+
+    if cfg.show_prints:
+        print("Matches of bid/ask ids: {}".format(m.matches))
+        print(
+            "\nCheck individual traded energy blocks (splitted) and price at market level"
+        )
+        print("\nTraded energy volume and price at actor level")
+        print(summerize_actor_trading(sc))
+
+    # save additional results
+    if cfg.save_csv:
+        for m in sc.market_dict.values():
+            sc.save_additional_results(m.csv_path)
+    for m in sc.market_dict.values():
+        print(f"Results saved to {m.csv_path}")
+
+    return sc
