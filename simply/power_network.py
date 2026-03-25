@@ -237,14 +237,30 @@ def create_power_network_from_config(network_path, weight_factor=1):
             f"Unsupported node-link JSON format. Expected 'edges' or 'links', got keys: {list(network_json.keys())}"
         )
 
-    try:
+    sig = inspect.signature(json_graph.node_link_graph)
+    params = sig.parameters
+
+    common_kwargs = {
+        "directed": network_json.get("directed", False),
+        "multigraph": network_json.get("multigraph", False),
+    }
+
+    if "edges" in params:
+        # newer NetworkX
         network = json_graph.node_link_graph(
             network_json,
             edges=edge_key,
-            directed=network_json.get("directed", False),
-            multigraph=network_json.get("multigraph", False),
+            **common_kwargs,
         )
-    except TypeError:
+    elif "link" in params:
+        # intermediate NetworkX 3.x
+        network = json_graph.node_link_graph(
+            network_json,
+            link=edge_key,
+            **common_kwargs,
+        )
+    elif "attrs" in params:
+        # older NetworkX 2.x
         network = json_graph.node_link_graph(
             network_json,
             attrs={
@@ -254,9 +270,13 @@ def create_power_network_from_config(network_path, weight_factor=1):
                 "key": "key",
                 "link": edge_key,
             },
-            directed=network_json.get("directed", False),
-            multigraph=network_json.get("multigraph", False),
+            **common_kwargs,
         )
+    else:
+        raise TypeError(
+            f"Unsupported networkx.node_link_graph signature: {sig}"
+        )
+
     return PowerNetwork(network_name, network, weight_factor)
 
 
