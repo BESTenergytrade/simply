@@ -228,10 +228,19 @@ def create_power_network_from_config(network_path, weight_factor=1):
     network_json = json.loads(file_contents)
     network_name = list(network_json.keys())[0]
     network_json = list(network_json.values())[0]
+    if "edges" in network_json:
+        edge_key = "edges"
+    elif "links" in network_json:
+        edge_key = "links"
+    else:
+        raise ValueError(
+            f"Unsupported node-link JSON format. Expected 'edges' or 'links', got keys: {list(network_json.keys())}"
+        )
+
     try:
         network = json_graph.node_link_graph(
             network_json,
-            edges="links",
+            edges=edge_key,
             directed=network_json.get("directed", False),
             multigraph=network_json.get("multigraph", False),
         )
@@ -243,7 +252,7 @@ def create_power_network_from_config(network_path, weight_factor=1):
                 "target": "target",
                 "name": "id",
                 "key": "key",
-                "link": "links",
+                "link": edge_key,
             },
             directed=network_json.get("directed", False),
             multigraph=network_json.get("multigraph", False),
