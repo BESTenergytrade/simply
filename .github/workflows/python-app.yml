@@ -44,6 +44,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Show environment
+      run: |
+        python --version
+        pip freeze
     - name: Test with pytest
       run: |
         pytest tests/
