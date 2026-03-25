@@ -46,7 +46,7 @@ class PowerNetwork:
         self.generate_grid_fee_matrix(weight_factor)
 
     def update_shortest_paths(self):
-        self.short_paths = nx.shortest_path(self.network, weight="weight")
+        self.short_paths = dict(nx.shortest_path(self.network, weight="weight"))
 
     def generate_grid_fee_matrix(self, weight_factor=1):
         # clustering of nodes by weight. Within cluster, edges have weight 0
