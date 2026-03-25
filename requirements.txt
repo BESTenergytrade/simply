@@ -1,4 +1,4 @@
-networkx
+networkx>=3,<4
 matplotlib
 pandas
 pytest

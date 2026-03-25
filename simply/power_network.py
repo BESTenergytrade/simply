@@ -228,10 +228,26 @@ def create_power_network_from_config(network_path, weight_factor=1):
     network_json = json.loads(file_contents)
     network_name = list(network_json.keys())[0]
     network_json = list(network_json.values())[0]
-    network = json_graph.node_link_graph(network_json,
-                                         edges="links",
-                                         directed=network_json.get("directed", False),
-                                         multigraph=network_json.get("multigraph", False))
+    try:
+        network = json_graph.node_link_graph(
+            network_json,
+            edges="links",
+            directed=network_json.get("directed", False),
+            multigraph=network_json.get("multigraph", False),
+        )
+    except TypeError:
+        network = json_graph.node_link_graph(
+            network_json,
+            attrs={
+                "source": "source",
+                "target": "target",
+                "name": "id",
+                "key": "key",
+                "link": "links",
+            },
+            directed=network_json.get("directed", False),
+            multigraph=network_json.get("multigraph", False),
+        )
     return PowerNetwork(network_name, network, weight_factor)
 
 
