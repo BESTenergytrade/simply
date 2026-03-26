@@ -151,8 +151,14 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
     :return: Actor object
     """
-    df = pd.DataFrame([], columns=cols)
     start_date, end_date, _ = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
+    date_range = pd.date_range(
+        start=start_date,
+        periods=nb_ts,
+        freq=pd.Timedelta(hours=1 / ts_hour)
+    )
+    df = pd.DataFrame(index=date_range, columns=cols)
+    df.index.name = "Time"
     # Read csv files for each asset
     csv_peak = {}
     battery_cap = 0
