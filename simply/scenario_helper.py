@@ -197,7 +197,7 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
         series = csv_df.loc[start_date:end_date].iloc[:, info_dict["col_index"] - 1]
         if df is None:
-            df = pd.DataFrame(index=series.index)
+            df = pd.DataFrame(index=series.index, columns=cols)
         df.loc[:, col] = series
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
