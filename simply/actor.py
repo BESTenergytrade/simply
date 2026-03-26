@@ -1108,7 +1108,8 @@ class Actor:
         #  also errors need to be saved.
         if self.error_scale != 0:
             raise Exception('Prediction Error is not yet implemented!')
-        save_df = self.data[["load", "pv", "schedule"]]
+        save_df = self.data[["load", "pv", "schedule"]].reset_index()
+        save_df["Time"] = save_df["Time"].dt.strftime('%Y-%m-%d %H:%M:%S')
         if self.var_battery.capacity > 0:
             save_df.loc[:, ["ev_avail", "ev_demand"]] = self.data[["ev_avail", "ev_demand"]]
         save_df.to_csv(dirpath.joinpath(self.csv_file))
