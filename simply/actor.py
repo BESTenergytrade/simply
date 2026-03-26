@@ -1112,6 +1112,8 @@ class Actor:
         save_df.index.name = "Time"
         if self.var_battery.capacity > 0:
             save_df.loc[:, ["ev_avail", "ev_demand"]] = self.data[["ev_avail", "ev_demand"]]
+        save_df = save_df.reset_index()
+        save_df["Time"] = save_df["Time"].dt.strftime('%Y-%m-%d %H:%M:%S')
         save_df.to_csv(dirpath.joinpath(self.csv_file))
 
     def save_actor_result(self, dirpath=None):
