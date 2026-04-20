@@ -72,17 +72,18 @@ def remove_existing_dir(path):
 
 def basic_strategy(df, csv_peak, ps, ls):
     """Scales load and pv by peak or scaling factor parameter and calculates schedule."""
+    # remove nan
+    df = df.fillna(0)
     if ls:
         df['load'] *= ls
     else:
-        df['load'] *= csv_peak['load']
+        df['load'] *= csv_peak.get('load', 1)
     if 'pv' in csv_peak:
         if ps:
             df['pv'] *= ps
         else:
-            df['pv'] *= csv_peak['pv']
-    # remove nan
-    df = df.fillna(0)
+            df['pv'] *= csv_peak.get('pv', 1)
+
     df["schedule"] = df["pv"] - df["load"]
     return df
 
@@ -365,7 +366,7 @@ def create_scenario_from_config(
                                      pricing_strategy=actor_row.get("pricing_strategy"),
                                      assigned_mm=actor_row.get('assignedMarketMaker', None),
                                      assigned_market=actor_row.get('assignedMarket', None))
-        print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{file_dict["load"]}"')
+        print(f'- Added Actor ({i}) {actor_row["prosumerName"]}: "{list(file_dict.keys())}"')
 
     actor_map = map_actors(actor_df)
     actor_map = pn.add_actors_map(actor_map)
