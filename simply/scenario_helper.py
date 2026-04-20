@@ -219,6 +219,7 @@ def create_scenario_from_config(
         weight_factor=1, ts_hour=4, nb_ts=None, horizon=24,
         start_date="2016-01-01", plot_network=False,
         price_filename="basic_prices.csv", mm_buy_col="buy_prices", mm_sell_col="sell_prices",
+        mm_grid_fees_col="grid_fees",
         ps=None, ls=None):
     """
     Create Scenario object while creating Actor objects from config_json referencing to time series
@@ -244,6 +245,8 @@ def create_scenario_from_config(
         defaults to buy_prices
     :param mm_sell_col: Column name of Market Maker selling prices of file "price_filename",
         defaults to sell_prices
+    :param mm_grid_fees_col: Column name of grid fees added to Market Maker selling prices,
+        defaults to grid_fees
     :param ps: PV scalar, defaults to None
     :param ls: Load scalar, defaults to None
     :return: Scenario object
@@ -292,6 +295,17 @@ def create_scenario_from_config(
             else:
                 sell_prices = None
                 warnings.warn("Sell prices not explicitly set.")
+
+            if "gridFeePrices" in mm_row.keys() and isinstance(mm_row["gridFeePrices"], str):
+                if sell_prices is None:
+                    raise NotImplementedError("gridFeePrices time series cannot be added if sell prices are not "
+                                              "specified explicitly. (Not implemented for the use of "
+                                              "buy_sell_function.)")
+                grid_fees = get_mm_prices(price_path / mm_row["gridFeePrices"], start_date, end_date,
+                              mm_grid_fees_col, required=False)
+                assert len(grid_fees) == len(sell_prices)
+                sell_prices = [p+g for p, g in zip(sell_prices, grid_fees)]
+
             scenario.add_market_maker(buy_prices=buy_prices, sell_prices=sell_prices,
                                       buy_to_sell_function=buy_sell_function, id=mm_row["marketMakerName"],
                                       assignedMarket=mm_row["assignedMarket"])
