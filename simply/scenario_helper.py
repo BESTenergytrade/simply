@@ -302,7 +302,7 @@ def create_scenario_from_config(
                                               "specified explicitly. (Not implemented for the use of "
                                               "buy_sell_function.)")
                 grid_fees = get_mm_prices(price_path / mm_row["gridFeePrices"], start_date, end_date,
-                              mm_grid_fees_col, required=False)
+                                          mm_grid_fees_col, required=False)
                 assert len(grid_fees) == len(sell_prices)
                 sell_prices = [p+g for p, g in zip(sell_prices, grid_fees)]
 
