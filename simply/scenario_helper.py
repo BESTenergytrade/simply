@@ -151,8 +151,8 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
 
     :return: Actor object
     """
-    df = pd.DataFrame([], columns=cols)
     start_date, end_date, _ = dates_to_datetime(start_date, nb_ts + 1, horizon, ts_hour)
+    df = None
     # Read csv files for each asset
     csv_peak = {}
     battery_cap = 0
@@ -187,15 +187,24 @@ def create_actor_from_config(actor_id, environment, asset_dict={}, start_date="2
                 "ev_initial_soc": info_dict.get("initialSOC", 0.5),
                 "ev_available": False
             }
-            df.loc[:, "ev_avail"] = csv_df.loc[start_date:end_date].loc[:, "availability"]
-            df.loc[:, "ev_demand"] = csv_df.loc[start_date:end_date].loc[:, "consumption"]
+            ev_avail = csv_df.loc[start_date:end_date].loc[:, "availability"]
+            ev_demand = csv_df.loc[start_date:end_date].loc[:, "consumption"]
+            if df is None:
+                df = pd.DataFrame(index=ev_avail.index, columns=cols)
+            df.loc[:, "ev_avail"] = ev_avail
+            df.loc[:, "ev_demand"] = ev_demand
             continue
 
-        df.loc[:, col] = csv_df.loc[start_date:end_date].iloc[:, info_dict["col_index"] - 1]
+        series = csv_df.loc[start_date:end_date].iloc[:, info_dict["col_index"] - 1]
+        if df is None:
+            df = pd.DataFrame(index=series.index, columns=cols)
+        df.loc[:, col] = series
         # Save peak value and normalize time series
         csv_peak[col] = df[col].max()
         df[col] = df[col] / csv_peak[col]
 
+    df.index = pd.to_datetime(df.index)
+    df.index.name = "Time"
     df = basic_strategy(df, csv_peak, ps, ls)
 
     return Actor(actor_id, df, environment, ls=1, ps=1, battery_cap=battery_cap,

@@ -95,13 +95,13 @@ def actor_print(actor, header=False, _header=dict()):
     _header[actor] = True
 
     print(f"{actor.t_step},"
-          f"{round(actor.battery.energy(),4)}, "
-          f"{round(actor.pred.schedule[0],4)}, "
-          f"{round(actor.market_schedule[0],4)}, "
-          f"{round(actor.battery.soc,4)}, "
-          f"{round(actor.bank,4)},"
-          f"{round(actor.pred.price[0],4)},"
-          f"{round(actor.matched_energy_current_step,4)}")
+          f"{round(actor.battery.energy(), 4)}, "
+          f"{round(actor.pred.schedule[0], 4)}, "
+          f"{round(actor.market_schedule[0], 4)}, "
+          f"{round(actor.battery.soc, 4)}, "
+          f"{round(actor.bank, 4)},"
+          f"{round(actor.pred.price[0], 4)},"
+          f"{round(actor.matched_energy_current_step, 4)}")
 
 
 def run_obj_method(obj, method_name, *args, **kwargs):
