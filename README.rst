@@ -42,7 +42,7 @@ After cloning the repository, a virtual environment is created (e.g. using virtu
 
     git clone git@github.com:BESTenergytrade/simply.git
     # create virtual environment
-    virtualenv venv --python=python3.8
+    virtualenv venv --python=python3.11
     source venv/bin/activate
     # install cbc-solver to be able to use optimization with pyomo
     sudo apt-get update
@@ -61,6 +61,8 @@ Then there are two options to use simply:
  .. code:: bash
 
     pip install -e .
+    # or
+    python -m pip install -e .
 
 The tool uses Python (>= 3.8) standard libraries as well as specific, but well known libraries
 such as `matplotlib <https://matplotlib.org/>`_, `pandas <https://pandas.pydata.org/>`_ and `networkx <https://networkx.org/>`_.
