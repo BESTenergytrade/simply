@@ -250,7 +250,7 @@ class Actor:
             soc_initial=min(max(self.battery.soc, 0), 1),  # optimizer cannot handle negative EPS
             ev_capacity=self.var_battery.capacity,
             ev_max_c_rate=self.var_battery.max_c_rate,
-            ev_soc_initial=self.var_battery.soc,
+            ev_soc_initial=min(max(self.var_battery.soc, 0), 1),  # optimizer cannot handle soc outside [0, 1]
             ts_per_hour=cfg.config.ts_per_hour,
             end_min_soc=0.6,
             grid_connection_capacity=self.grid_connection_capacity,
@@ -1093,7 +1093,7 @@ class Actor:
         if self.var_battery.capacity > 0:
             args.update({
                 "ev_cap": self.var_battery.capacity, "ev_initial_soc": self.var_battery.soc,
-                "ev_available": False}
+                "ev_available": self.var_battery.available}
             )
         return args
 
